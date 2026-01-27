@@ -66,6 +66,16 @@
     summary { font-size: 0.875rem; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
     summary:hover { color: #cbd5e1; }
     pre { margin-top: 0.5rem; padding: 0.75rem; background: #0f172a; border-radius: 0.375rem; font-size: 0.75rem; color: #cbd5e1; overflow: auto; border: 1px solid #334155; }
+    .accuracy-note { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0.5rem; padding: 1rem; margin-top: 1rem; }
+    .accuracy-note h5 { color: #60a5fa; font-size: 0.875rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .accuracy-note p { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.5rem; line-height: 1.5; }
+    .accuracy-note ul { font-size: 0.75rem; color: #94a3b8; margin-left: 1rem; line-height: 1.6; }
+    .accuracy-note li { margin-bottom: 0.25rem; }
+    .accuracy-note .tag { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 600; margin-right: 0.25rem; }
+    .tag-over { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
+    .tag-under { background: rgba(34, 211, 238, 0.2); color: #22d3ee; }
+    .warning-badge { display: none; background: rgba(251, 146, 60, 0.2); color: #fb923c; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem; margin-top: 0.5rem; text-align: center; }
+    .warning-badge.show { display: block; }
     .download-icon { width: 1.25rem; height: 1.25rem; }
     .toggle-group { display: flex; background: #1e293b; border-radius: 0.5rem; overflow: hidden; border: 1px solid #334155; }
     .toggle-btn { padding: 0.5rem 1rem; background: transparent; color: #94a3b8; border: none; cursor: pointer; font-size: 0.875rem; transition: all 0.2s; }
@@ -78,7 +88,7 @@
     <div class="header">
       <h1>MLB The Show 25</h1>
       <h2>Rating Converter</h2>
-      <div class="version">v2.0 • Calibrated on 74 players • 81% accuracy within ±3 points</div>
+      <div class="version">v2.1 • Calibrated on 75 players • 80% accuracy within ±3 points</div>
     </div>
     <div class="card">
       <div class="form-row">
@@ -152,6 +162,7 @@
               <div class="overall" id="resultOverall">0</div>
               <div class="tier" id="resultTier"></div>
               <div class="rp hidden" id="resultRP"></div>
+              <div class="warning-badge" id="warningBadge"></div>
             </div>
           </div>
           <button onclick="downloadCSV()" class="btn-secondary" style="margin-top: 1rem;">
@@ -166,6 +177,27 @@
       <details>
         <summary>View Raw Stats</summary>
         <pre id="rawStats"></pre>
+      </details>
+      <details>
+        <summary>ℹ️ Accuracy Notes & Known Discrepancies</summary>
+        <div class="accuracy-note">
+          <h5>📊 Formula Accuracy</h5>
+          <p>This converter is calibrated on 75 real MLB The Show 25 players. Results are <strong>80% accurate within ±3 points</strong> and <strong>87% accurate within ±5 points</strong>.</p>
+          
+          <h5 style="margin-top: 0.75rem;">⚠️ Known Outlier Patterns</h5>
+          <p>Certain player profiles consistently produce results that differ from in-game ratings:</p>
+          <ul>
+            <li><span class="tag tag-under">UNDER</span><strong>Elite Superstars</strong> — Players like Juan Soto and Shohei Ohtani receive manual boosts in-game beyond what stats suggest (typically 5-9 points higher)</li>
+            <li><span class="tag tag-over">OVER</span><strong>Speed-Only Profiles</strong> — Players with elite speed (95+) but very weak power (&lt;35) are penalized more heavily in-game than the formula captures</li>
+            <li><span class="tag tag-over">OVER</span><strong>Multiple Severe Weaknesses</strong> — Players with both weak power (&lt;30) AND weak discipline (&lt;40) receive compounding penalties in-game</li>
+            <li><span class="tag tag-over">OVER</span><strong>Defense-First Catchers</strong> — Catchers with elite fielding but below-average offensive profiles tend to be overcalculated</li>
+            <li><span class="tag tag-under">UNDER</span><strong>Cy Young Candidates</strong> — Top-tier starting pitchers (Crochet, Skubal, Yamamoto) often receive in-game boosts</li>
+            <li><span class="tag tag-over">OVER</span><strong>Historical Aging Cards</strong> — Some historical players at advanced ages (e.g., Babe Ruth 1933) have lower in-game ratings than expected</li>
+          </ul>
+          
+          <h5 style="margin-top: 0.75rem;">💡 Why Discrepancies Exist</h5>
+          <p>MLB The Show uses proprietary formulas that include factors we cannot directly measure, such as marketability, prospect status, and manual developer adjustments. This converter provides the best statistical approximation possible.</p>
+        </div>
       </details>
     </div>
   </div>
@@ -382,11 +414,68 @@ function displayResults() {
     rpDiv.textContent = `As RP: ${ratings.overall_rp}`; 
     rpDiv.classList.remove('hidden'); 
   } else rpDiv.classList.add('hidden');
+  
+  // Detect outlier patterns and show warnings
+  const warningBadge = document.getElementById('warningBadge');
+  const warnings = detectOutlierPatterns();
+  if (warnings.length > 0) {
+    warningBadge.innerHTML = '⚠️ ' + warnings.join(' • ');
+    warningBadge.classList.add('show');
+  } else {
+    warningBadge.classList.remove('show');
+  }
+  
   const rc = document.getElementById('ratingsContainer');
   rc.innerHTML = playerData.type === 'pitcher' 
     ? `<div class="ratings-section"><h4>🎯 Pitching</h4>${ratingRow('H/9', ratings.h_per_9)}${ratingRow('K/9', ratings.k_per_9)}${ratingRow('BB/9', ratings.bb_per_9)}${ratingRow('HR/9', ratings.hr_per_9)}${ratingRow('Clutch', ratings.pitching_clutch)}${ratingRow('Control', ratings.control)}${ratingRow('Velocity', ratings.velocity)}${ratingRow('Break', ratings.break_rating)}${ratingRow('Stamina', ratings.stamina)}</div><div class="ratings-section"><h4>🛡️ Fielding</h4>${ratingRow('Fielding', ratings.fielding)}${ratingRow('Arm Strength', ratings.arm_strength)}${ratingRow('Arm Accuracy', ratings.arm_accuracy)}${ratingRow('Reaction', ratings.reaction)}${ratingRow('Durability', ratings.durability)}</div>`
     : `<div class="ratings-section"><h4>📈 Hitting</h4>${ratingRow('Contact R', ratings.contact_r)}${ratingRow('Contact L', ratings.contact_l)}${ratingRow('Power R', ratings.power_r)}${ratingRow('Power L', ratings.power_l)}${ratingRow('Vision', ratings.vision)}${ratingRow('Discipline', ratings.discipline)}${ratingRow('Clutch', ratings.clutch)}</div><div class="ratings-section"><h4>⚡ Speed</h4>${ratingRow('Speed', ratings.speed)}${ratingRow('Stealing', ratings.stealing)}${ratingRow('Baserunning', ratings.baserunning)}<h4 class="mt">🛡️ Fielding</h4>${ratingRow('Fielding', ratings.fielding)}${ratingRow('Arm Strength', ratings.arm_strength)}${ratingRow('Arm Accuracy', ratings.arm_accuracy)}${ratingRow('Reaction', ratings.reaction)}${ratings.blocking ? ratingRow('Blocking', ratings.blocking) : ''}${ratingRow('Durability', ratings.durability)}</div>`;
   document.getElementById('rawStats').textContent = JSON.stringify(playerData, null, 2);
+}
+
+function detectOutlierPatterns() {
+  const warnings = [];
+  if (!ratings || !playerData) return warnings;
+  
+  if (playerData.type === 'hitter') {
+    const avgPower = ((ratings.power_r || 70) + (ratings.power_l || 70)) / 2;
+    const avgContact = ((ratings.contact_r || 70) + (ratings.contact_l || 70)) / 2;
+    const speed = ratings.speed || 50;
+    const disc = ratings.discipline || 70;
+    const fld = ratings.fielding || 65;
+    const pos = playerData.position;
+    
+    // Speed-only profile: elite speed + very weak power
+    if (speed >= 95 && avgPower < 40) {
+      warnings.push('Speed-only profile (may be 5-8 pts lower in-game)');
+    }
+    
+    // Multiple severe weaknesses: weak power + weak discipline
+    if (avgPower < 35 && disc < 40) {
+      warnings.push('Multiple weaknesses (may be 5-8 pts lower in-game)');
+    }
+    
+    // Elite superstar profile: elite disc + elite power (likely undercalculated)
+    if (disc >= 95 && avgPower >= 85 && ratings.overall >= 88) {
+      warnings.push('Elite profile (may be 5-9 pts higher in-game)');
+    }
+    
+    // Defense-first catcher
+    if (pos === 'C' && fld >= 80 && avgPower < 60 && avgContact < 75) {
+      warnings.push('Defense-first catcher (may be 4-6 pts lower in-game)');
+    }
+  } else {
+    // Pitcher patterns
+    const coreAvg = [ratings.h_per_9, ratings.k_per_9, ratings.bb_per_9, ratings.hr_per_9, 
+                     ratings.pitching_clutch, ratings.control, ratings.velocity, ratings.break_rating]
+                    .filter(v => v != null).reduce((a, b) => a + b, 0) / 8;
+    
+    // Elite SP (Cy Young candidate type)
+    if (playerData.pitcher_role !== 'RP' && coreAvg >= 85 && ratings.overall >= 93) {
+      warnings.push('Elite SP profile (may be 4-6 pts higher in-game)');
+    }
+  }
+  
+  return warnings;
 }
 
 function ratingRow(label, value) { const v = Math.min(99, value || 0); return `<div class="rating-row"><span class="label">${label}</span><span class="value ${getRatingColor(v)}">${v}</span></div>`; }
