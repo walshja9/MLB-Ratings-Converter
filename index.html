@@ -158,6 +158,19 @@
           r.stamina = hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : 220) : 80;
           r.fielding = 55; r.arm_strength = r.velocity ? Math.round(r.velocity * 0.85) : 70; r.arm_accuracy = 60; r.reaction = 50;
 
+          // Durability: based on games/appearances and IP
+          if (hasCountStat(stats.games) && hasCountStat(stats.ip)) {
+            const gamesWeight = scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70);
+            const ipWeight = scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : 220);
+            r.durability = Math.round((gamesWeight * 0.4 + ipWeight * 0.6));
+          } else if (hasCountStat(stats.games)) {
+            r.durability = scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70);
+          } else if (hasCountStat(stats.ip)) {
+            r.durability = scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : 220);
+          } else {
+            r.durability = 65;
+          }
+
           const core = [r.h_per_9, r.k_per_9, r.bb_per_9, r.hr_per_9, r.pitching_clutch, r.control, r.velocity, r.break_rating].map(v => Math.min(v || 70, 99));
           const avg = core.reduce((a, b) => a + b, 0) / 8;
           r.overall = Math.min(99, Math.max(25, Math.round(avg + 7.5 + Math.min((r.stamina || 50) * 0.163, 8))));
@@ -190,6 +203,13 @@
           r.stealing = r.speed; r.baserunning = Math.round(r.speed * 0.9); r.bunt = 35; r.drag_bunt = 30;
           r.arm_strength = Math.round(r.fielding * 0.9 + 10); r.arm_accuracy = Math.round(r.fielding * 0.85 + 10); r.reaction = Math.round(r.fielding * 0.8 + 15);
 
+          // Durability: based on games played
+          if (hasCountStat(stats.games)) {
+            r.durability = scale(num(stats.games), isCareer ? 500 : 40, isCareer ? 3000 : 162);
+          } else {
+            r.durability = 65;
+          }
+
           const core = [r.contact_r, r.contact_l, r.power_r, r.power_l, r.vision, r.discipline, r.clutch, r.fielding, r.speed].map(v => Math.min(v || 70, 99));
           r.overall = Math.min(99, Math.max(25, Math.round(core.reduce((a, b) => a + b, 0) / 9 + 16)));
         }
@@ -203,11 +223,11 @@
       }, [manualStats, playerType, isCareer, calculateRatings]);
 
       const loadTest = useCallback((stats) => { setPlayerData(stats); setRatings(calculateRatings(stats)); }, [calculateRatings]);
-      const testPedroia = () => loadTest({ name: "Dustin Pedroia", type: "hitter", season: "2007", avg: 0.317, obp: 0.380, slg: 0.442, iso: 0.125, hr: 8, sb: 7, k_pct: 8.1, bb_pct: 8.3, spd: 4.2, drs: 6 });
-      const testLabine = () => loadTest({ name: "Clem Labine", type: "pitcher", season: "1956", era: 3.63, ip: 1079.2, k: 551, bb: 396, h: 1045, hr: 76 });
-      const testFoxx = () => loadTest({ name: "Jimmie Foxx", type: "hitter", season: "1932", avg: 0.364, obp: 0.469, slg: 0.749, iso: 0.385, hr: 58, sb: 3, k_pct: 14.1, bb_pct: 17.1, fielding_pct: 0.991 });
-      const testCrochet = () => loadTest({ name: "Garrett Crochet", type: "pitcher", season: "2025", era: 2.29, whip: 0.92, ip: 146, k_9: 12.82, bb_9: 2.15, h_9: 6.02, hr_9: 0.80, fb_velo: 97.6, whiff_pct: 32.5 });
-      const testBerger = () => loadTest({ name: "Wally Berger", type: "hitter", season: "1935", avg: 0.295, obp: 0.355, slg: 0.548, iso: 0.253, hr: 34, sb: 3, k_pct: 12.4, bb_pct: 7.8, fielding_pct: 0.960 });
+      const testPedroia = () => loadTest({ name: "Dustin Pedroia", type: "hitter", season: "2007", avg: 0.317, obp: 0.380, slg: 0.442, iso: 0.125, hr: 8, sb: 7, k_pct: 8.1, bb_pct: 8.3, spd: 4.2, drs: 6, games: 139 });
+      const testLabine = () => loadTest({ name: "Clem Labine", type: "pitcher", season: "1956", era: 3.63, ip: 1079.2, k: 551, bb: 396, h: 1045, hr: 76, games: 513 });
+      const testFoxx = () => loadTest({ name: "Jimmie Foxx", type: "hitter", season: "1932", avg: 0.364, obp: 0.469, slg: 0.749, iso: 0.385, hr: 58, sb: 3, k_pct: 14.1, bb_pct: 17.1, fielding_pct: 0.991, games: 154 });
+      const testCrochet = () => loadTest({ name: "Garrett Crochet", type: "pitcher", season: "2025", era: 2.29, whip: 0.92, ip: 146, k_9: 12.82, bb_9: 2.15, h_9: 6.02, hr_9: 0.80, fb_velo: 97.6, whiff_pct: 32.5, games: 32 });
+      const testBerger = () => loadTest({ name: "Wally Berger", type: "hitter", season: "1935", avg: 0.295, obp: 0.355, slg: 0.548, iso: 0.253, hr: 34, sb: 3, k_pct: 12.4, bb_pct: 7.8, fielding_pct: 0.960, games: 150 });
 
       const downloadCSV = useCallback(() => {
         if (!ratings || !playerData) return;
@@ -234,7 +254,8 @@
         { key: 'hr', label: 'HR', placeholder: '30' }, { key: 'sb', label: 'SB', placeholder: '10' },
         { key: 'k_pct', label: 'K%', placeholder: '20.0' }, { key: 'bb_pct', label: 'BB%', placeholder: '10.0' },
         { key: 'sprint_speed', label: 'Sprint', placeholder: '27.0' }, { key: 'oaa', label: 'OAA', placeholder: '5' },
-        { key: 'drs', label: 'DRS', placeholder: '5' }, { key: 'fielding_pct', label: 'Fld%', placeholder: '.980' }
+        { key: 'drs', label: 'DRS', placeholder: '5' }, { key: 'fielding_pct', label: 'Fld%', placeholder: '.980' },
+        { key: 'games', label: 'G', placeholder: '150' }
       ], []);
 
       const pitcherFields = useMemo(() => [
@@ -244,7 +265,7 @@
         { key: 'hr', label: 'HR', placeholder: '20' }, { key: 'k_9', label: 'K/9', placeholder: 'auto', auto: true },
         { key: 'bb_9', label: 'BB/9', placeholder: 'auto', auto: true }, { key: 'h_9', label: 'H/9', placeholder: 'auto', auto: true },
         { key: 'hr_9', label: 'HR/9', placeholder: 'auto', auto: true }, { key: 'fb_velo', label: 'Velo', placeholder: '95.0' },
-        { key: 'whiff_pct', label: 'Whiff%', placeholder: '25.0' }
+        { key: 'whiff_pct', label: 'Whiff%', placeholder: '25.0' }, { key: 'games', label: 'G', placeholder: '32' }
       ], []);
 
       const RatingRow = ({ label, value }) => (
@@ -360,6 +381,7 @@
                           <RatingRow label="Arm Strength" value={ratings.arm_strength} />
                           <RatingRow label="Arm Accuracy" value={ratings.arm_accuracy} />
                           <RatingRow label="Reaction" value={ratings.reaction} />
+                          <RatingRow label="Durability" value={ratings.durability} />
                         </div>
                       </>
                     ) : (
@@ -384,6 +406,7 @@
                           <RatingRow label="Arm Strength" value={ratings.arm_strength} />
                           <RatingRow label="Arm Accuracy" value={ratings.arm_accuracy} />
                           <RatingRow label="Reaction" value={ratings.reaction} />
+                          <RatingRow label="Durability" value={ratings.durability} />
                         </div>
                       </>
                     )}
