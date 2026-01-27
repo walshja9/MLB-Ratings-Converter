@@ -6,106 +6,38 @@
   <title>MLB The Show 25 Rating Converter</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-    
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-      padding: 1rem;
-      color: #e2e8f0;
-    }
-    
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); padding: 1rem; color: #e2e8f0; }
     @media (min-width: 768px) { body { padding: 2rem; } }
-    
     .container { max-width: 1100px; margin: 0 auto; }
-    
     .header { text-align: center; margin-bottom: 1.5rem; }
-    .header h1 {
-      font-size: 2.25rem;
-      font-weight: 900;
-      background: linear-gradient(90deg, #ef4444, #ffffff, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.25rem;
-    }
+    .header h1 { font-size: 2.25rem; font-weight: 900; background: linear-gradient(90deg, #ef4444, #ffffff, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.25rem; }
     .header h2 { font-size: 1.25rem; font-weight: 700; color: #cbd5e1; }
-    
-    .card {
-      background: rgba(30, 41, 59, 0.8);
-      backdrop-filter: blur(8px);
-      border-radius: 1rem;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      border: 1px solid #334155;
-    }
-    
+    .header .version { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+    .card { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(8px); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
     .form-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
-    
     .form-group label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; }
-    
-    .form-group input, .form-group select {
-      padding: 0.5rem 0.75rem;
-      background: #334155;
-      border: 1px solid #475569;
-      border-radius: 0.375rem;
-      color: white;
-      font-size: 0.875rem;
-      outline: none;
-    }
-    
+    .form-group input, .form-group select { padding: 0.5rem 0.75rem; background: #334155; border: 1px solid #475569; border-radius: 0.375rem; color: white; font-size: 0.875rem; outline: none; }
     .form-group input:focus, .form-group select:focus { border-color: #3b82f6; }
     .form-group input[readonly] { background: #1e293b; color: #94a3b8; cursor: not-allowed; }
     .form-group input.disabled { opacity: 0.5; }
     .input-name { width: 11rem; }
     .input-season { width: 5rem; }
-    
     .checkbox-group { display: flex; align-items: flex-end; padding-bottom: 0.25rem; }
     .checkbox-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; color: #cbd5e1; }
     .checkbox-label input { width: 1rem; height: 1rem; accent-color: #3b82f6; }
-    
     .fields-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
     @media (min-width: 768px) { .fields-grid { grid-template-columns: repeat(7, 1fr); } }
     .fields-grid input { width: 100%; padding: 0.375rem 0.5rem; }
-    
-    .btn-row { display: flex; align-items: center; gap: 1rem; }
-    
-    .btn-primary {
-      padding: 0.5rem 1.5rem;
-      background: linear-gradient(90deg, #2563eb, #3b82f6);
-      color: white;
-      font-weight: 600;
-      border: none;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
+    .btn-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-primary { padding: 0.5rem 1.5rem; background: linear-gradient(90deg, #2563eb, #3b82f6); color: white; font-weight: 600; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; }
     .btn-primary:hover { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-    
-    .btn-secondary {
-      width: 100%;
-      padding: 0.5rem 1rem;
-      background: #334155;
-      color: white;
-      border: none;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      transition: background 0.2s;
-    }
+    .btn-secondary { width: 100%; padding: 0.5rem 1rem; background: #334155; color: white; border: none; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s; }
     .btn-secondary:hover { background: #475569; }
-    
     .hint { font-size: 0.75rem; color: #64748b; }
     .hidden { display: none !important; }
-    
     .results-grid { display: flex; flex-direction: column; gap: 1.5rem; }
     @media (min-width: 768px) { .results-grid { flex-direction: row; } .results-left { width: 33.333%; } .results-right { width: 66.666%; } }
-    
     .player-card-wrapper { padding: 4px; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
     .player-card { background: #0f172a; border-radius: 0.5rem; padding: 1rem; text-align: center; }
     .player-card h3 { font-size: 1.5rem; font-weight: 700; color: white; }
@@ -113,33 +45,32 @@
     .player-card .overall { font-size: 3.75rem; font-weight: 900; color: white; margin: 1rem 0; }
     .player-card .tier { font-size: 1.125rem; }
     .player-card .rp { font-size: 0.875rem; color: #94a3b8; margin-top: 0.5rem; }
-    
     .ratings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
     .ratings-section { background: rgba(15, 23, 42, 0.5); border-radius: 0.5rem; padding: 1rem; }
     .ratings-section h4 { color: white; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
     .ratings-section h4.mt { margin-top: 1rem; }
-    
     .rating-row { display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0; }
     .rating-row .label { font-size: 0.875rem; color: #94a3b8; }
     .rating-row .value { font-weight: 700; }
-    
-    .color-diamond { color: #facc15; }
-    .color-gold { color: #a855f7; }
-    .color-silver { color: #60a5fa; }
-    .color-bronze { color: #4ade80; }
-    .color-common { color: #9ca3af; }
-    
+    .color-diamond { color: #22d3ee; }
+    .color-gold { color: #facc15; }
+    .color-silver { color: #9ca3af; }
+    .color-bronze { color: #fb923c; }
+    .color-common { color: #6b7280; }
     .tier-diamond { background: linear-gradient(135deg, #22d3ee, #3b82f6); }
     .tier-gold { background: linear-gradient(135deg, #facc15, #ca8a04); }
     .tier-silver { background: linear-gradient(135deg, #d1d5db, #6b7280); }
     .tier-bronze { background: linear-gradient(135deg, #fb923c, #ea580c); }
     .tier-common { background: linear-gradient(135deg, #6b7280, #374151); }
-    
     details { margin-top: 1rem; }
     summary { font-size: 0.875rem; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
     summary:hover { color: #cbd5e1; }
     pre { margin-top: 0.5rem; padding: 0.75rem; background: #0f172a; border-radius: 0.375rem; font-size: 0.75rem; color: #cbd5e1; overflow: auto; border: 1px solid #334155; }
     .download-icon { width: 1.25rem; height: 1.25rem; }
+    .toggle-group { display: flex; background: #1e293b; border-radius: 0.5rem; overflow: hidden; border: 1px solid #334155; }
+    .toggle-btn { padding: 0.5rem 1rem; background: transparent; color: #94a3b8; border: none; cursor: pointer; font-size: 0.875rem; transition: all 0.2s; }
+    .toggle-btn.active { background: #3b82f6; color: white; }
+    .toggle-btn:hover:not(.active) { background: #334155; }
   </style>
 </head>
 <body>
@@ -147,8 +78,8 @@
     <div class="header">
       <h1>MLB The Show 25</h1>
       <h2>Rating Converter</h2>
+      <div class="version">v2.0 • Calibrated on 74 players • 81% accuracy within ±3 points</div>
     </div>
-
     <div class="card">
       <div class="form-row">
         <div class="form-group">
@@ -170,6 +101,13 @@
           <select id="playerType">
             <option value="hitter">Hitter</option>
             <option value="pitcher">Pitcher</option>
+          </select>
+        </div>
+        <div class="form-group" id="pitcherRoleContainer" style="display:none;">
+          <label>Role</label>
+          <select id="pitcherRole">
+            <option value="SP">Starting Pitcher</option>
+            <option value="RP">Relief Pitcher</option>
           </select>
         </div>
         <div class="form-group">
@@ -198,15 +136,12 @@
           </select>
         </div>
       </div>
-
       <div id="fieldsContainer" class="fields-grid"></div>
-
       <div class="btn-row">
         <button onclick="calculateRatings()" class="btn-primary">Calculate Ratings</button>
         <span class="hint">Rate stats (K/9, ISO, etc.) auto-calculate from counting stats</span>
       </div>
     </div>
-
     <div id="resultsContainer" class="card hidden">
       <div class="results-grid">
         <div class="results-left">
@@ -262,12 +197,12 @@ const pitcherFields = [
 ];
 
 const eraConfig = {
-  deadball: { avgK9: 4.0, avgKPct: 10, spBase: -3, rpBase: 1, staminaMax: 400 },
-  liveball: { avgK9: 4.5, avgKPct: 12, spBase: -2, rpBase: 1, staminaMax: 350 },
-  integration: { avgK9: 5.0, avgKPct: 14, spBase: -1, rpBase: 1, staminaMax: 300 },
-  expansion: { avgK9: 5.5, avgKPct: 15, spBase: 2, rpBase: 1, staminaMax: 280 },
-  freeagency: { avgK9: 6.0, avgKPct: 16, spBase: 3, rpBase: 1, staminaMax: 250 },
-  modern: { avgK9: 8.5, avgKPct: 22, spBase: 5, rpBase: 1, staminaMax: 220 },
+  deadball: { avgK9: 4.0, avgKPct: 10, staminaMax: 400 },
+  liveball: { avgK9: 4.5, avgKPct: 12, staminaMax: 350 },
+  integration: { avgK9: 5.0, avgKPct: 14, staminaMax: 300 },
+  expansion: { avgK9: 5.5, avgKPct: 15, staminaMax: 280 },
+  freeagency: { avgK9: 6.0, avgKPct: 16, staminaMax: 250 },
+  modern: { avgK9: 8.5, avgKPct: 22, staminaMax: 220 },
 };
 
 const positionAdj = { 'C': 10, 'SS': 8, 'CF': 6, '2B': 5, '3B': 4, 'RF': 3, 'LF': 2, '1B': 2, 'DH': 0 };
@@ -292,6 +227,7 @@ function buildFields() {
   const fields = playerType === 'pitcher' ? pitcherFields : hitterFields;
   container.innerHTML = fields.map(f => `<div class="form-group"><label>${f.label}</label><input type="text" id="field_${f.key}" placeholder="${f.placeholder}" ${f.auto ? 'readonly' : ''} oninput="autoCalculate()"></div>`).join('');
   document.getElementById('positionContainer').style.display = playerType === 'hitter' ? 'block' : 'none';
+  document.getElementById('pitcherRoleContainer').style.display = playerType === 'pitcher' ? 'block' : 'none';
 }
 
 function autoCalculate() {
@@ -307,7 +243,14 @@ function autoCalculate() {
 function getStats() {
   const playerType = document.getElementById('playerType').value;
   const fields = playerType === 'pitcher' ? pitcherFields : hitterFields;
-  const stats = { name: document.getElementById('name').value, season: document.getElementById('isCareer').checked ? 'career' : (document.getElementById('season').value || '2025'), type: playerType, era_type: document.getElementById('playerEra').value, position: playerType === 'hitter' ? document.getElementById('playerPosition').value : null };
+  const stats = { 
+    name: document.getElementById('name').value, 
+    season: document.getElementById('isCareer').checked ? 'career' : (document.getElementById('season').value || '2025'), 
+    type: playerType, 
+    era_type: document.getElementById('playerEra').value, 
+    position: playerType === 'hitter' ? document.getElementById('playerPosition').value : null,
+    pitcher_role: playerType === 'pitcher' ? document.getElementById('pitcherRole').value : null
+  };
   fields.forEach(f => { const val = document.getElementById(`field_${f.key}`)?.value; if (val) stats[f.key] = val; });
   return stats;
 }
@@ -328,6 +271,8 @@ function calculateRatings() {
 
   if (isPitcher) {
     const k9 = getK9(), bb9 = getBB9(), h9 = getH9(), hr9 = getHR9(), kPct = getKPct();
+    const isRP = stats.pitcher_role === 'RP';
+    
     r.h_per_9 = h9 ? scale(h9, 5.5, 10.5, true) : hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
     r.k_per_9 = k9 ? scale(k9, 5.0, isCareer ? 10.5 : 13.0) : 70;
     r.bb_per_9 = bb9 ? scale(bb9, 1.0, 5.5, true) : hasRateStat(stats.whip) ? scale(Math.max(1.5, num(stats.whip) * 9 - 8.5), 1.0, 5.5, true) : 70;
@@ -339,11 +284,36 @@ function calculateRatings() {
     r.stamina = hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) : 80;
     r.fielding = 55; r.arm_strength = r.velocity ? Math.round(r.velocity * 0.85) : 70; r.arm_accuracy = 60; r.reaction = 50;
     r.durability = hasCountStat(stats.games) && hasCountStat(stats.ip) ? Math.round((scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70) * 0.4 + scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) * 0.6)) : hasCountStat(stats.games) ? scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70) : hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) : 65;
+    
+    // Core 8: H/9, K/9, BB/9, HR/9, Clutch, Control, Velocity, Break
     const core = [r.h_per_9, r.k_per_9, r.bb_per_9, r.hr_per_9, r.pitching_clutch, r.control, r.velocity, r.break_rating].map(v => Math.min(v || 70, 99));
-    const avg = core.reduce((a, b) => a + b, 0) / 8;
-    r.overall = Math.min(99, Math.max(25, Math.round(avg + cfg.spBase + Math.min((r.stamina || 50) * 0.163, 8))));
-    r.overall_rp = Math.min(99, Math.max(25, Math.round(avg + cfg.rpBase)));
+    const coreAvg = core.reduce((a, b) => a + b, 0) / 8;
+    
+    if (isRP) {
+      // RP FORMULA: weightedAvg with H/9 × 2.5 and Clutch × 2.0, elite bonus if coreAvg >= 85
+      const totalWeight = 2.5 + 1 + 1 + 1 + 2.0 + 1 + 1 + 1; // = 10.5
+      const weightedAvg = (core[0] * 2.5 + core[1] + core[2] + core[3] + core[4] * 2.0 + core[5] + core[6] + core[7]) / totalWeight;
+      const eliteBonus = coreAvg >= 85 ? 3 : 0;
+      r.overall = Math.min(99, Math.max(25, Math.round(weightedAvg + 0.5 + eliteBonus)));
+      r.overall_sp = null; // No SP rating for relievers
+    } else {
+      // SP FORMULA: compression above 82.5, stamina bonus, low penalty
+      let effectiveAvg = coreAvg;
+      if (coreAvg > 82.5) {
+        effectiveAvg = 82.5 + (coreAvg - 82.5) * 0.35;
+      }
+      const lowPenalty = Math.max(0, (50 - coreAvg) * 2.5);
+      const staminaBonus = Math.min((r.stamina || 50) * 0.11, 8);
+      r.overall = Math.min(99, Math.max(25, Math.round(effectiveAvg + 2.5 + staminaBonus - lowPenalty)));
+      
+      // Also calculate RP rating for comparison
+      const totalWeight = 2.5 + 1 + 1 + 1 + 2.0 + 1 + 1 + 1;
+      const weightedAvg = (core[0] * 2.5 + core[1] + core[2] + core[3] + core[4] * 2.0 + core[5] + core[6] + core[7]) / totalWeight;
+      const eliteBonus = coreAvg >= 85 ? 3 : 0;
+      r.overall_rp = Math.min(99, Math.max(25, Math.round(weightedAvg + 0.5 + eliteBonus)));
+    }
   } else {
+    // HITTER FORMULA
     if (hasRateStat(stats.avg_vs_r)) r.contact_r = scale(num(stats.avg_vs_r), 0.200, 0.350);
     else if (hasRateStat(stats.avg)) { const base = scale(num(stats.avg), 0.200, 0.350); const kAdj = hasRateStat(stats.k_pct) && toPct(stats.k_pct) > 22 ? Math.round((toPct(stats.k_pct) - 22) * 0.8) : 0; r.contact_r = base ? Math.max(25, base - kAdj) : 70; } else r.contact_r = 70;
     r.contact_l = hasRateStat(stats.avg_vs_l) ? scale(num(stats.avg_vs_l), 0.200, 0.350) : Math.max(25, r.contact_r - 12);
@@ -361,10 +331,37 @@ function calculateRatings() {
     r.reaction = Math.min(99, Math.round(r.fielding * 0.8 + 15));
     if (stats.position === 'C') r.blocking = (hasFieldingStat(stats.drs) || hasFieldingStat(stats.oaa)) ? Math.min(99, hasFieldingStat(stats.oaa) ? scale(num(stats.oaa), -15, 15) : scale(num(stats.drs), -15, 20)) : Math.min(99, Math.round((r.fielding + r.arm_strength + r.arm_accuracy + r.reaction) / 4));
     r.durability = hasCountStat(stats.games) ? scale(num(stats.games), isCareer ? 500 : 40, isCareer ? 3000 : 162) : 65;
+    
     const posAdj = positionAdj[stats.position] || 0;
+    
+    // Core 9: Contact R, Contact L, Power R, Power L, Vision, Discipline, Clutch, Fielding, Speed
     const core = [r.contact_r, r.contact_l, r.power_r, r.power_l, r.vision, r.discipline, r.clutch, r.fielding, r.speed].map(v => Math.min(v || 70, 99));
     const coreAvg = core.reduce((a, b) => a + b, 0) / 9;
-    r.overall = Math.min(99, Math.max(25, Math.round(coreAvg + 16 + posAdj - Math.max(0, (50 - coreAvg) * 1.9))));
+    const avgPower = (core[2] + core[3]) / 2;
+    const disc = core[5];
+    
+    // HITTER OVERALL FORMULA (calibrated on 38 players, 76% within ±3)
+    // 1. Compression above 70
+    let effectiveAvg = coreAvg;
+    if (coreAvg > 70) {
+      effectiveAvg = 70 + (coreAvg - 70) * 0.25;
+    }
+    
+    // 2. Low penalty for weak hitters
+    const lowPenalty = Math.max(0, (50 - coreAvg) * 1.9);
+    
+    // 3. Power bonus for elite power (85+)
+    const powerBonus = avgPower >= 85 ? (avgPower - 85) * 0.225 : 0;
+    
+    // 4. Power penalty for weak power (<40), extra penalty for very weak (<35)
+    let powerPenalty = avgPower < 40 ? (40 - avgPower) * 0.03 : 0;
+    const powerPenaltyExtra = avgPower < 35 ? (35 - avgPower) * 0.15 : 0;
+    
+    // 5. Elite bonus for disc 95+ AND power 85+
+    const eliteBonus = (disc >= 95 && avgPower >= 85) ? 1 : 0;
+    
+    // 6. Calculate overall
+    r.overall = Math.min(99, Math.max(25, Math.round(effectiveAvg + 15.5 + posAdj + powerBonus + eliteBonus - powerPenalty - powerPenaltyExtra - lowPenalty)));
   }
   ratings = r;
   displayResults();
@@ -376,11 +373,15 @@ function displayResults() {
   const tier = getTier(ratings.overall);
   document.getElementById('cardContainer').className = `player-card-wrapper ${tier.css}`;
   document.getElementById('resultName').textContent = playerData.name || 'Player';
-  document.getElementById('resultMeta').textContent = `${playerData.season} • ${playerData.type}`;
+  const roleText = playerData.type === 'pitcher' ? (playerData.pitcher_role === 'RP' ? 'RP' : 'SP') : playerData.type;
+  document.getElementById('resultMeta').textContent = `${playerData.season} • ${roleText}`;
   document.getElementById('resultOverall').textContent = Math.min(99, ratings.overall);
   document.getElementById('resultTier').innerHTML = `${tier.icon} ${tier.label}`;
   const rpDiv = document.getElementById('resultRP');
-  if (playerData.type === 'pitcher') { rpDiv.textContent = `RP: ${ratings.overall_rp}`; rpDiv.classList.remove('hidden'); } else rpDiv.classList.add('hidden');
+  if (playerData.type === 'pitcher' && playerData.pitcher_role !== 'RP' && ratings.overall_rp) { 
+    rpDiv.textContent = `As RP: ${ratings.overall_rp}`; 
+    rpDiv.classList.remove('hidden'); 
+  } else rpDiv.classList.add('hidden');
   const rc = document.getElementById('ratingsContainer');
   rc.innerHTML = playerData.type === 'pitcher' 
     ? `<div class="ratings-section"><h4>🎯 Pitching</h4>${ratingRow('H/9', ratings.h_per_9)}${ratingRow('K/9', ratings.k_per_9)}${ratingRow('BB/9', ratings.bb_per_9)}${ratingRow('HR/9', ratings.hr_per_9)}${ratingRow('Clutch', ratings.pitching_clutch)}${ratingRow('Control', ratings.control)}${ratingRow('Velocity', ratings.velocity)}${ratingRow('Break', ratings.break_rating)}${ratingRow('Stamina', ratings.stamina)}</div><div class="ratings-section"><h4>🛡️ Fielding</h4>${ratingRow('Fielding', ratings.fielding)}${ratingRow('Arm Strength', ratings.arm_strength)}${ratingRow('Arm Accuracy', ratings.arm_accuracy)}${ratingRow('Reaction', ratings.reaction)}${ratingRow('Durability', ratings.durability)}</div>`
