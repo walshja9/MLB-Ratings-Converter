@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MLB The Show 25 - Rating Converter</title>
+  <meta name="description" content="Convert real MLB statistics to MLB The Show 25 video game ratings. Works for both current and historical players.">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; padding: 0; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    // Lucide React Icons (inline SVG components)
+    const Download = () => (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+    );
+
+    const TrendingUp = () => (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+      </svg>
+    );
+
+    const Target = () => (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" strokeWidth={2} />
+        <circle cx="12" cy="12" r="6" strokeWidth={2} />
+        <circle cx="12" cy="12" r="2" strokeWidth={2} />
+      </svg>
+    );
+
+    const Zap = () => (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    );
+
+    const Shield = () => (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    );
+
+    function MLBTheShowConverter() {
+      const [playerData, setPlayerData] = useState(null);
+      const [ratings, setRatings] = useState(null);
+      const [playerType, setPlayerType] = useState('hitter');
+      const [isCareer, setIsCareer] = useState(false);
+      const [manualStats, setManualStats] = useState({});
+
+      // AUTO-CALCULATE DERIVED STATS
+      useEffect(() => {
+        const s = { ...manualStats };
+        let changed = false;
+
+        if (playerType === 'pitcher') {
+          const ip = parseFloat(s.ip);
+          if (ip > 0) {
+            const stats = ['k', 'bb', 'h', 'hr'];
+            stats.forEach(stat => {
+              const val = parseFloat(s[stat]);
+              if (val >= 0 && !isNaN(val)) {
+                const rate = ((val / ip) * 9).toFixed(2);
+                const rateKey = \`\${stat}_9\`;
+                if (s[rateKey] !== rate) {
+                  s[rateKey] = rate;
+                  changed = true;
+                }
+              }
+            });
+          }
+        } else {
+          const isoCalcs = [
+            { avg: 'avg', slg: 'slg', iso: 'iso' },
+            { avg: 'avg_vs_r', slg: 'slg_vs_r', iso: 'iso_vs_r' },
+            { avg: 'avg_vs_l', slg: 'slg_vs_l', iso: 'iso_vs_l' }
+          ];
+
+          isoCalcs.forEach(({ avg, slg, iso }) => {
+            const avgVal = parseFloat(s[avg]);
+            const slgVal = parseFloat(s[slg]);
+            if (avgVal > 0 && slgVal > 0) {
+              const isoVal = (slgVal - avgVal).toFixed(3);
+              if (s[iso] !== isoVal) {
+                s[iso] = isoVal;
+                changed = true;
+              }
+            }
+          });
+        }
+
+        if (changed) setManualStats(s);
+      }, [manualStats.ip, manualStats.k, manualStats.bb, manualStats.h, manualStats.hr,
+          manualStats.avg, manualStats.slg, manualStats.avg_vs_r, manualStats.slg_vs_r,
+          manualStats.avg_vs_l, manualStats.slg_vs_l, playerType]);
+
+      // HELPER FUNCTIONS
+      const hasRateStat = useCallback((val) => val != null && val !== '' && parseFloat(val) > 0, []);
+      const hasCountStat = useCallback((val) => val != null && val !== '' && !isNaN(parseFloat(val)), []);
+      const hasFieldingStat = useCallback((val) => val != null && val !== '' && !isNaN(parseFloat(val)), []);
+      const num = useCallback((val) => parseFloat(val), []);
+      const toPct = useCallback((val) => { const n = parseFloat(val); return n > 1 ? n : n * 100; }, []);
+
+      const scale = useCallback((value, min, max, inverse = false) => {
+        if (value === null || value === undefined || isNaN(parseFloat(value))) return null;
+        const v = parseFloat(value);
+        const normalized = inverse ? (max - v) / (max - min) : (v - min) / (max - min);
+        return Math.round(Math.max(0, Math.min(1, normalized)) * 100 + 25);
+      }, []);
+
+      // RATING CALCULATIONS
+      const calculateRatings = useCallback((stats) => {
+        const r = {};
+        const isCareer = stats.season === 'career' || stats.season === 'Career';
+        const isPitcher = stats.type === 'pitcher';
+        const year = parseInt(stats.season) || 2025;
+
+        const calcRate = (stat, ip) => hasCountStat(stat) && hasCountStat(ip) && num(ip) > 0 ? (num(stat) / num(ip)) * 9 : null;
+        const getK9 = () => hasRateStat(stats.k_9) ? num(stats.k_9) : calcRate(stats.k, stats.ip);
+        const getBB9 = () => hasRateStat(stats.bb_9) ? num(stats.bb_9) : calcRate(stats.bb, stats.ip);
+        const getH9 = () => hasRateStat(stats.h_9) ? num(stats.h_9) : calcRate(stats.h, stats.ip);
+        const getHR9 = () => hasRateStat(stats.hr_9) ? num(stats.hr_9) : calcRate(stats.hr, stats.ip);
+
+        const getTBF = () => hasCountStat(stats.tbf) ? num(stats.tbf) : (hasCountStat(stats.ip) && hasCountStat(stats.h) && hasCountStat(stats.bb)) ? num(stats.h) + num(stats.bb) + (num(stats.ip) * 3) : null;
+        const getKPct = () => hasRateStat(stats.k_pct) ? toPct(stats.k_pct) : (hasCountStat(stats.k) && getTBF()) ? (num(stats.k) / getTBF()) * 100 : null;
+
+        const eraVeloRating = (k9) => {
+          const avgK9 = year < 1950 ? 4 : year < 1970 ? 5 : year < 1990 ? 5.5 : year < 2010 ? 6.5 : 8.5;
+          return Math.min(99, Math.max(25, Math.round(60 + (k9 - avgK9) * 8)));
+        };
+        const eraBreakRating = (kPct) => {
+          const avgKPct = year < 1950 ? 10 : year < 1970 ? 14 : year < 1990 ? 15 : year < 2010 ? 17 : 22;
+          return Math.min(99, Math.max(25, Math.round(60 + (kPct - avgKPct) * 5)));
+        };
+
+        if (isPitcher) {
+          const k9 = getK9(), bb9 = getBB9(), h9 = getH9(), hr9 = getHR9(), kPct = getKPct();
+
+          r.h_per_9 = h9 ? scale(h9, 5.5, 10.5, true) : hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
+          r.k_per_9 = k9 ? scale(k9, 5.0, isCareer ? 10.5 : 13.0) : 70;
+          r.bb_per_9 = bb9 ? scale(bb9, 1.0, 5.5, true) : hasRateStat(stats.whip) ? scale(Math.max(1.5, num(stats.whip) * 9 - 8.5), 1.0, 5.5, true) : 70;
+          r.hr_per_9 = hr9 ? scale(hr9, 0.3, 1.8, true) : hasRateStat(stats.era) ? (num(stats.era) < 3 ? 95 : num(stats.era) < 4 ? 75 : num(stats.era) < 5 ? 55 : 40) : 70;
+          r.pitching_clutch = hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
+          r.control = r.bb_per_9 ? Math.round(r.bb_per_9 * 0.92) : 65;
+          r.velocity = hasRateStat(stats.fb_velo) ? scale(num(stats.fb_velo), 88, 101) : k9 ? eraVeloRating(k9) : 60;
+          r.break_rating = hasRateStat(stats.whiff_pct) ? scale(toPct(stats.whiff_pct), 20, 40) : kPct ? eraBreakRating(kPct) : 60;
+          r.stamina = hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : 220) : 80;
+          r.fielding = 55; r.arm_strength = r.velocity ? Math.round(r.velocity * 0.85) : 70; r.arm_accuracy = 60; r.reaction = 50;
+
+          const core = [r.h_per_9, r.k_per_9, r.bb_per_9, r.hr_per_9, r.pitching_clutch, r.control, r.velocity, r.break_rating].map(v => Math.min(v || 70, 99));
+          const avg = core.reduce((a, b) => a + b, 0) / 8;
+          r.overall = Math.min(99, Math.max(25, Math.round(avg + 7.5 + Math.min((r.stamina || 50) * 0.163, 8))));
+          const rpPenalty = Math.max(0, (58 - avg) * 1.4);
+          r.overall_rp = Math.min(99, Math.max(25, Math.round(avg + 7.5 - rpPenalty)));
+        } else {
+          if (hasRateStat(stats.avg_vs_r)) r.contact_r = scale(num(stats.avg_vs_r), 0.200, 0.350);
+          else if (hasRateStat(stats.avg)) {
+            const base = scale(num(stats.avg), 0.200, 0.350);
+            const kAdj = hasRateStat(stats.k_pct) && toPct(stats.k_pct) > 22 ? Math.round((toPct(stats.k_pct) - 22) * 0.8) : 0;
+            r.contact_r = base ? Math.max(25, base - kAdj) : 70;
+          } else r.contact_r = 70;
+          r.contact_l = hasRateStat(stats.avg_vs_l) ? scale(num(stats.avg_vs_l), 0.200, 0.350) : Math.max(25, r.contact_r - 12);
+
+          const getISO = () => hasRateStat(stats.iso) ? num(stats.iso) : (hasRateStat(stats.slg) && hasRateStat(stats.avg)) ? num(stats.slg) - num(stats.avg) : null;
+          r.power_r = hasRateStat(stats.iso_vs_r) ? scale(num(stats.iso_vs_r), 0.080, 0.300) : getISO() ? scale(getISO(), 0.080, 0.300) : 70;
+          r.power_l = hasRateStat(stats.iso_vs_l) ? scale(num(stats.iso_vs_l), 0.080, 0.300) : Math.max(25, r.power_r - 15);
+
+          r.vision = hasRateStat(stats.k_pct) ? scale(toPct(stats.k_pct), 5, 30, true) : hasRateStat(stats.o_swing_pct) ? scale(toPct(stats.o_swing_pct), 20, 40, true) : 70;
+          r.discipline = hasRateStat(stats.bb_pct) ? scale(toPct(stats.bb_pct), 5, 18) : (hasRateStat(stats.obp) && hasRateStat(stats.avg)) ? scale(num(stats.obp) - num(stats.avg), 0.030, 0.100) : 70;
+          r.clutch = hasRateStat(stats.avg_risp) ? scale(num(stats.avg_risp), 0.200, 0.350) : hasRateStat(stats.wpa) ? scale(num(stats.wpa), -1.0, 4.0) : 70;
+          r.fielding = hasFieldingStat(stats.oaa) ? scale(num(stats.oaa), -15, 15) : hasFieldingStat(stats.drs) ? scale(num(stats.drs), -15, 20) : hasRateStat(stats.fielding_pct) ? scale(num(stats.fielding_pct), 0.950, 1.000) : 65;
+
+          if (hasRateStat(stats.sprint_speed)) r.speed = scale(num(stats.sprint_speed), 23, 30);
+          else if (hasRateStat(stats.spd)) r.speed = scale(num(stats.spd), 1, 8);
+          else if (hasCountStat(stats.sb)) {
+            if (isCareer) r.speed = Math.min(99, Math.max(25, Math.round(25 + Math.log(num(stats.sb) + 1) * 11)));
+            else r.speed = scale(num(stats.sb), 0, 50);
+          } else r.speed = 50;
+          r.stealing = r.speed; r.baserunning = Math.round(r.speed * 0.9); r.bunt = 35; r.drag_bunt = 30;
+          r.arm_strength = Math.round(r.fielding * 0.9 + 10); r.arm_accuracy = Math.round(r.fielding * 0.85 + 10); r.reaction = Math.round(r.fielding * 0.8 + 15);
+
+          const core = [r.contact_r, r.contact_l, r.power_r, r.power_l, r.vision, r.discipline, r.clutch, r.fielding, r.speed].map(v => Math.min(v || 70, 99));
+          r.overall = Math.min(99, Math.max(25, Math.round(core.reduce((a, b) => a + b, 0) / 9 + 16)));
+        }
+        return r;
+      }, [hasRateStat, hasCountStat, hasFieldingStat, num, toPct, scale]);
+
+      const submitManualStats = useCallback(() => {
+        const stats = { ...manualStats, type: playerType, season: isCareer ? 'career' : (manualStats.season || '2025') };
+        setPlayerData(stats);
+        setRatings(calculateRatings(stats));
+      }, [manualStats, playerType, isCareer, calculateRatings]);
+
+      const loadTest = useCallback((stats) => { setPlayerData(stats); setRatings(calculateRatings(stats)); }, [calculateRatings]);
+      const testPedroia = () => loadTest({ name: "Dustin Pedroia", type: "hitter", season: "2007", avg: 0.317, obp: 0.380, slg: 0.442, iso: 0.125, hr: 8, sb: 7, k_pct: 8.1, bb_pct: 8.3, spd: 4.2, drs: 6 });
+      const testLabine = () => loadTest({ name: "Clem Labine", type: "pitcher", season: "1956", era: 3.63, ip: 1079.2, k: 551, bb: 396, h: 1045, hr: 76 });
+      const testFoxx = () => loadTest({ name: "Jimmie Foxx", type: "hitter", season: "1932", avg: 0.364, obp: 0.469, slg: 0.749, iso: 0.385, hr: 58, sb: 3, k_pct: 14.1, bb_pct: 17.1, fielding_pct: 0.991 });
+      const testCrochet = () => loadTest({ name: "Garrett Crochet", type: "pitcher", season: "2025", era: 2.29, whip: 0.92, ip: 146, k_9: 12.82, bb_9: 2.15, h_9: 6.02, hr_9: 0.80, fb_velo: 97.6, whiff_pct: 32.5 });
+      const testBerger = () => loadTest({ name: "Wally Berger", type: "hitter", season: "1935", avg: 0.295, obp: 0.355, slg: 0.548, iso: 0.253, hr: 34, sb: 3, k_pct: 12.4, bb_pct: 7.8, fielding_pct: 0.960 });
+
+      const downloadCSV = useCallback(() => {
+        if (!ratings || !playerData) return;
+        const rows = [['Attribute', 'Rating'], ...Object.entries(ratings).filter(([,v]) => v != null).map(([k, v]) => [k.replace(/_/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase()), Math.min(99, v)])];
+        const csvContent = rows.map(r => r.join(',')).join('\\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = \`\${(playerData.name || 'player').replace(/\\s+/g, '_')}_ratings.csv\`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }, [ratings, playerData]);
+
+      const getRatingColor = (v) => v >= 90 ? 'text-yellow-400' : v >= 80 ? 'text-purple-400' : v >= 70 ? 'text-blue-400' : v >= 60 ? 'text-green-400' : 'text-gray-400';
+      const getTier = (v) => v >= 90 ? { label: 'Diamond', color: 'from-cyan-400 to-blue-500', icon: '💎' } : v >= 80 ? { label: 'Gold', color: 'from-yellow-400 to-yellow-600', icon: '🥇' } : v >= 70 ? { label: 'Silver', color: 'from-gray-300 to-gray-500', icon: '🥈' } : v >= 60 ? { label: 'Bronze', color: 'from-orange-400 to-orange-600', icon: '🥉' } : { label: 'Common', color: 'from-gray-500 to-gray-700', icon: '⚫' };
+
+      const hitterFields = useMemo(() => [
+        { key: 'avg', label: 'AVG', placeholder: '.300' }, { key: 'avg_vs_r', label: 'AVG vR', placeholder: '.310' },
+        { key: 'avg_vs_l', label: 'AVG vL', placeholder: '.280' }, { key: 'obp', label: 'OBP', placeholder: '.380' },
+        { key: 'slg', label: 'SLG', placeholder: '.500' }, { key: 'slg_vs_r', label: 'SLG vR', placeholder: '.520' },
+        { key: 'slg_vs_l', label: 'SLG vL', placeholder: '.460' }, { key: 'iso', label: 'ISO', placeholder: 'auto', auto: true },
+        { key: 'iso_vs_r', label: 'ISO vR', placeholder: 'auto', auto: true }, { key: 'iso_vs_l', label: 'ISO vL', placeholder: 'auto', auto: true },
+        { key: 'hr', label: 'HR', placeholder: '30' }, { key: 'sb', label: 'SB', placeholder: '10' },
+        { key: 'k_pct', label: 'K%', placeholder: '20.0' }, { key: 'bb_pct', label: 'BB%', placeholder: '10.0' },
+        { key: 'sprint_speed', label: 'Sprint', placeholder: '27.0' }, { key: 'oaa', label: 'OAA', placeholder: '5' },
+        { key: 'drs', label: 'DRS', placeholder: '5' }, { key: 'fielding_pct', label: 'Fld%', placeholder: '.980' }
+      ], []);
+
+      const pitcherFields = useMemo(() => [
+        { key: 'era', label: 'ERA', placeholder: '3.50' }, { key: 'whip', label: 'WHIP', placeholder: '1.20' },
+        { key: 'ip', label: 'IP', placeholder: '180' }, { key: 'k', label: 'K', placeholder: '200' },
+        { key: 'bb', label: 'BB', placeholder: '50' }, { key: 'h', label: 'H', placeholder: '150' },
+        { key: 'hr', label: 'HR', placeholder: '20' }, { key: 'k_9', label: 'K/9', placeholder: 'auto', auto: true },
+        { key: 'bb_9', label: 'BB/9', placeholder: 'auto', auto: true }, { key: 'h_9', label: 'H/9', placeholder: 'auto', auto: true },
+        { key: 'hr_9', label: 'HR/9', placeholder: 'auto', auto: true }, { key: 'fb_velo', label: 'Velo', placeholder: '95.0' },
+        { key: 'whiff_pct', label: 'Whiff%', placeholder: '25.0' }
+      ], []);
+
+      const RatingRow = ({ label, value }) => (
+        <div className="flex justify-between items-center py-1">
+          <span className="text-slate-400 text-sm">{label}</span>
+          <span className={\`font-bold \${getRatingColor(Math.min(99, value || 0))}\`}>{Math.min(99, value || 0)}</span>
+        </div>
+      );
+
+      const fields = playerType === 'pitcher' ? pitcherFields : hitterFields;
+      const tier = ratings ? getTier(ratings.overall) : null;
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-8">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-6">
+              <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-white to-blue-500 mb-1">MLB The Show 25</h1>
+              <h2 className="text-xl font-bold text-slate-300">Rating Converter</h2>
+            </div>
+
+            <div className="bg-slate-800/80 backdrop-blur rounded-2xl p-6 mb-6 border border-slate-700">
+              <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-slate-700">
+                <span className="text-slate-400 text-sm self-center mr-2">Quick Tests:</span>
+                <button onClick={testPedroia} className="px-3 py-1.5 bg-green-600/80 hover:bg-green-500 text-white text-sm rounded-lg transition">Pedroia '07</button>
+                <button onClick={testCrochet} className="px-3 py-1.5 bg-purple-600/80 hover:bg-purple-500 text-white text-sm rounded-lg transition">Crochet '25</button>
+                <button onClick={testLabine} className="px-3 py-1.5 bg-orange-600/80 hover:bg-orange-500 text-white text-sm rounded-lg transition">Labine '56</button>
+                <button onClick={testFoxx} className="px-3 py-1.5 bg-yellow-600/80 hover:bg-yellow-500 text-white text-sm rounded-lg transition">Foxx '32</button>
+                <button onClick={testBerger} className="px-3 py-1.5 bg-lime-600/80 hover:bg-lime-500 text-white text-sm rounded-lg transition">Berger '35</button>
+              </div>
+
+              <div className="flex flex-wrap gap-4 mb-4">
+                <div>
+                  <label className="block text-slate-400 text-xs mb-1">Player Name</label>
+                  <input type="text" value={manualStats.name || ''} onChange={(e) => setManualStats({...manualStats, name: e.target.value})}
+                    placeholder="Player Name" className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm w-44" />
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-xs mb-1">Season</label>
+                  <input type="text" value={manualStats.season || ''} onChange={(e) => setManualStats({...manualStats, season: e.target.value})}
+                    placeholder="2025" disabled={isCareer} className={\`px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm w-20 \${isCareer ? 'opacity-50' : ''}\`} />
+                </div>
+                <div className="flex items-end pb-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={isCareer} onChange={(e) => setIsCareer(e.target.checked)}
+                      className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-blue-500" />
+                    <span className="text-slate-300 text-sm">Career</span>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-xs mb-1">Type</label>
+                  <select value={playerType} onChange={(e) => { setPlayerType(e.target.value); setManualStats({ name: manualStats.name, season: manualStats.season }); }}
+                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm">
+                    <option value="hitter">Hitter</option>
+                    <option value="pitcher">Pitcher</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 md:grid-cols-7 gap-2 mb-4">
+                {fields.map(f => (
+                  <div key={f.key}>
+                    <label className="block text-slate-400 text-xs mb-1">{f.label}</label>
+                    <input type="text" value={manualStats[f.key] || ''} readOnly={f.auto}
+                      onChange={(e) => setManualStats({...manualStats, [f.key]: e.target.value})}
+                      placeholder={f.placeholder}
+                      className={\`px-2 py-1.5 border border-slate-600 rounded text-white text-sm w-full \${f.auto ? 'bg-slate-800 text-slate-400 cursor-not-allowed' : 'bg-slate-700'}\`} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-4">
+                <button onClick={submitManualStats} className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold rounded-lg transition">Calculate Ratings</button>
+                <span className="text-slate-500 text-xs">Rate stats (K/9, ISO, etc.) auto-calculate from counting stats</span>
+              </div>
+            </div>
+
+            {ratings && playerData && (
+              <div className="bg-slate-800/80 backdrop-blur rounded-2xl p-6 border border-slate-700">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="md:w-1/3">
+                    <div className={\`bg-gradient-to-br \${tier.color} p-1 rounded-xl shadow-xl\`}>
+                      <div className="bg-slate-900 rounded-lg p-4 text-center">
+                        <h3 className="text-2xl font-bold text-white">{playerData.name || 'Player'}</h3>
+                        <p className="text-slate-400 text-sm">{playerData.season} • {playerData.type}</p>
+                        <div className="mt-4"><span className="text-6xl font-black text-white">{Math.min(99, ratings.overall)}</span></div>
+                        <div className="mt-2 text-lg">{tier.icon} {tier.label}</div>
+                        {playerData.type === 'pitcher' && <div className="mt-2 text-slate-400 text-sm">RP: {ratings.overall_rp}</div>}
+                      </div>
+                    </div>
+                    <button onClick={downloadCSV} className="mt-4 w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg flex items-center justify-center gap-2 transition">
+                      <Download /> Export CSV
+                    </button>
+                  </div>
+
+                  <div className="md:w-2/3 grid grid-cols-2 gap-4">
+                    {playerData.type === 'pitcher' ? (
+                      <>
+                        <div className="bg-slate-900/50 rounded-lg p-4">
+                          <h4 className="text-white font-semibold mb-2 flex items-center gap-2"><Target /> Pitching</h4>
+                          <RatingRow label="H/9" value={ratings.h_per_9} />
+                          <RatingRow label="K/9" value={ratings.k_per_9} />
+                          <RatingRow label="BB/9" value={ratings.bb_per_9} />
+                          <RatingRow label="HR/9" value={ratings.hr_per_9} />
+                          <RatingRow label="Clutch" value={ratings.pitching_clutch} />
+                          <RatingRow label="Control" value={ratings.control} />
+                          <RatingRow label="Velocity" value={ratings.velocity} />
+                          <RatingRow label="Break" value={ratings.break_rating} />
+                          <RatingRow label="Stamina" value={ratings.stamina} />
+                        </div>
+                        <div className="bg-slate-900/50 rounded-lg p-4">
+                          <h4 className="text-white font-semibold mb-2 flex items-center gap-2"><Shield /> Fielding</h4>
+                          <RatingRow label="Fielding" value={ratings.fielding} />
+                          <RatingRow label="Arm Strength" value={ratings.arm_strength} />
+                          <RatingRow label="Arm Accuracy" value={ratings.arm_accuracy} />
+                          <RatingRow label="Reaction" value={ratings.reaction} />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-slate-900/50 rounded-lg p-4">
+                          <h4 className="text-white font-semibold mb-2 flex items-center gap-2"><TrendingUp /> Hitting</h4>
+                          <RatingRow label="Contact R" value={ratings.contact_r} />
+                          <RatingRow label="Contact L" value={ratings.contact_l} />
+                          <RatingRow label="Power R" value={ratings.power_r} />
+                          <RatingRow label="Power L" value={ratings.power_l} />
+                          <RatingRow label="Vision" value={ratings.vision} />
+                          <RatingRow label="Discipline" value={ratings.discipline} />
+                          <RatingRow label="Clutch" value={ratings.clutch} />
+                        </div>
+                        <div className="bg-slate-900/50 rounded-lg p-4">
+                          <h4 className="text-white font-semibold mb-2 flex items-center gap-2"><Zap /> Speed</h4>
+                          <RatingRow label="Speed" value={ratings.speed} />
+                          <RatingRow label="Stealing" value={ratings.stealing} />
+                          <RatingRow label="Baserunning" value={ratings.baserunning} />
+                          <h4 className="text-white font-semibold mb-2 mt-4 flex items-center gap-2"><Shield /> Fielding</h4>
+                          <RatingRow label="Fielding" value={ratings.fielding} />
+                          <RatingRow label="Arm Strength" value={ratings.arm_strength} />
+                          <RatingRow label="Arm Accuracy" value={ratings.arm_accuracy} />
+                          <RatingRow label="Reaction" value={ratings.reaction} />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <details className="mt-4">
+                  <summary className="text-slate-400 text-sm cursor-pointer hover:text-slate-300 transition">View Raw Stats</summary>
+                  <pre className="mt-2 p-3 bg-slate-900 rounded text-xs text-slate-300 overflow-auto border border-slate-700">{JSON.stringify(playerData, null, 2)}</pre>
+                </details>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<MLBTheShowConverter />, document.getElementById('root'));
+  </script>
+</body>
+</html>
