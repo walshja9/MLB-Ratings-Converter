@@ -57,6 +57,7 @@
       const [ratings, setRatings] = useState(null);
       const [playerType, setPlayerType] = useState('hitter');
       const [isCareer, setIsCareer] = useState(false);
+      const [playerEra, setPlayerEra] = useState('modern');
       const [manualStats, setManualStats] = useState({});
 
       // AUTO-CALCULATE DERIVED STATS
@@ -124,7 +125,18 @@
         const r = {};
         const isCareer = stats.season === 'career' || stats.season === 'Career';
         const isPitcher = stats.type === 'pitcher';
-        const year = parseInt(stats.season) || 2025;
+        const era = stats.era_type || 'modern';
+
+        // Era-specific configurations
+        const eraConfig = {
+          deadball:    { avgK9: 4.0, avgKPct: 10, spBase: -3, rpBase: 1, staminaMax: 400, powerBoost: -5, kTolerance: 22, sbMax: 60 },
+          liveball:    { avgK9: 4.5, avgKPct: 12, spBase: -2, rpBase: 1, staminaMax: 350, powerBoost: 0, kTolerance: 22, sbMax: 50 },
+          integration: { avgK9: 5.0, avgKPct: 14, spBase: -1, rpBase: 1, staminaMax: 300, powerBoost: 2, kTolerance: 22, sbMax: 45 },
+          expansion:   { avgK9: 5.5, avgKPct: 15, spBase: 2, rpBase: 1, staminaMax: 280, powerBoost: 3, kTolerance: 22, sbMax: 40 },
+          freeagency:  { avgK9: 6.0, avgKPct: 16, spBase: 3, rpBase: 1, staminaMax: 250, powerBoost: 5, kTolerance: 22, sbMax: 35 },
+          modern:      { avgK9: 8.5, avgKPct: 22, spBase: 5, rpBase: 1, staminaMax: 220, powerBoost: 3, kTolerance: 26, sbMax: 30 },
+        };
+        const cfg = eraConfig[era] || eraConfig.modern;
 
         const calcRate = (stat, ip) => hasCountStat(stat) && hasCountStat(ip) && num(ip) > 0 ? (num(stat) / num(ip)) * 9 : null;
         const getK9 = () => hasRateStat(stats.k_9) ? num(stats.k_9) : calcRate(stats.k, stats.ip);
@@ -135,14 +147,9 @@
         const getTBF = () => hasCountStat(stats.tbf) ? num(stats.tbf) : (hasCountStat(stats.ip) && hasCountStat(stats.h) && hasCountStat(stats.bb)) ? num(stats.h) + num(stats.bb) + (num(stats.ip) * 3) : null;
         const getKPct = () => hasRateStat(stats.k_pct) ? toPct(stats.k_pct) : (hasCountStat(stats.k) && getTBF()) ? (num(stats.k) / getTBF()) * 100 : null;
 
-        const eraVeloRating = (k9) => {
-          const avgK9 = year < 1950 ? 4 : year < 1970 ? 5 : year < 1990 ? 5.5 : year < 2010 ? 6.5 : 8.5;
-          return Math.min(99, Math.max(25, Math.round(60 + (k9 - avgK9) * 8)));
-        };
-        const eraBreakRating = (kPct) => {
-          const avgKPct = year < 1950 ? 10 : year < 1970 ? 14 : year < 1990 ? 15 : year < 2010 ? 17 : 22;
-          return Math.min(99, Math.max(25, Math.round(60 + (kPct - avgKPct) * 5)));
-        };
+        // Era-relative velocity/break ratings
+        const eraVeloRating = (k9) => Math.min(99, Math.max(25, Math.round(60 + (k9 - cfg.avgK9) * 8)));
+        const eraBreakRating = (kPct) => Math.min(99, Math.max(25, Math.round(60 + (kPct - cfg.avgKPct) * 5)));
 
         if (isPitcher) {
           const k9 = getK9(), bb9 = getBB9(), h9 = getH9(), hr9 = getHR9(), kPct = getKPct();
@@ -153,52 +160,64 @@
           r.hr_per_9 = hr9 ? scale(hr9, 0.3, 1.8, true) : hasRateStat(stats.era) ? (num(stats.era) < 3 ? 95 : num(stats.era) < 4 ? 75 : num(stats.era) < 5 ? 55 : 40) : 70;
           r.pitching_clutch = hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
           r.control = r.bb_per_9 ? Math.round(r.bb_per_9 * 0.92) : 65;
-          r.velocity = hasRateStat(stats.fb_velo) ? scale(num(stats.fb_velo), 88, 101) : k9 ? eraVeloRating(k9) : 60;
-          r.break_rating = hasRateStat(stats.whiff_pct) ? scale(toPct(stats.whiff_pct), 20, 40) : kPct ? eraBreakRating(kPct) : 60;
-          r.stamina = hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : 220) : 80;
+          // Velocity: use fb_velo if available, era-relative for single seasons, neutral 60 for career
+          r.velocity = hasRateStat(stats.fb_velo) ? scale(num(stats.fb_velo), 88, 101) : (!isCareer && k9) ? eraVeloRating(k9) : 60;
+          // Break: use whiff% if available, era-relative for single seasons, neutral 60 for career
+          r.break_rating = hasRateStat(stats.whiff_pct) ? scale(toPct(stats.whiff_pct), 20, 40) : (!isCareer && kPct) ? eraBreakRating(kPct) : 60;
+          // Stamina: scale based on era's typical workload
+          r.stamina = hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) : 80;
           r.fielding = 55; r.arm_strength = r.velocity ? Math.round(r.velocity * 0.85) : 70; r.arm_accuracy = 60; r.reaction = 50;
 
           // Durability: based on games/appearances and IP
           if (hasCountStat(stats.games) && hasCountStat(stats.ip)) {
             const gamesWeight = scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70);
-            const ipWeight = scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : 220);
+            const ipWeight = scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax);
             r.durability = Math.round((gamesWeight * 0.4 + ipWeight * 0.6));
           } else if (hasCountStat(stats.games)) {
             r.durability = scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70);
           } else if (hasCountStat(stats.ip)) {
-            r.durability = scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : 220);
+            r.durability = scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax);
           } else {
             r.durability = 65;
           }
 
           const core = [r.h_per_9, r.k_per_9, r.bb_per_9, r.hr_per_9, r.pitching_clutch, r.control, r.velocity, r.break_rating].map(v => Math.min(v || 70, 99));
           const avg = core.reduce((a, b) => a + b, 0) / 8;
-          r.overall = Math.min(99, Math.max(25, Math.round(avg + 7.5 + Math.min((r.stamina || 50) * 0.163, 8))));
-          const rpPenalty = Math.max(0, (58 - avg) * 1.4);
-          r.overall_rp = Math.min(99, Math.max(25, Math.round(avg + 7.5 - rpPenalty)));
+
+          // SP Overall: coreAvg + era-specific base + stamina bonus (capped at 8)
+          const staminaBonus = Math.min((r.stamina || 50) * 0.163, 8);
+          r.overall = Math.min(99, Math.max(25, Math.round(avg + cfg.spBase + staminaBonus)));
+
+          // RP Overall: coreAvg + era-specific base
+          r.overall_rp = Math.min(99, Math.max(25, Math.round(avg + cfg.rpBase)));
         } else {
+          // Contact - use era-specific K% tolerance
           if (hasRateStat(stats.avg_vs_r)) r.contact_r = scale(num(stats.avg_vs_r), 0.200, 0.350);
           else if (hasRateStat(stats.avg)) {
             const base = scale(num(stats.avg), 0.200, 0.350);
-            const kAdj = hasRateStat(stats.k_pct) && toPct(stats.k_pct) > 22 ? Math.round((toPct(stats.k_pct) - 22) * 0.8) : 0;
+            const kAdj = hasRateStat(stats.k_pct) && toPct(stats.k_pct) > cfg.kTolerance ? Math.round((toPct(stats.k_pct) - cfg.kTolerance) * 0.8) : 0;
             r.contact_r = base ? Math.max(25, base - kAdj) : 70;
           } else r.contact_r = 70;
           r.contact_l = hasRateStat(stats.avg_vs_l) ? scale(num(stats.avg_vs_l), 0.200, 0.350) : Math.max(25, r.contact_r - 12);
 
+          // Power - add era-specific boost (Dead Ball gets penalty, Steroid Era gets boost)
           const getISO = () => hasRateStat(stats.iso) ? num(stats.iso) : (hasRateStat(stats.slg) && hasRateStat(stats.avg)) ? num(stats.slg) - num(stats.avg) : null;
-          r.power_r = hasRateStat(stats.iso_vs_r) ? scale(num(stats.iso_vs_r), 0.080, 0.300) : getISO() ? scale(getISO(), 0.080, 0.300) : 70;
-          r.power_l = hasRateStat(stats.iso_vs_l) ? scale(num(stats.iso_vs_l), 0.080, 0.300) : Math.max(25, r.power_r - 15);
+          const basePowerR = hasRateStat(stats.iso_vs_r) ? scale(num(stats.iso_vs_r), 0.080, 0.300) : getISO() ? scale(getISO(), 0.080, 0.300) : 70;
+          r.power_r = basePowerR ? Math.min(99, Math.max(25, basePowerR + cfg.powerBoost)) : 70;
+          const basePowerL = hasRateStat(stats.iso_vs_l) ? scale(num(stats.iso_vs_l), 0.080, 0.300) : Math.max(25, r.power_r - 15 - cfg.powerBoost);
+          r.power_l = Math.min(99, Math.max(25, basePowerL + cfg.powerBoost));
 
           r.vision = hasRateStat(stats.k_pct) ? scale(toPct(stats.k_pct), 5, 30, true) : hasRateStat(stats.o_swing_pct) ? scale(toPct(stats.o_swing_pct), 20, 40, true) : 70;
           r.discipline = hasRateStat(stats.bb_pct) ? scale(toPct(stats.bb_pct), 5, 18) : (hasRateStat(stats.obp) && hasRateStat(stats.avg)) ? scale(num(stats.obp) - num(stats.avg), 0.030, 0.100) : 70;
           r.clutch = hasRateStat(stats.avg_risp) ? scale(num(stats.avg_risp), 0.200, 0.350) : hasRateStat(stats.wpa) ? scale(num(stats.wpa), -1.0, 4.0) : 70;
           r.fielding = hasFieldingStat(stats.oaa) ? scale(num(stats.oaa), -15, 15) : hasFieldingStat(stats.drs) ? scale(num(stats.drs), -15, 20) : hasRateStat(stats.fielding_pct) ? scale(num(stats.fielding_pct), 0.950, 1.000) : 65;
 
+          // Speed - use era-specific SB expectations
           if (hasRateStat(stats.sprint_speed)) r.speed = scale(num(stats.sprint_speed), 23, 30);
           else if (hasRateStat(stats.spd)) r.speed = scale(num(stats.spd), 1, 8);
           else if (hasCountStat(stats.sb)) {
             if (isCareer) r.speed = Math.min(99, Math.max(25, Math.round(25 + Math.log(num(stats.sb) + 1) * 11)));
-            else r.speed = scale(num(stats.sb), 0, 50);
+            else r.speed = scale(num(stats.sb), 0, cfg.sbMax);
           } else r.speed = 50;
           r.stealing = r.speed; r.baserunning = Math.round(r.speed * 0.9); r.bunt = 35; r.drag_bunt = 30;
           r.arm_strength = Math.round(r.fielding * 0.9 + 10); r.arm_accuracy = Math.round(r.fielding * 0.85 + 10); r.reaction = Math.round(r.fielding * 0.8 + 15);
@@ -211,16 +230,25 @@
           }
 
           const core = [r.contact_r, r.contact_l, r.power_r, r.power_l, r.vision, r.discipline, r.clutch, r.fielding, r.speed].map(v => Math.min(v || 70, 99));
-          r.overall = Math.min(99, Math.max(25, Math.round(core.reduce((a, b) => a + b, 0) / 9 + 16)));
+          const coreAvg = core.reduce((a, b) => a + b, 0) / 9;
+
+          // Hitter Overall: coreAvg + 16 - penalty for low-rated players
+          const hitterPenalty = Math.max(0, (50 - coreAvg) * 1.9);
+          r.overall = Math.min(99, Math.max(25, Math.round(coreAvg + 16 - hitterPenalty)));
         }
         return r;
       }, [hasRateStat, hasCountStat, hasFieldingStat, num, toPct, scale]);
 
       const submitManualStats = useCallback(() => {
-        const stats = { ...manualStats, type: playerType, season: isCareer ? 'career' : (manualStats.season || '2025') };
+        const stats = {
+          ...manualStats,
+          type: playerType,
+          season: isCareer ? 'career' : (manualStats.season || '2025'),
+          era_type: playerEra
+        };
         setPlayerData(stats);
         setRatings(calculateRatings(stats));
-      }, [manualStats, playerType, isCareer, calculateRatings]);
+      }, [manualStats, playerType, isCareer, playerEra, calculateRatings]);
 
       const loadTest = useCallback((stats) => { setPlayerData(stats); setRatings(calculateRatings(stats)); }, [calculateRatings]);
       const testPedroia = () => loadTest({ name: "Dustin Pedroia", type: "hitter", season: "2007", avg: 0.317, obp: 0.380, slg: 0.442, iso: 0.125, hr: 8, sb: 7, k_pct: 8.1, bb_pct: 8.3, spd: 4.2, drs: 6, games: 139 });
@@ -320,6 +348,18 @@
                     className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm">
                     <option value="hitter">Hitter</option>
                     <option value="pitcher">Pitcher</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-xs mb-1">Era</label>
+                  <select value={playerEra} onChange={(e) => setPlayerEra(e.target.value)}
+                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm">
+                    <option value="deadball">Dead Ball (pre-1920)</option>
+                    <option value="liveball">Live Ball (1920-1941)</option>
+                    <option value="integration">Integration (1947-1960)</option>
+                    <option value="expansion">Expansion (1961-1976)</option>
+                    <option value="freeagency">Free Agency/Steroid (1977-2005)</option>
+                    <option value="modern">Modern (2006+)</option>
                   </select>
                 </div>
               </div>
