@@ -3,468 +3,403 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MLB The Show 25 - Rating Converter</title>
-  <meta name="description" content="Convert real MLB statistics to MLB The Show 25 video game ratings. Works for both current and historical players.">
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>MLB The Show 25 Rating Converter</title>
   <style>
-    body { margin: 0; padding: 0; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      padding: 1rem;
+      color: #e2e8f0;
+    }
+    
+    @media (min-width: 768px) { body { padding: 2rem; } }
+    
+    .container { max-width: 1100px; margin: 0 auto; }
+    
+    .header { text-align: center; margin-bottom: 1.5rem; }
+    .header h1 {
+      font-size: 2.25rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, #ef4444, #ffffff, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.25rem;
+    }
+    .header h2 { font-size: 1.25rem; font-weight: 700; color: #cbd5e1; }
+    
+    .card {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(8px);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #334155;
+    }
+    
+    .form-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+    
+    .form-group label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; }
+    
+    .form-group input, .form-group select {
+      padding: 0.5rem 0.75rem;
+      background: #334155;
+      border: 1px solid #475569;
+      border-radius: 0.375rem;
+      color: white;
+      font-size: 0.875rem;
+      outline: none;
+    }
+    
+    .form-group input:focus, .form-group select:focus { border-color: #3b82f6; }
+    .form-group input[readonly] { background: #1e293b; color: #94a3b8; cursor: not-allowed; }
+    .form-group input.disabled { opacity: 0.5; }
+    .input-name { width: 11rem; }
+    .input-season { width: 5rem; }
+    
+    .checkbox-group { display: flex; align-items: flex-end; padding-bottom: 0.25rem; }
+    .checkbox-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; color: #cbd5e1; }
+    .checkbox-label input { width: 1rem; height: 1rem; accent-color: #3b82f6; }
+    
+    .fields-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+    @media (min-width: 768px) { .fields-grid { grid-template-columns: repeat(7, 1fr); } }
+    .fields-grid input { width: 100%; padding: 0.375rem 0.5rem; }
+    
+    .btn-row { display: flex; align-items: center; gap: 1rem; }
+    
+    .btn-primary {
+      padding: 0.5rem 1.5rem;
+      background: linear-gradient(90deg, #2563eb, #3b82f6);
+      color: white;
+      font-weight: 600;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    
+    .btn-secondary {
+      width: 100%;
+      padding: 0.5rem 1rem;
+      background: #334155;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: #475569; }
+    
+    .hint { font-size: 0.75rem; color: #64748b; }
+    .hidden { display: none !important; }
+    
+    .results-grid { display: flex; flex-direction: column; gap: 1.5rem; }
+    @media (min-width: 768px) { .results-grid { flex-direction: row; } .results-left { width: 33.333%; } .results-right { width: 66.666%; } }
+    
+    .player-card-wrapper { padding: 4px; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    .player-card { background: #0f172a; border-radius: 0.5rem; padding: 1rem; text-align: center; }
+    .player-card h3 { font-size: 1.5rem; font-weight: 700; color: white; }
+    .player-card .meta { font-size: 0.875rem; color: #94a3b8; }
+    .player-card .overall { font-size: 3.75rem; font-weight: 900; color: white; margin: 1rem 0; }
+    .player-card .tier { font-size: 1.125rem; }
+    .player-card .rp { font-size: 0.875rem; color: #94a3b8; margin-top: 0.5rem; }
+    
+    .ratings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .ratings-section { background: rgba(15, 23, 42, 0.5); border-radius: 0.5rem; padding: 1rem; }
+    .ratings-section h4 { color: white; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .ratings-section h4.mt { margin-top: 1rem; }
+    
+    .rating-row { display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0; }
+    .rating-row .label { font-size: 0.875rem; color: #94a3b8; }
+    .rating-row .value { font-weight: 700; }
+    
+    .color-diamond { color: #facc15; }
+    .color-gold { color: #a855f7; }
+    .color-silver { color: #60a5fa; }
+    .color-bronze { color: #4ade80; }
+    .color-common { color: #9ca3af; }
+    
+    .tier-diamond { background: linear-gradient(135deg, #22d3ee, #3b82f6); }
+    .tier-gold { background: linear-gradient(135deg, #facc15, #ca8a04); }
+    .tier-silver { background: linear-gradient(135deg, #d1d5db, #6b7280); }
+    .tier-bronze { background: linear-gradient(135deg, #fb923c, #ea580c); }
+    .tier-common { background: linear-gradient(135deg, #6b7280, #374151); }
+    
+    details { margin-top: 1rem; }
+    summary { font-size: 0.875rem; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
+    summary:hover { color: #cbd5e1; }
+    pre { margin-top: 0.5rem; padding: 0.75rem; background: #0f172a; border-radius: 0.375rem; font-size: 0.75rem; color: #cbd5e1; overflow: auto; border: 1px solid #334155; }
+    .download-icon { width: 1.25rem; height: 1.25rem; }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div class="container">
+    <div class="header">
+      <h1>MLB The Show 25</h1>
+      <h2>Rating Converter</h2>
+    </div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useMemo, useCallback } = React;
-
-    // Lucide React Icons (inline SVG components)
-    const Download = () => (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-      </svg>
-    );
-
-    const TrendingUp = () => (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-      </svg>
-    );
-
-    const Target = () => (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" strokeWidth={2} />
-        <circle cx="12" cy="12" r="6" strokeWidth={2} />
-        <circle cx="12" cy="12" r="2" strokeWidth={2} />
-      </svg>
-    );
-
-    const Zap = () => (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    );
-
-    const Shield = () => (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    );
-
-    function MLBTheShowConverter() {
-      const [playerData, setPlayerData] = useState(null);
-      const [ratings, setRatings] = useState(null);
-      const [playerType, setPlayerType] = useState('hitter');
-      const [isCareer, setIsCareer] = useState(false);
-      const [playerEra, setPlayerEra] = useState('modern');
-      const [manualStats, setManualStats] = useState({});
-
-      // AUTO-CALCULATE DERIVED STATS
-      useEffect(() => {
-        const s = { ...manualStats };
-        let changed = false;
-
-        if (playerType === 'pitcher') {
-          const ip = parseFloat(s.ip);
-          if (ip > 0) {
-            const stats = ['k', 'bb', 'h', 'hr'];
-            stats.forEach(stat => {
-              const val = parseFloat(s[stat]);
-              if (val >= 0 && !isNaN(val)) {
-                const rate = ((val / ip) * 9).toFixed(2);
-                const rateKey = `${stat}_9`;
-                if (s[rateKey] !== rate) {
-                  s[rateKey] = rate;
-                  changed = true;
-                }
-              }
-            });
-          }
-        } else {
-          const isoCalcs = [
-            { avg: 'avg', slg: 'slg', iso: 'iso' },
-            { avg: 'avg_vs_r', slg: 'slg_vs_r', iso: 'iso_vs_r' },
-            { avg: 'avg_vs_l', slg: 'slg_vs_l', iso: 'iso_vs_l' }
-          ];
-
-          isoCalcs.forEach(({ avg, slg, iso }) => {
-            const avgVal = parseFloat(s[avg]);
-            const slgVal = parseFloat(s[slg]);
-            if (avgVal > 0 && slgVal > 0) {
-              const isoVal = (slgVal - avgVal).toFixed(3);
-              if (s[iso] !== isoVal) {
-                s[iso] = isoVal;
-                changed = true;
-              }
-            }
-          });
-        }
-
-        if (changed) setManualStats(s);
-      }, [manualStats.ip, manualStats.k, manualStats.bb, manualStats.h, manualStats.hr,
-          manualStats.avg, manualStats.slg, manualStats.avg_vs_r, manualStats.slg_vs_r,
-          manualStats.avg_vs_l, manualStats.slg_vs_l, playerType]);
-
-      // HELPER FUNCTIONS
-      const hasRateStat = useCallback((val) => val != null && val !== '' && parseFloat(val) > 0, []);
-      const hasCountStat = useCallback((val) => val != null && val !== '' && !isNaN(parseFloat(val)), []);
-      const hasFieldingStat = useCallback((val) => val != null && val !== '' && !isNaN(parseFloat(val)), []);
-      const num = useCallback((val) => parseFloat(val), []);
-      const toPct = useCallback((val) => { const n = parseFloat(val); return n > 1 ? n : n * 100; }, []);
-
-      const scale = useCallback((value, min, max, inverse = false) => {
-        if (value === null || value === undefined || isNaN(parseFloat(value))) return null;
-        const v = parseFloat(value);
-        const normalized = inverse ? (max - v) / (max - min) : (v - min) / (max - min);
-        return Math.round(Math.max(0, Math.min(1, normalized)) * 100 + 25);
-      }, []);
-
-      // RATING CALCULATIONS
-      const calculateRatings = useCallback((stats) => {
-        const r = {};
-        const isCareer = stats.season === 'career' || stats.season === 'Career';
-        const isPitcher = stats.type === 'pitcher';
-        const era = stats.era_type || 'modern';
-
-        // Era-specific configurations
-        const eraConfig = {
-          deadball:    { avgK9: 4.0, avgKPct: 10, spBase: -3, rpBase: 1, staminaMax: 400, powerBoost: -5, kTolerance: 22, sbMax: 60 },
-          liveball:    { avgK9: 4.5, avgKPct: 12, spBase: -2, rpBase: 1, staminaMax: 350, powerBoost: 0, kTolerance: 22, sbMax: 50 },
-          integration: { avgK9: 5.0, avgKPct: 14, spBase: -1, rpBase: 1, staminaMax: 300, powerBoost: 2, kTolerance: 22, sbMax: 45 },
-          expansion:   { avgK9: 5.5, avgKPct: 15, spBase: 2, rpBase: 1, staminaMax: 280, powerBoost: 3, kTolerance: 22, sbMax: 40 },
-          freeagency:  { avgK9: 6.0, avgKPct: 16, spBase: 3, rpBase: 1, staminaMax: 250, powerBoost: 5, kTolerance: 22, sbMax: 35 },
-          modern:      { avgK9: 8.5, avgKPct: 22, spBase: 5, rpBase: 1, staminaMax: 220, powerBoost: 3, kTolerance: 26, sbMax: 30 },
-        };
-        const cfg = eraConfig[era] || eraConfig.modern;
-
-        const calcRate = (stat, ip) => hasCountStat(stat) && hasCountStat(ip) && num(ip) > 0 ? (num(stat) / num(ip)) * 9 : null;
-        const getK9 = () => hasRateStat(stats.k_9) ? num(stats.k_9) : calcRate(stats.k, stats.ip);
-        const getBB9 = () => hasRateStat(stats.bb_9) ? num(stats.bb_9) : calcRate(stats.bb, stats.ip);
-        const getH9 = () => hasRateStat(stats.h_9) ? num(stats.h_9) : calcRate(stats.h, stats.ip);
-        const getHR9 = () => hasRateStat(stats.hr_9) ? num(stats.hr_9) : calcRate(stats.hr, stats.ip);
-
-        const getTBF = () => hasCountStat(stats.tbf) ? num(stats.tbf) : (hasCountStat(stats.ip) && hasCountStat(stats.h) && hasCountStat(stats.bb)) ? num(stats.h) + num(stats.bb) + (num(stats.ip) * 3) : null;
-        const getKPct = () => hasRateStat(stats.k_pct) ? toPct(stats.k_pct) : (hasCountStat(stats.k) && getTBF()) ? (num(stats.k) / getTBF()) * 100 : null;
-
-        // Era-relative velocity/break ratings
-        const eraVeloRating = (k9) => Math.min(99, Math.max(25, Math.round(60 + (k9 - cfg.avgK9) * 8)));
-        const eraBreakRating = (kPct) => Math.min(99, Math.max(25, Math.round(60 + (kPct - cfg.avgKPct) * 5)));
-
-        if (isPitcher) {
-          const k9 = getK9(), bb9 = getBB9(), h9 = getH9(), hr9 = getHR9(), kPct = getKPct();
-
-          r.h_per_9 = h9 ? scale(h9, 5.5, 10.5, true) : hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
-          r.k_per_9 = k9 ? scale(k9, 5.0, isCareer ? 10.5 : 13.0) : 70;
-          r.bb_per_9 = bb9 ? scale(bb9, 1.0, 5.5, true) : hasRateStat(stats.whip) ? scale(Math.max(1.5, num(stats.whip) * 9 - 8.5), 1.0, 5.5, true) : 70;
-          r.hr_per_9 = hr9 ? scale(hr9, 0.3, 1.8, true) : hasRateStat(stats.era) ? (num(stats.era) < 3 ? 95 : num(stats.era) < 4 ? 75 : num(stats.era) < 5 ? 55 : 40) : 70;
-          r.pitching_clutch = hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
-          r.control = r.bb_per_9 ? Math.round(r.bb_per_9 * 0.92) : 65;
-          // Velocity: use fb_velo if available, era-relative for single seasons, neutral 60 for career
-          r.velocity = hasRateStat(stats.fb_velo) ? scale(num(stats.fb_velo), 88, 101) : (!isCareer && k9) ? eraVeloRating(k9) : 60;
-          // Break: use whiff% if available, era-relative for single seasons, neutral 60 for career
-          r.break_rating = hasRateStat(stats.whiff_pct) ? scale(toPct(stats.whiff_pct), 20, 40) : (!isCareer && kPct) ? eraBreakRating(kPct) : 60;
-          // Stamina: scale based on era's typical workload
-          r.stamina = hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) : 80;
-          r.fielding = 55; r.arm_strength = r.velocity ? Math.round(r.velocity * 0.85) : 70; r.arm_accuracy = 60; r.reaction = 50;
-
-          // Durability: based on games/appearances and IP
-          if (hasCountStat(stats.games) && hasCountStat(stats.ip)) {
-            const gamesWeight = scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70);
-            const ipWeight = scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax);
-            r.durability = Math.round((gamesWeight * 0.4 + ipWeight * 0.6));
-          } else if (hasCountStat(stats.games)) {
-            r.durability = scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70);
-          } else if (hasCountStat(stats.ip)) {
-            r.durability = scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax);
-          } else {
-            r.durability = 65;
-          }
-
-          const core = [r.h_per_9, r.k_per_9, r.bb_per_9, r.hr_per_9, r.pitching_clutch, r.control, r.velocity, r.break_rating].map(v => Math.min(v || 70, 99));
-          const avg = core.reduce((a, b) => a + b, 0) / 8;
-
-          // SP Overall: coreAvg + era-specific base + stamina bonus (capped at 8)
-          const staminaBonus = Math.min((r.stamina || 50) * 0.163, 8);
-          r.overall = Math.min(99, Math.max(25, Math.round(avg + cfg.spBase + staminaBonus)));
-
-          // RP Overall: coreAvg + era-specific base
-          r.overall_rp = Math.min(99, Math.max(25, Math.round(avg + cfg.rpBase)));
-        } else {
-          // Contact - use era-specific K% tolerance
-          if (hasRateStat(stats.avg_vs_r)) r.contact_r = scale(num(stats.avg_vs_r), 0.200, 0.350);
-          else if (hasRateStat(stats.avg)) {
-            const base = scale(num(stats.avg), 0.200, 0.350);
-            const kAdj = hasRateStat(stats.k_pct) && toPct(stats.k_pct) > cfg.kTolerance ? Math.round((toPct(stats.k_pct) - cfg.kTolerance) * 0.8) : 0;
-            r.contact_r = base ? Math.max(25, base - kAdj) : 70;
-          } else r.contact_r = 70;
-          r.contact_l = hasRateStat(stats.avg_vs_l) ? scale(num(stats.avg_vs_l), 0.200, 0.350) : Math.max(25, r.contact_r - 12);
-
-          // Power - add era-specific boost (Dead Ball gets penalty, Steroid Era gets boost)
-          const getISO = () => hasRateStat(stats.iso) ? num(stats.iso) : (hasRateStat(stats.slg) && hasRateStat(stats.avg)) ? num(stats.slg) - num(stats.avg) : null;
-          const basePowerR = hasRateStat(stats.iso_vs_r) ? scale(num(stats.iso_vs_r), 0.080, 0.300) : getISO() ? scale(getISO(), 0.080, 0.300) : 70;
-          r.power_r = basePowerR ? Math.min(99, Math.max(25, basePowerR + cfg.powerBoost)) : 70;
-          const basePowerL = hasRateStat(stats.iso_vs_l) ? scale(num(stats.iso_vs_l), 0.080, 0.300) : Math.max(25, r.power_r - 15 - cfg.powerBoost);
-          r.power_l = Math.min(99, Math.max(25, basePowerL + cfg.powerBoost));
-
-          r.vision = hasRateStat(stats.k_pct) ? scale(toPct(stats.k_pct), 5, 30, true) : hasRateStat(stats.o_swing_pct) ? scale(toPct(stats.o_swing_pct), 20, 40, true) : 70;
-          r.discipline = hasRateStat(stats.bb_pct) ? scale(toPct(stats.bb_pct), 5, 18) : (hasRateStat(stats.obp) && hasRateStat(stats.avg)) ? scale(num(stats.obp) - num(stats.avg), 0.030, 0.100) : 70;
-          r.clutch = hasRateStat(stats.avg_risp) ? scale(num(stats.avg_risp), 0.200, 0.350) : hasRateStat(stats.wpa) ? scale(num(stats.wpa), -1.0, 4.0) : 70;
-          r.fielding = hasFieldingStat(stats.oaa) ? scale(num(stats.oaa), -15, 15) : hasFieldingStat(stats.drs) ? scale(num(stats.drs), -15, 20) : hasRateStat(stats.fielding_pct) ? scale(num(stats.fielding_pct), 0.950, 1.000) : 65;
-
-          // Speed - use era-specific SB expectations
-          if (hasRateStat(stats.sprint_speed)) r.speed = scale(num(stats.sprint_speed), 23, 30);
-          else if (hasRateStat(stats.spd)) r.speed = scale(num(stats.spd), 1, 8);
-          else if (hasCountStat(stats.sb)) {
-            if (isCareer) r.speed = Math.min(99, Math.max(25, Math.round(25 + Math.log(num(stats.sb) + 1) * 11)));
-            else r.speed = scale(num(stats.sb), 0, cfg.sbMax);
-          } else r.speed = 50;
-          r.stealing = r.speed; r.baserunning = Math.round(r.speed * 0.9); r.bunt = 35; r.drag_bunt = 30;
-          r.arm_strength = Math.round(r.fielding * 0.9 + 10); r.arm_accuracy = Math.round(r.fielding * 0.85 + 10); r.reaction = Math.round(r.fielding * 0.8 + 15);
-
-          // Durability: based on games played
-          if (hasCountStat(stats.games)) {
-            r.durability = scale(num(stats.games), isCareer ? 500 : 40, isCareer ? 3000 : 162);
-          } else {
-            r.durability = 65;
-          }
-
-          const core = [r.contact_r, r.contact_l, r.power_r, r.power_l, r.vision, r.discipline, r.clutch, r.fielding, r.speed].map(v => Math.min(v || 70, 99));
-          const coreAvg = core.reduce((a, b) => a + b, 0) / 9;
-
-          // Hitter Overall: coreAvg + 16 - penalty for low-rated players
-          const hitterPenalty = Math.max(0, (50 - coreAvg) * 1.9);
-          r.overall = Math.min(99, Math.max(25, Math.round(coreAvg + 16 - hitterPenalty)));
-        }
-        return r;
-      }, [hasRateStat, hasCountStat, hasFieldingStat, num, toPct, scale]);
-
-      const submitManualStats = useCallback(() => {
-        const stats = {
-          ...manualStats,
-          type: playerType,
-          season: isCareer ? 'career' : (manualStats.season || '2025'),
-          era_type: playerEra
-        };
-        setPlayerData(stats);
-        setRatings(calculateRatings(stats));
-      }, [manualStats, playerType, isCareer, playerEra, calculateRatings]);
-
-      const loadTest = useCallback((stats) => { setPlayerData(stats); setRatings(calculateRatings(stats)); }, [calculateRatings]);
-      const testPedroia = () => loadTest({ name: "Dustin Pedroia", type: "hitter", season: "2007", avg: 0.317, obp: 0.380, slg: 0.442, iso: 0.125, hr: 8, sb: 7, k_pct: 8.1, bb_pct: 8.3, spd: 4.2, drs: 6, games: 139 });
-      const testLabine = () => loadTest({ name: "Clem Labine", type: "pitcher", season: "1956", era: 3.63, ip: 1079.2, k: 551, bb: 396, h: 1045, hr: 76, games: 513 });
-      const testFoxx = () => loadTest({ name: "Jimmie Foxx", type: "hitter", season: "1932", avg: 0.364, obp: 0.469, slg: 0.749, iso: 0.385, hr: 58, sb: 3, k_pct: 14.1, bb_pct: 17.1, fielding_pct: 0.991, games: 154 });
-      const testCrochet = () => loadTest({ name: "Garrett Crochet", type: "pitcher", season: "2025", era: 2.29, whip: 0.92, ip: 146, k_9: 12.82, bb_9: 2.15, h_9: 6.02, hr_9: 0.80, fb_velo: 97.6, whiff_pct: 32.5, games: 32 });
-      const testBerger = () => loadTest({ name: "Wally Berger", type: "hitter", season: "1935", avg: 0.295, obp: 0.355, slg: 0.548, iso: 0.253, hr: 34, sb: 3, k_pct: 12.4, bb_pct: 7.8, fielding_pct: 0.960, games: 150 });
-
-      const downloadCSV = useCallback(() => {
-        if (!ratings || !playerData) return;
-        const rows = [['Attribute', 'Rating'], ...Object.entries(ratings).filter(([,v]) => v != null).map(([k, v]) => [k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), Math.min(99, v)])];
-        const csvContent = rows.map(r => r.join(',')).join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${(playerData.name || 'player').replace(/\s+/g, '_')}_ratings.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }, [ratings, playerData]);
-
-      const getRatingColor = (v) => v >= 90 ? 'text-yellow-400' : v >= 80 ? 'text-purple-400' : v >= 70 ? 'text-blue-400' : v >= 60 ? 'text-green-400' : 'text-gray-400';
-      const getTier = (v) => v >= 90 ? { label: 'Diamond', color: 'from-cyan-400 to-blue-500', icon: '💎' } : v >= 80 ? { label: 'Gold', color: 'from-yellow-400 to-yellow-600', icon: '🥇' } : v >= 70 ? { label: 'Silver', color: 'from-gray-300 to-gray-500', icon: '🥈' } : v >= 60 ? { label: 'Bronze', color: 'from-orange-400 to-orange-600', icon: '🥉' } : { label: 'Common', color: 'from-gray-500 to-gray-700', icon: '⚫' };
-
-      const hitterFields = useMemo(() => [
-        { key: 'avg', label: 'AVG', placeholder: '.300' }, { key: 'avg_vs_r', label: 'AVG vR', placeholder: '.310' },
-        { key: 'avg_vs_l', label: 'AVG vL', placeholder: '.280' }, { key: 'obp', label: 'OBP', placeholder: '.380' },
-        { key: 'slg', label: 'SLG', placeholder: '.500' }, { key: 'slg_vs_r', label: 'SLG vR', placeholder: '.520' },
-        { key: 'slg_vs_l', label: 'SLG vL', placeholder: '.460' }, { key: 'iso', label: 'ISO', placeholder: 'auto', auto: true },
-        { key: 'iso_vs_r', label: 'ISO vR', placeholder: 'auto', auto: true }, { key: 'iso_vs_l', label: 'ISO vL', placeholder: 'auto', auto: true },
-        { key: 'hr', label: 'HR', placeholder: '30' }, { key: 'sb', label: 'SB', placeholder: '10' },
-        { key: 'k_pct', label: 'K%', placeholder: '20.0' }, { key: 'bb_pct', label: 'BB%', placeholder: '10.0' },
-        { key: 'sprint_speed', label: 'Sprint', placeholder: '27.0' }, { key: 'oaa', label: 'OAA', placeholder: '5' },
-        { key: 'drs', label: 'DRS', placeholder: '5' }, { key: 'fielding_pct', label: 'Fld%', placeholder: '.980' },
-        { key: 'games', label: 'G', placeholder: '150' }
-      ], []);
-
-      const pitcherFields = useMemo(() => [
-        { key: 'era', label: 'ERA', placeholder: '3.50' }, { key: 'whip', label: 'WHIP', placeholder: '1.20' },
-        { key: 'ip', label: 'IP', placeholder: '180' }, { key: 'k', label: 'K', placeholder: '200' },
-        { key: 'bb', label: 'BB', placeholder: '50' }, { key: 'h', label: 'H', placeholder: '150' },
-        { key: 'hr', label: 'HR', placeholder: '20' }, { key: 'k_9', label: 'K/9', placeholder: 'auto', auto: true },
-        { key: 'bb_9', label: 'BB/9', placeholder: 'auto', auto: true }, { key: 'h_9', label: 'H/9', placeholder: 'auto', auto: true },
-        { key: 'hr_9', label: 'HR/9', placeholder: 'auto', auto: true }, { key: 'fb_velo', label: 'Velo', placeholder: '95.0' },
-        { key: 'whiff_pct', label: 'Whiff%', placeholder: '25.0' }, { key: 'games', label: 'G', placeholder: '32' }
-      ], []);
-
-      const RatingRow = ({ label, value }) => (
-        <div className="flex justify-between items-center py-1">
-          <span className="text-slate-400 text-sm">{label}</span>
-          <span className={`font-bold ${getRatingColor(Math.min(99, value || 0))}`}>{Math.min(99, value || 0)}</span>
+    <div class="card">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Player Name</label>
+          <input type="text" id="name" placeholder="Player Name" class="input-name">
         </div>
-      );
+        <div class="form-group">
+          <label>Season</label>
+          <input type="text" id="season" placeholder="2025" class="input-season">
+        </div>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="isCareer">
+            <span>Career</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <select id="playerType">
+            <option value="hitter">Hitter</option>
+            <option value="pitcher">Pitcher</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Era</label>
+          <select id="playerEra">
+            <option value="deadball">Dead Ball (pre-1920)</option>
+            <option value="liveball">Live Ball (1920-1941)</option>
+            <option value="integration">Integration (1947-1960)</option>
+            <option value="expansion">Expansion (1961-1976)</option>
+            <option value="freeagency">Free Agency/Steroid (1977-2005)</option>
+            <option value="modern" selected>Modern (2006+)</option>
+          </select>
+        </div>
+        <div class="form-group" id="positionContainer">
+          <label>Position</label>
+          <select id="playerPosition">
+            <option value="C">C (Catcher)</option>
+            <option value="1B">1B (First Base)</option>
+            <option value="2B">2B (Second Base)</option>
+            <option value="3B">3B (Third Base)</option>
+            <option value="SS">SS (Shortstop)</option>
+            <option value="LF">LF (Left Field)</option>
+            <option value="CF">CF (Center Field)</option>
+            <option value="RF" selected>RF (Right Field)</option>
+            <option value="DH">DH (Designated Hitter)</option>
+          </select>
+        </div>
+      </div>
 
-      const fields = playerType === 'pitcher' ? pitcherFields : hitterFields;
-      const tier = ratings ? getTier(ratings.overall) : null;
+      <div id="fieldsContainer" class="fields-grid"></div>
 
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-8">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-6">
-              <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-white to-blue-500 mb-1">MLB The Show 25</h1>
-              <h2 className="text-xl font-bold text-slate-300">Rating Converter</h2>
+      <div class="btn-row">
+        <button onclick="calculateRatings()" class="btn-primary">Calculate Ratings</button>
+        <span class="hint">Rate stats (K/9, ISO, etc.) auto-calculate from counting stats</span>
+      </div>
+    </div>
+
+    <div id="resultsContainer" class="card hidden">
+      <div class="results-grid">
+        <div class="results-left">
+          <div id="cardContainer" class="player-card-wrapper">
+            <div class="player-card">
+              <h3 id="resultName">Player</h3>
+              <p class="meta" id="resultMeta">2025 • hitter</p>
+              <div class="overall" id="resultOverall">0</div>
+              <div class="tier" id="resultTier"></div>
+              <div class="rp hidden" id="resultRP"></div>
             </div>
-
-            <div className="bg-slate-800/80 backdrop-blur rounded-2xl p-6 mb-6 border border-slate-700">
-              <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-slate-700">
-                <span className="text-slate-400 text-sm self-center mr-2">Quick Tests:</span>
-                <button onClick={testPedroia} className="px-3 py-1.5 bg-green-600/80 hover:bg-green-500 text-white text-sm rounded-lg transition">Pedroia '07</button>
-                <button onClick={testCrochet} className="px-3 py-1.5 bg-purple-600/80 hover:bg-purple-500 text-white text-sm rounded-lg transition">Crochet '25</button>
-                <button onClick={testLabine} className="px-3 py-1.5 bg-orange-600/80 hover:bg-orange-500 text-white text-sm rounded-lg transition">Labine '56</button>
-                <button onClick={testFoxx} className="px-3 py-1.5 bg-yellow-600/80 hover:bg-yellow-500 text-white text-sm rounded-lg transition">Foxx '32</button>
-                <button onClick={testBerger} className="px-3 py-1.5 bg-lime-600/80 hover:bg-lime-500 text-white text-sm rounded-lg transition">Berger '35</button>
-              </div>
-
-              <div className="flex flex-wrap gap-4 mb-4">
-                <div>
-                  <label className="block text-slate-400 text-xs mb-1">Player Name</label>
-                  <input type="text" value={manualStats.name || ''} onChange={(e) => setManualStats({...manualStats, name: e.target.value})}
-                    placeholder="Player Name" className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm w-44" />
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-xs mb-1">Season</label>
-                  <input type="text" value={manualStats.season || ''} onChange={(e) => setManualStats({...manualStats, season: e.target.value})}
-                    placeholder="2025" disabled={isCareer} className={`px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm w-20 ${isCareer ? 'opacity-50' : ''}`} />
-                </div>
-                <div className="flex items-end pb-1">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={isCareer} onChange={(e) => setIsCareer(e.target.checked)}
-                      className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-blue-500" />
-                    <span className="text-slate-300 text-sm">Career</span>
-                  </label>
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-xs mb-1">Type</label>
-                  <select value={playerType} onChange={(e) => { setPlayerType(e.target.value); setManualStats({ name: manualStats.name, season: manualStats.season }); }}
-                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm">
-                    <option value="hitter">Hitter</option>
-                    <option value="pitcher">Pitcher</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-xs mb-1">Era</label>
-                  <select value={playerEra} onChange={(e) => setPlayerEra(e.target.value)}
-                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm">
-                    <option value="deadball">Dead Ball (pre-1920)</option>
-                    <option value="liveball">Live Ball (1920-1941)</option>
-                    <option value="integration">Integration (1947-1960)</option>
-                    <option value="expansion">Expansion (1961-1976)</option>
-                    <option value="freeagency">Free Agency/Steroid (1977-2005)</option>
-                    <option value="modern">Modern (2006+)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 md:grid-cols-7 gap-2 mb-4">
-                {fields.map(f => (
-                  <div key={f.key}>
-                    <label className="block text-slate-400 text-xs mb-1">{f.label}</label>
-                    <input type="text" value={manualStats[f.key] || ''} readOnly={f.auto}
-                      onChange={(e) => setManualStats({...manualStats, [f.key]: e.target.value})}
-                      placeholder={f.placeholder}
-                      className={`px-2 py-1.5 border border-slate-600 rounded text-white text-sm w-full ${f.auto ? 'bg-slate-800 text-slate-400 cursor-not-allowed' : 'bg-slate-700'}`} />
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-4">
-                <button onClick={submitManualStats} className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold rounded-lg transition">Calculate Ratings</button>
-                <span className="text-slate-500 text-xs">Rate stats (K/9, ISO, etc.) auto-calculate from counting stats</span>
-              </div>
-            </div>
-
-            {ratings && playerData && (
-              <div className="bg-slate-800/80 backdrop-blur rounded-2xl p-6 border border-slate-700">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="md:w-1/3">
-                    <div className={`bg-gradient-to-br ${tier.color} p-1 rounded-xl shadow-xl`}>
-                      <div className="bg-slate-900 rounded-lg p-4 text-center">
-                        <h3 className="text-2xl font-bold text-white">{playerData.name || 'Player'}</h3>
-                        <p className="text-slate-400 text-sm">{playerData.season} • {playerData.type}</p>
-                        <div className="mt-4"><span className="text-6xl font-black text-white">{Math.min(99, ratings.overall)}</span></div>
-                        <div className="mt-2 text-lg">{tier.icon} {tier.label}</div>
-                        {playerData.type === 'pitcher' && <div className="mt-2 text-slate-400 text-sm">RP: {ratings.overall_rp}</div>}
-                      </div>
-                    </div>
-                    <button onClick={downloadCSV} className="mt-4 w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg flex items-center justify-center gap-2 transition">
-                      <Download /> Export CSV
-                    </button>
-                  </div>
-
-                  <div className="md:w-2/3 grid grid-cols-2 gap-4">
-                    {playerData.type === 'pitcher' ? (
-                      <>
-                        <div className="bg-slate-900/50 rounded-lg p-4">
-                          <h4 className="text-white font-semibold mb-2 flex items-center gap-2"><Target /> Pitching</h4>
-                          <RatingRow label="H/9" value={ratings.h_per_9} />
-                          <RatingRow label="K/9" value={ratings.k_per_9} />
-                          <RatingRow label="BB/9" value={ratings.bb_per_9} />
-                          <RatingRow label="HR/9" value={ratings.hr_per_9} />
-                          <RatingRow label="Clutch" value={ratings.pitching_clutch} />
-                          <RatingRow label="Control" value={ratings.control} />
-                          <RatingRow label="Velocity" value={ratings.velocity} />
-                          <RatingRow label="Break" value={ratings.break_rating} />
-                          <RatingRow label="Stamina" value={ratings.stamina} />
-                        </div>
-                        <div className="bg-slate-900/50 rounded-lg p-4">
-                          <h4 className="text-white font-semibold mb-2 flex items-center gap-2"><Shield /> Fielding</h4>
-                          <RatingRow label="Fielding" value={ratings.fielding} />
-                          <RatingRow label="Arm Strength" value={ratings.arm_strength} />
-                          <RatingRow label="Arm Accuracy" value={ratings.arm_accuracy} />
-                          <RatingRow label="Reaction" value={ratings.reaction} />
-                          <RatingRow label="Durability" value={ratings.durability} />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="bg-slate-900/50 rounded-lg p-4">
-                          <h4 className="text-white font-semibold mb-2 flex items-center gap-2"><TrendingUp /> Hitting</h4>
-                          <RatingRow label="Contact R" value={ratings.contact_r} />
-                          <RatingRow label="Contact L" value={ratings.contact_l} />
-                          <RatingRow label="Power R" value={ratings.power_r} />
-                          <RatingRow label="Power L" value={ratings.power_l} />
-                          <RatingRow label="Vision" value={ratings.vision} />
-                          <RatingRow label="Discipline" value={ratings.discipline} />
-                          <RatingRow label="Clutch" value={ratings.clutch} />
-                        </div>
-                        <div className="bg-slate-900/50 rounded-lg p-4">
-                          <h4 className="text-white font-semibold mb-2 flex items-center gap-2"><Zap /> Speed</h4>
-                          <RatingRow label="Speed" value={ratings.speed} />
-                          <RatingRow label="Stealing" value={ratings.stealing} />
-                          <RatingRow label="Baserunning" value={ratings.baserunning} />
-                          <h4 className="text-white font-semibold mb-2 mt-4 flex items-center gap-2"><Shield /> Fielding</h4>
-                          <RatingRow label="Fielding" value={ratings.fielding} />
-                          <RatingRow label="Arm Strength" value={ratings.arm_strength} />
-                          <RatingRow label="Arm Accuracy" value={ratings.arm_accuracy} />
-                          <RatingRow label="Reaction" value={ratings.reaction} />
-                          <RatingRow label="Durability" value={ratings.durability} />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <details className="mt-4">
-                  <summary className="text-slate-400 text-sm cursor-pointer hover:text-slate-300 transition">View Raw Stats</summary>
-                  <pre className="mt-2 p-3 bg-slate-900 rounded text-xs text-slate-300 overflow-auto border border-slate-700">{JSON.stringify(playerData, null, 2)}</pre>
-                </details>
-              </div>
-            )}
           </div>
+          <button onclick="downloadCSV()" class="btn-secondary" style="margin-top: 1rem;">
+            <svg class="download-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Export CSV
+          </button>
         </div>
-      );
-    }
+        <div class="results-right">
+          <div id="ratingsContainer" class="ratings-grid"></div>
+        </div>
+      </div>
+      <details>
+        <summary>View Raw Stats</summary>
+        <pre id="rawStats"></pre>
+      </details>
+    </div>
+  </div>
 
-    ReactDOM.render(<MLBTheShowConverter />, document.getElementById('root'));
-  </script>
+<script>
+let playerData = null, ratings = null;
+
+const hitterFields = [
+  { key: 'avg', label: 'AVG', placeholder: '.300' }, { key: 'avg_vs_r', label: 'AVG vR', placeholder: '.310' },
+  { key: 'avg_vs_l', label: 'AVG vL', placeholder: '.280' }, { key: 'obp', label: 'OBP', placeholder: '.380' },
+  { key: 'slg', label: 'SLG', placeholder: '.500' }, { key: 'slg_vs_r', label: 'SLG vR', placeholder: '.520' },
+  { key: 'slg_vs_l', label: 'SLG vL', placeholder: '.460' }, { key: 'iso', label: 'ISO', placeholder: 'auto', auto: true },
+  { key: 'iso_vs_r', label: 'ISO vR', placeholder: 'auto', auto: true }, { key: 'iso_vs_l', label: 'ISO vL', placeholder: 'auto', auto: true },
+  { key: 'hr', label: 'HR', placeholder: '30' }, { key: 'sb', label: 'SB', placeholder: '10' },
+  { key: 'k_pct', label: 'K%', placeholder: '20.0' }, { key: 'bb_pct', label: 'BB%', placeholder: '10.0' },
+  { key: 'sprint_speed', label: 'Sprint', placeholder: '27.0' }, { key: 'oaa', label: 'OAA', placeholder: '5' },
+  { key: 'drs', label: 'DRS', placeholder: '5' }, { key: 'fielding_pct', label: 'Fld%', placeholder: '.980' },
+  { key: 'games', label: 'G', placeholder: '150' }
+];
+
+const pitcherFields = [
+  { key: 'era', label: 'ERA', placeholder: '3.50' }, { key: 'whip', label: 'WHIP', placeholder: '1.20' },
+  { key: 'ip', label: 'IP', placeholder: '180' }, { key: 'k', label: 'K', placeholder: '200' },
+  { key: 'bb', label: 'BB', placeholder: '50' }, { key: 'h', label: 'H', placeholder: '150' },
+  { key: 'hr', label: 'HR', placeholder: '20' }, { key: 'k_9', label: 'K/9', placeholder: 'auto', auto: true },
+  { key: 'bb_9', label: 'BB/9', placeholder: 'auto', auto: true }, { key: 'h_9', label: 'H/9', placeholder: 'auto', auto: true },
+  { key: 'hr_9', label: 'HR/9', placeholder: 'auto', auto: true }, { key: 'fb_velo', label: 'Velo', placeholder: '95.0' },
+  { key: 'whiff_pct', label: 'Whiff%', placeholder: '25.0' }, { key: 'games', label: 'G', placeholder: '32' }
+];
+
+const eraConfig = {
+  deadball: { avgK9: 4.0, avgKPct: 10, spBase: -3, rpBase: 1, staminaMax: 400 },
+  liveball: { avgK9: 4.5, avgKPct: 12, spBase: -2, rpBase: 1, staminaMax: 350 },
+  integration: { avgK9: 5.0, avgKPct: 14, spBase: -1, rpBase: 1, staminaMax: 300 },
+  expansion: { avgK9: 5.5, avgKPct: 15, spBase: 2, rpBase: 1, staminaMax: 280 },
+  freeagency: { avgK9: 6.0, avgKPct: 16, spBase: 3, rpBase: 1, staminaMax: 250 },
+  modern: { avgK9: 8.5, avgKPct: 22, spBase: 5, rpBase: 1, staminaMax: 220 },
+};
+
+const positionAdj = { 'C': 10, 'SS': 8, 'CF': 6, '2B': 5, '3B': 4, 'RF': 3, 'LF': 2, '1B': 2, 'DH': 0 };
+
+const hasRateStat = (v) => v != null && v !== '' && parseFloat(v) > 0;
+const hasCountStat = (v) => v != null && v !== '' && !isNaN(parseFloat(v));
+const hasFieldingStat = (v) => v != null && v !== '' && !isNaN(parseFloat(v));
+const num = (v) => parseFloat(v);
+const toPct = (v) => { const n = parseFloat(v); return n > 1 ? n : n * 100; };
+const scale = (value, min, max, inverse = false) => {
+  if (value == null || isNaN(parseFloat(value))) return null;
+  const v = parseFloat(value);
+  const normalized = inverse ? (max - v) / (max - min) : (v - min) / (max - min);
+  return Math.round(Math.max(0, Math.min(1, normalized)) * 100 + 25);
+};
+const getRatingColor = (v) => v >= 90 ? 'color-diamond' : v >= 80 ? 'color-gold' : v >= 70 ? 'color-silver' : v >= 60 ? 'color-bronze' : 'color-common';
+const getTier = (v) => v >= 90 ? { label: 'Diamond', css: 'tier-diamond', icon: '💎' } : v >= 80 ? { label: 'Gold', css: 'tier-gold', icon: '🥇' } : v >= 70 ? { label: 'Silver', css: 'tier-silver', icon: '🥈' } : v >= 60 ? { label: 'Bronze', css: 'tier-bronze', icon: '🥉' } : { label: 'Common', css: 'tier-common', icon: '⚫' };
+
+function buildFields() {
+  const container = document.getElementById('fieldsContainer');
+  const playerType = document.getElementById('playerType').value;
+  const fields = playerType === 'pitcher' ? pitcherFields : hitterFields;
+  container.innerHTML = fields.map(f => `<div class="form-group"><label>${f.label}</label><input type="text" id="field_${f.key}" placeholder="${f.placeholder}" ${f.auto ? 'readonly' : ''} oninput="autoCalculate()"></div>`).join('');
+  document.getElementById('positionContainer').style.display = playerType === 'hitter' ? 'block' : 'none';
+}
+
+function autoCalculate() {
+  const playerType = document.getElementById('playerType').value;
+  if (playerType === 'pitcher') {
+    const ip = parseFloat(document.getElementById('field_ip')?.value) || 0;
+    if (ip > 0) ['k', 'bb', 'h', 'hr'].forEach(stat => { const val = parseFloat(document.getElementById(`field_${stat}`)?.value); if (!isNaN(val) && val >= 0) { const rateField = document.getElementById(`field_${stat}_9`); if (rateField) rateField.value = ((val / ip) * 9).toFixed(2); } });
+  } else {
+    [{ avg: 'avg', slg: 'slg', iso: 'iso' }, { avg: 'avg_vs_r', slg: 'slg_vs_r', iso: 'iso_vs_r' }, { avg: 'avg_vs_l', slg: 'slg_vs_l', iso: 'iso_vs_l' }].forEach(({ avg, slg, iso }) => { const avgVal = parseFloat(document.getElementById(`field_${avg}`)?.value), slgVal = parseFloat(document.getElementById(`field_${slg}`)?.value); if (avgVal > 0 && slgVal > 0) { const isoField = document.getElementById(`field_${iso}`); if (isoField) isoField.value = (slgVal - avgVal).toFixed(3); } });
+  }
+}
+
+function getStats() {
+  const playerType = document.getElementById('playerType').value;
+  const fields = playerType === 'pitcher' ? pitcherFields : hitterFields;
+  const stats = { name: document.getElementById('name').value, season: document.getElementById('isCareer').checked ? 'career' : (document.getElementById('season').value || '2025'), type: playerType, era_type: document.getElementById('playerEra').value, position: playerType === 'hitter' ? document.getElementById('playerPosition').value : null };
+  fields.forEach(f => { const val = document.getElementById(`field_${f.key}`)?.value; if (val) stats[f.key] = val; });
+  return stats;
+}
+
+function calculateRatings() {
+  const stats = getStats();
+  playerData = stats;
+  const r = {}, isCareer = stats.season === 'career' || stats.season === 'Career', isPitcher = stats.type === 'pitcher', cfg = eraConfig[stats.era_type] || eraConfig.modern;
+  const calcRate = (stat, ip) => hasCountStat(stat) && hasCountStat(ip) && num(ip) > 0 ? (num(stat) / num(ip)) * 9 : null;
+  const getK9 = () => hasRateStat(stats.k_9) ? num(stats.k_9) : calcRate(stats.k, stats.ip);
+  const getBB9 = () => hasRateStat(stats.bb_9) ? num(stats.bb_9) : calcRate(stats.bb, stats.ip);
+  const getH9 = () => hasRateStat(stats.h_9) ? num(stats.h_9) : calcRate(stats.h, stats.ip);
+  const getHR9 = () => hasRateStat(stats.hr_9) ? num(stats.hr_9) : calcRate(stats.hr, stats.ip);
+  const getTBF = () => hasCountStat(stats.tbf) ? num(stats.tbf) : (hasCountStat(stats.ip) && hasCountStat(stats.h) && hasCountStat(stats.bb)) ? num(stats.h) + num(stats.bb) + (num(stats.ip) * 3) : null;
+  const getKPct = () => hasRateStat(stats.k_pct) ? toPct(stats.k_pct) : (hasCountStat(stats.k) && getTBF()) ? (num(stats.k) / getTBF()) * 100 : null;
+  const eraVeloRating = (k9) => Math.min(99, Math.max(25, Math.round(60 + (k9 - cfg.avgK9) * 8)));
+  const eraBreakRating = (kPct) => Math.min(99, Math.max(25, Math.round(60 + (kPct - cfg.avgKPct) * 5)));
+
+  if (isPitcher) {
+    const k9 = getK9(), bb9 = getBB9(), h9 = getH9(), hr9 = getHR9(), kPct = getKPct();
+    r.h_per_9 = h9 ? scale(h9, 5.5, 10.5, true) : hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
+    r.k_per_9 = k9 ? scale(k9, 5.0, isCareer ? 10.5 : 13.0) : 70;
+    r.bb_per_9 = bb9 ? scale(bb9, 1.0, 5.5, true) : hasRateStat(stats.whip) ? scale(Math.max(1.5, num(stats.whip) * 9 - 8.5), 1.0, 5.5, true) : 70;
+    r.hr_per_9 = hr9 ? scale(hr9, 0.3, 1.8, true) : hasRateStat(stats.era) ? (num(stats.era) < 3 ? 95 : num(stats.era) < 4 ? 75 : num(stats.era) < 5 ? 55 : 40) : 70;
+    r.pitching_clutch = hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
+    r.control = r.bb_per_9 ? Math.round(r.bb_per_9 * 0.92) : 65;
+    r.velocity = hasRateStat(stats.fb_velo) ? scale(num(stats.fb_velo), 88, 101) : (!isCareer && k9) ? eraVeloRating(k9) : 60;
+    r.break_rating = hasRateStat(stats.whiff_pct) ? scale(toPct(stats.whiff_pct), 20, 40) : (!isCareer && kPct) ? eraBreakRating(kPct) : 60;
+    r.stamina = hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) : 80;
+    r.fielding = 55; r.arm_strength = r.velocity ? Math.round(r.velocity * 0.85) : 70; r.arm_accuracy = 60; r.reaction = 50;
+    r.durability = hasCountStat(stats.games) && hasCountStat(stats.ip) ? Math.round((scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70) * 0.4 + scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) * 0.6)) : hasCountStat(stats.games) ? scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70) : hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) : 65;
+    const core = [r.h_per_9, r.k_per_9, r.bb_per_9, r.hr_per_9, r.pitching_clutch, r.control, r.velocity, r.break_rating].map(v => Math.min(v || 70, 99));
+    const avg = core.reduce((a, b) => a + b, 0) / 8;
+    r.overall = Math.min(99, Math.max(25, Math.round(avg + cfg.spBase + Math.min((r.stamina || 50) * 0.163, 8))));
+    r.overall_rp = Math.min(99, Math.max(25, Math.round(avg + cfg.rpBase)));
+  } else {
+    if (hasRateStat(stats.avg_vs_r)) r.contact_r = scale(num(stats.avg_vs_r), 0.200, 0.350);
+    else if (hasRateStat(stats.avg)) { const base = scale(num(stats.avg), 0.200, 0.350); const kAdj = hasRateStat(stats.k_pct) && toPct(stats.k_pct) > 22 ? Math.round((toPct(stats.k_pct) - 22) * 0.8) : 0; r.contact_r = base ? Math.max(25, base - kAdj) : 70; } else r.contact_r = 70;
+    r.contact_l = hasRateStat(stats.avg_vs_l) ? scale(num(stats.avg_vs_l), 0.200, 0.350) : Math.max(25, r.contact_r - 12);
+    const getISO = () => hasRateStat(stats.iso) ? num(stats.iso) : (hasRateStat(stats.slg) && hasRateStat(stats.avg)) ? num(stats.slg) - num(stats.avg) : null;
+    r.power_r = hasRateStat(stats.iso_vs_r) ? scale(num(stats.iso_vs_r), 0.080, 0.300) : getISO() ? scale(getISO(), 0.080, 0.300) : 70;
+    r.power_l = hasRateStat(stats.iso_vs_l) ? scale(num(stats.iso_vs_l), 0.080, 0.300) : Math.max(25, r.power_r - 15);
+    r.vision = hasRateStat(stats.k_pct) ? scale(toPct(stats.k_pct), 5, 30, true) : 70;
+    r.discipline = hasRateStat(stats.bb_pct) ? scale(toPct(stats.bb_pct), 5, 18) : (hasRateStat(stats.obp) && hasRateStat(stats.avg)) ? scale(num(stats.obp) - num(stats.avg), 0.030, 0.100) : 70;
+    r.clutch = 70;
+    r.fielding = Math.min(99, hasFieldingStat(stats.oaa) ? scale(num(stats.oaa), -15, 15) : hasFieldingStat(stats.drs) ? scale(num(stats.drs), -15, 20) : hasRateStat(stats.fielding_pct) ? scale(num(stats.fielding_pct), 0.950, 1.000) : 65);
+    r.speed = hasRateStat(stats.sprint_speed) ? scale(num(stats.sprint_speed), 23, 30) : hasCountStat(stats.sb) ? (isCareer ? Math.min(99, Math.max(25, Math.round(25 + Math.log(num(stats.sb) + 1) * 11))) : scale(num(stats.sb), 0, 50)) : 50;
+    r.stealing = r.speed; r.baserunning = Math.round(r.speed * 0.9);
+    r.arm_strength = Math.min(99, Math.round(r.fielding * 0.9 + 10));
+    r.arm_accuracy = Math.min(99, Math.round(r.fielding * 0.85 + 10));
+    r.reaction = Math.min(99, Math.round(r.fielding * 0.8 + 15));
+    if (stats.position === 'C') r.blocking = (hasFieldingStat(stats.drs) || hasFieldingStat(stats.oaa)) ? Math.min(99, hasFieldingStat(stats.oaa) ? scale(num(stats.oaa), -15, 15) : scale(num(stats.drs), -15, 20)) : Math.min(99, Math.round((r.fielding + r.arm_strength + r.arm_accuracy + r.reaction) / 4));
+    r.durability = hasCountStat(stats.games) ? scale(num(stats.games), isCareer ? 500 : 40, isCareer ? 3000 : 162) : 65;
+    const posAdj = positionAdj[stats.position] || 0;
+    const core = [r.contact_r, r.contact_l, r.power_r, r.power_l, r.vision, r.discipline, r.clutch, r.fielding, r.speed].map(v => Math.min(v || 70, 99));
+    const coreAvg = core.reduce((a, b) => a + b, 0) / 9;
+    r.overall = Math.min(99, Math.max(25, Math.round(coreAvg + 16 + posAdj - Math.max(0, (50 - coreAvg) * 1.9))));
+  }
+  ratings = r;
+  displayResults();
+}
+
+function displayResults() {
+  if (!ratings || !playerData) return;
+  document.getElementById('resultsContainer').classList.remove('hidden');
+  const tier = getTier(ratings.overall);
+  document.getElementById('cardContainer').className = `player-card-wrapper ${tier.css}`;
+  document.getElementById('resultName').textContent = playerData.name || 'Player';
+  document.getElementById('resultMeta').textContent = `${playerData.season} • ${playerData.type}`;
+  document.getElementById('resultOverall').textContent = Math.min(99, ratings.overall);
+  document.getElementById('resultTier').innerHTML = `${tier.icon} ${tier.label}`;
+  const rpDiv = document.getElementById('resultRP');
+  if (playerData.type === 'pitcher') { rpDiv.textContent = `RP: ${ratings.overall_rp}`; rpDiv.classList.remove('hidden'); } else rpDiv.classList.add('hidden');
+  const rc = document.getElementById('ratingsContainer');
+  rc.innerHTML = playerData.type === 'pitcher' 
+    ? `<div class="ratings-section"><h4>🎯 Pitching</h4>${ratingRow('H/9', ratings.h_per_9)}${ratingRow('K/9', ratings.k_per_9)}${ratingRow('BB/9', ratings.bb_per_9)}${ratingRow('HR/9', ratings.hr_per_9)}${ratingRow('Clutch', ratings.pitching_clutch)}${ratingRow('Control', ratings.control)}${ratingRow('Velocity', ratings.velocity)}${ratingRow('Break', ratings.break_rating)}${ratingRow('Stamina', ratings.stamina)}</div><div class="ratings-section"><h4>🛡️ Fielding</h4>${ratingRow('Fielding', ratings.fielding)}${ratingRow('Arm Strength', ratings.arm_strength)}${ratingRow('Arm Accuracy', ratings.arm_accuracy)}${ratingRow('Reaction', ratings.reaction)}${ratingRow('Durability', ratings.durability)}</div>`
+    : `<div class="ratings-section"><h4>📈 Hitting</h4>${ratingRow('Contact R', ratings.contact_r)}${ratingRow('Contact L', ratings.contact_l)}${ratingRow('Power R', ratings.power_r)}${ratingRow('Power L', ratings.power_l)}${ratingRow('Vision', ratings.vision)}${ratingRow('Discipline', ratings.discipline)}${ratingRow('Clutch', ratings.clutch)}</div><div class="ratings-section"><h4>⚡ Speed</h4>${ratingRow('Speed', ratings.speed)}${ratingRow('Stealing', ratings.stealing)}${ratingRow('Baserunning', ratings.baserunning)}<h4 class="mt">🛡️ Fielding</h4>${ratingRow('Fielding', ratings.fielding)}${ratingRow('Arm Strength', ratings.arm_strength)}${ratingRow('Arm Accuracy', ratings.arm_accuracy)}${ratingRow('Reaction', ratings.reaction)}${ratings.blocking ? ratingRow('Blocking', ratings.blocking) : ''}${ratingRow('Durability', ratings.durability)}</div>`;
+  document.getElementById('rawStats').textContent = JSON.stringify(playerData, null, 2);
+}
+
+function ratingRow(label, value) { const v = Math.min(99, value || 0); return `<div class="rating-row"><span class="label">${label}</span><span class="value ${getRatingColor(v)}">${v}</span></div>`; }
+
+function downloadCSV() {
+  if (!ratings || !playerData) return;
+  const rows = [['Attribute', 'Rating'], ...Object.entries(ratings).filter(([,v]) => v != null).map(([k, v]) => [k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), Math.min(99, v)])];
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }));
+  a.download = `${(playerData.name || 'player').replace(/\s+/g, '_')}_ratings.csv`; a.click();
+}
+
+document.getElementById('playerType').addEventListener('change', buildFields);
+document.getElementById('isCareer').addEventListener('change', function() { document.getElementById('season').disabled = this.checked; document.getElementById('season').classList.toggle('disabled', this.checked); });
+buildFields();
+</script>
 </body>
 </html>
