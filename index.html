@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLB Stats → The Show 25 Converter v4.0</title>
+    <title>MLB Stats → The Show 25 Converter v4.1</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a12; min-height: 100vh; color: #fff; line-height: 1.5; }
@@ -88,7 +88,7 @@
 <div class="container">
     <div class="header">
         <div class="badges">
-            <span class="badge">v4.0 · 95% Accuracy</span>
+            <span class="badge">v4.1 · 95% Accuracy</span>
             <span class="badge new">🔍 Lahman DB: 24,270 Players</span>
         </div>
         <h1>MLB Stats → <span class="accent">The Show 25</span></h1>
@@ -103,7 +103,7 @@
     </div>
 
     <div id="search-form" class="player-form">
-        <div id="db-status" class="db-status loading">📊 Loading Lahman Database (may take a moment)...</div>
+        <div id="db-status" class="db-status loading">📊 Loading Lahman Database...</div>
         <div class="card">
             <div class="card-title">Search Historical Players (1871-2024)</div>
             <div class="form-row cols-3">
@@ -157,6 +157,15 @@
                 <div class="form-group"><label>CS</label><input type="number" id="h-cs" value="3"></div>
                 <div class="form-group"><label>3B</label><input type="number" id="h-3b" value="2"></div>
                 <div class="form-group"><label>wRC+</label><input type="number" id="h-wrc" placeholder="Optional"></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">Fielding (Optional)</div>
+            <div class="form-row">
+                <div class="form-group"><label>Fld %</label><input type="number" id="h-fldpct" step="0.001" placeholder="e.g. 0.985"><span class="helper">e.g. 0.985</span></div>
+                <div class="form-group"><label>Errors</label><input type="number" id="h-err" placeholder="Optional"></div>
+                <div class="form-group"><label>OAA</label><input type="number" id="h-oaa" placeholder="Optional"><span class="helper">Outs Above Avg</span></div>
+                <div class="form-group"><label>DRS</label><input type="number" id="h-drs" placeholder="Optional"><span class="helper">Def Runs Saved</span></div>
             </div>
         </div>
     </div>
@@ -233,14 +242,15 @@
         <div class="info-body">
             <p><strong>🔍 Search:</strong> Powered by <span class="hl">Lahman Database</span> with 24,270 players (1871-2024) including Negro Leagues!</p>
             <p style="margin-top:8px">Overall formula derived from <span class="hl">3,644 players</span> with <span class="hl">95% accuracy</span>.</p>
-            <p style="margin-top:8px"><strong>Note:</strong> The lahman_data.js file must be in the same folder as this HTML file.</p>
+            <p style="margin-top:8px"><strong>Auto-estimates:</strong> wRC+ from OPS, Sprint from SB/3B, Velocity by era</p>
+            <p style="margin-top:8px"><strong>Fielding:</strong> Uses actual fielding % from database, or position defaults if unavailable.</p>
         </div>
     </details>
 </div>
 
 <script src="lahman_data.js"></script>
 <script>
-// ============ CONVERSION FUNCTIONS (unchanged 95% accuracy) ============
+// ============ CONVERSION FUNCTIONS (v3.1 accurate) ============
 function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
 function scale(val,minS,maxS,minR,maxR){if(val===null||val===undefined||isNaN(val))return Math.round((minR+maxR)/2);return clamp(Math.round(minR+((val-minS)/(maxS-minS))*(maxR-minR)),0,125)}
 function getVal(id){const el=document.getElementById(id);if(!el)return null;const v=parseFloat(el.value);return(isNaN(v)||el.value.trim()==='')?null:v}
@@ -270,8 +280,21 @@ function convertHitter(stats){
     const sbSucc=stats.sb/Math.max(1,stats.sb+stats.cs);
     attrs.stealing=clamp(scale(stats.sb,0,50,5,90)+scale(sbSucc,0.5,0.9,-10,20),5,99);
     attrs.baserunning=clamp(Math.round(attrs.speed*0.6+attrs.stealing*0.4),5,99);
-    const posDef={C:65,'1B':55,'2B':70,'3B':65,SS:75,LF:60,CF:70,RF:60,DH:40};
-    attrs.fielding=posDef[stats.pos]||60;est.push('Fielding');
+    
+    // Fielding calculation (v3.1 logic)
+    if(stats.oaa!==null||stats.drs!==null){
+        const oaa=stats.oaa!==null?stats.oaa:(stats.drs*0.8);
+        attrs.fielding=clamp(scale(oaa,-15,20,30,99),20,99);
+    }else if(stats.fldPct!==null){
+        const posAvg={C:0.990,'1B':0.993,'2B':0.983,'3B':0.960,SS:0.970,LF:0.985,CF:0.990,RF:0.985,DH:0.990};
+        attrs.fielding=clamp(scale(stats.fldPct-(posAvg[stats.pos]||0.980),-0.030,0.015,40,90),20,99);
+    }else if(stats.errors!==null){
+        attrs.fielding=scale(stats.errors,20,2,35,85);est.push('Fielding from errors');
+    }else{
+        const posDef={C:65,'1B':55,'2B':70,'3B':65,SS:75,LF:60,CF:70,RF:60,DH:40};
+        attrs.fielding=posDef[stats.pos]||60;est.push('Fielding');
+    }
+    
     const posArm={C:70,'1B':55,'2B':60,'3B':70,SS:75,LF:65,CF:70,RF:80,DH:50};
     attrs.armStr=posArm[stats.pos]||65;
     attrs.armAcc=clamp(Math.round(attrs.fielding*0.6+attrs.armStr*0.3+10),30,99);
@@ -318,20 +341,18 @@ function calcPitcherOvr(attrs,type,tier){
 }
 
 // ============ LAHMAN DATABASE ============
-let dbLoaded = false;
+let dbLoaded=false;
 function initDB(){
     const status=document.getElementById('db-status');
     try{
-        if(typeof PPL==='undefined'||typeof BAT==='undefined'){
-            throw new Error('Data not loaded');
-        }
+        if(typeof PPL==='undefined'||typeof BAT==='undefined')throw new Error('Data not loaded');
         dbLoaded=true;
         status.textContent='✅ Loaded '+PPL.length.toLocaleString()+' players (1871-2024)';
         status.classList.remove('loading','error');
         document.getElementById('btn-search').disabled=false;
     }catch(e){
         status.classList.remove('loading');status.classList.add('error');
-        status.innerHTML='❌ Database not loaded. Place <strong>lahman_data.js</strong> in the same folder as this HTML file.';
+        status.innerHTML='❌ Database not loaded. Place <strong>lahman_data.js</strong> in the same folder.';
     }
 }
 
@@ -340,7 +361,6 @@ function normalizeStr(s){return(s||'').toLowerCase().normalize('NFD').replace(/[
 function searchPlayers(q){
     if(!dbLoaded||!q||q.length<2)return[];
     const nq=normalizeStr(q),pts=nq.split(/\s+/);
-    // PPL format: [playerID, firstName, lastName, bats, throws]
     return PPL.filter(p=>{
         const fn=normalizeStr(p[1]),ln=normalizeStr(p[2]),full=fn+' '+ln;
         return pts.length===1?(fn.includes(pts[0])||ln.includes(pts[0])):pts.every(pt=>full.includes(pt))
@@ -355,7 +375,6 @@ function getPlayerYears(pid){
 }
 
 function getBatting(pid,yr){
-    // BAT: [playerID, year, G, AB, H, 2B, 3B, HR, BB, SO, SB, CS, HBP, SF]
     const rows=BAT.filter(b=>b[0]===pid&&b[1]===yr);if(!rows.length)return null;
     let g=0,ab=0,h=0,d=0,tr=0,hr=0,bb=0,so=0,sb=0,cs=0,hbp=0,sf=0;
     rows.forEach(r=>{g+=r[2];ab+=r[3];h+=r[4];d+=r[5];tr+=r[6];hr+=r[7];bb+=r[8];so+=r[9];sb+=r[10];cs+=r[11];hbp+=r[12];sf+=r[13]});
@@ -364,7 +383,6 @@ function getBatting(pid,yr){
 }
 
 function getPitching(pid,yr){
-    // PIT: [playerID, year, W, L, G, GS, SV, IPouts, H, ER, HR, BB, SO]
     const rows=PIT.filter(p=>p[0]===pid&&p[1]===yr);if(!rows.length)return null;
     let w=0,l=0,g=0,gs=0,sv=0,ipo=0,h=0,er=0,hr=0,bb=0,so=0;
     rows.forEach(r=>{w+=r[2];l+=r[3];g+=r[4];gs+=r[5];sv+=r[6];ipo+=r[7];h+=r[8];er+=r[9];hr+=r[10];bb+=r[11];so+=r[12]});
@@ -372,13 +390,13 @@ function getPitching(pid,yr){
     return{w,l,g,gs,sv,ip,h,er,hr,bb,so,era:ip>0?(er*9)/ip:0,whip:ip>0?(h+bb)/ip:0,k9:ip>0?(so*9)/ip:0}
 }
 
-function getPosition(pid,yr){
-    // FLD: [playerID, year, position]
+function getFielding(pid,yr){
+    // FLD: [playerID, year, position, fldPct*1000, errors]
     const rows=FLD.filter(f=>f[0]===pid&&f[1]===yr);
-    if(!rows.length)return'DH';
-    // Just take the first one (already sorted by games in build script)
-    const pos=rows[0][2];
-    return{C:'C','1B':'1B','2B':'2B','3B':'3B',SS:'SS',LF:'LF',CF:'CF',RF:'RF',OF:'CF'}[pos]||'DH'
+    if(!rows.length)return{pos:'DH',fldPct:null,errors:null};
+    const r=rows[0];
+    const pos={C:'C','1B':'1B','2B':'2B','3B':'3B',SS:'SS',LF:'LF',CF:'CF',RF:'RF',OF:'CF'}[r[2]]||'DH';
+    return{pos,fldPct:r[3]/1000,errors:r[4]}
 }
 
 function estVelo(yr,k9){let v=93;if(yr<1920)v=88;else if(yr<1950)v=90;else if(yr<1970)v=92;else if(yr<1990)v=91;else if(yr<2010)v=93;else v=94;if(k9>10)v+=2;else if(k9>8)v+=1;return v}
@@ -405,7 +423,6 @@ searchIn.addEventListener('input',function(){
     searchTO=setTimeout(()=>{
         if(q.length<2){searchRes.classList.remove('show');return}
         const res=searchPlayers(q);
-        // PPL format: [playerID, firstName, lastName, bats, throws]
         searchRes.innerHTML=res.length?res.map(p=>`<div class="search-result" data-id="${p[0]}" data-fn="${p[1]}" data-ln="${p[2]}" data-bats="${p[3]}" data-throws="${p[4]}"><span class="name">${p[1]} ${p[2]}</span><span class="years">${getPlayerYears(p[0])}</span></div>`).join(''):'<div class="search-result"><span class="name">No players found</span></div>';
         searchRes.classList.add('show')
     },200)
@@ -428,10 +445,12 @@ function searchConvert(){
 }
 
 function convertSearchHit(player,yr,real,oPos){
-    const pos=oPos||getPosition(player.id,yr),tier=document.getElementById('search-tier').value||autoTier(real,false);
-    const stats={avg:real.avg,obp:real.obp,slg:real.slg,iso:real.iso,pa:real.pa,hr:real.hr,bb:real.bb,so:real.so,sb:real.sb,cs:real.cs,triples:real.tr,sprint:null,wrc:null,bats:player.bats||'R',pos};
+    const fld=getFielding(player.id,yr);
+    const pos=oPos||fld.pos,tier=document.getElementById('search-tier').value||autoTier(real,false);
+    const stats={avg:real.avg,obp:real.obp,slg:real.slg,iso:real.iso,pa:real.pa,hr:real.hr,bb:real.bb,so:real.so,sb:real.sb,cs:real.cs,triples:real.tr,sprint:null,wrc:null,oaa:null,drs:null,fldPct:fld.fldPct,errors:fld.errors,bats:player.bats||'R',pos};
     const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,pos,tier);
-    const realHtml=`<strong>${yr}:</strong> .${(real.avg*1000).toFixed(0).padStart(3,'0')}/.${(real.obp*1000).toFixed(0).padStart(3,'0')}/.${(real.slg*1000).toFixed(0).padStart(3,'0')} · ${real.hr} HR · ${real.sb} SB · ${real.g} G`;
+    const fldStr=fld.fldPct?` · ${(fld.fldPct*100).toFixed(1)}% Fld`:'';
+    const realHtml=`<strong>${yr}:</strong> .${(real.avg*1000).toFixed(0).padStart(3,'0')}/.${(real.obp*1000).toFixed(0).padStart(3,'0')}/.${(real.slg*1000).toFixed(0).padStart(3,'0')} · ${real.hr} HR · ${real.sb} SB${fldStr}`;
     showHitterResult(player.fn+' '+player.ln,pos,attrs,res,est,realHtml)
 }
 
@@ -441,13 +460,13 @@ function convertSearchPit(player,yr,real,oPos){
     const oVelo=getVal('search-velo'),velo=oVelo||estVelo(yr,real.k9);
     const stats={era:real.era,ip:real.ip,h:real.h,bb:real.bb,so:real.so,hr:real.hr,velo,stuff:null,fip:null};
     const{attrs,est}=convertPitcher(stats,posType==='SP'),res=calcPitcherOvr(attrs,posType,tier);
-    est.push('Velo: '+velo.toFixed(0)+' mph (est)');
+    est.push('Velo: '+velo.toFixed(0)+' mph');
     const realHtml=`<strong>${yr}:</strong> ${real.w}-${real.l} · ${real.era.toFixed(2)} ERA · ${real.ip.toFixed(0)} IP · ${real.so} SO · ${real.whip.toFixed(2)} WHIP`;
     showPitcherResult(player.fn+' '+player.ln,posType,attrs,res,est,realHtml)
 }
 
 function calcHitter(){
-    const stats={avg:getVal('h-avg'),obp:getVal('h-obp'),slg:getVal('h-slg'),iso:getVal('h-iso'),pa:getValOr('h-pa',600),hr:getValOr('h-hr',0),bb:getValOr('h-bb',0),so:getValOr('h-so',0),sb:getValOr('h-sb',0),cs:getValOr('h-cs',0),triples:getValOr('h-3b',0),sprint:null,wrc:getVal('h-wrc'),bats:document.getElementById('h-bats').value,pos:document.getElementById('h-pos').value};
+    const stats={avg:getVal('h-avg'),obp:getVal('h-obp'),slg:getVal('h-slg'),iso:getVal('h-iso'),pa:getValOr('h-pa',600),hr:getValOr('h-hr',0),bb:getValOr('h-bb',0),so:getValOr('h-so',0),sb:getValOr('h-sb',0),cs:getValOr('h-cs',0),triples:getValOr('h-3b',0),sprint:null,wrc:getVal('h-wrc'),oaa:getVal('h-oaa'),drs:getVal('h-drs'),fldPct:getVal('h-fldpct'),errors:getVal('h-err'),bats:document.getElementById('h-bats').value,pos:document.getElementById('h-pos').value};
     const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,stats.pos,document.getElementById('h-tier').value);
     showHitterResult(document.getElementById('h-name').value||'Player',stats.pos,attrs,res,est)
 }
