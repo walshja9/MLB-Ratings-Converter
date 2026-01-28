@@ -17,7 +17,7 @@ Convert real MLB statistics into MLB The Show 25 player ratings with **95% accur
 ## Quick Start
 
 ### Option 1: Use Online (GitHub Pages)
-Visit: **https://YOUR_USERNAME.github.io/mlb-the-show-converter/**
+Visit: **https://walshja9.github.io/mlb-the-show-converter/**
 
 ### Option 2: Download & Run Locally
 1. Download both files:
