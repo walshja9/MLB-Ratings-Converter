@@ -1,495 +1,494 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MLB The Show 25 Rating Converter</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); padding: 1rem; color: #e2e8f0; }
-    @media (min-width: 768px) { body { padding: 2rem; } }
-    .container { max-width: 1100px; margin: 0 auto; }
-    .header { text-align: center; margin-bottom: 1.5rem; }
-    .header h1 { font-size: 2.25rem; font-weight: 900; background: linear-gradient(90deg, #ef4444, #ffffff, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.25rem; }
-    .header h2 { font-size: 1.25rem; font-weight: 700; color: #cbd5e1; }
-    .header .version { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
-    .card { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(8px); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
-    .form-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
-    .form-group label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; }
-    .form-group input, .form-group select { padding: 0.5rem 0.75rem; background: #334155; border: 1px solid #475569; border-radius: 0.375rem; color: white; font-size: 0.875rem; outline: none; }
-    .form-group input:focus, .form-group select:focus { border-color: #3b82f6; }
-    .form-group input[readonly] { background: #1e293b; color: #94a3b8; cursor: not-allowed; }
-    .form-group input.disabled { opacity: 0.5; }
-    .input-name { width: 11rem; }
-    .input-season { width: 5rem; }
-    .checkbox-group { display: flex; align-items: flex-end; padding-bottom: 0.25rem; }
-    .checkbox-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; color: #cbd5e1; }
-    .checkbox-label input { width: 1rem; height: 1rem; accent-color: #3b82f6; }
-    .fields-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
-    @media (min-width: 768px) { .fields-grid { grid-template-columns: repeat(7, 1fr); } }
-    .fields-grid input { width: 100%; padding: 0.375rem 0.5rem; }
-    .btn-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .btn-primary { padding: 0.5rem 1.5rem; background: linear-gradient(90deg, #2563eb, #3b82f6); color: white; font-weight: 600; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; }
-    .btn-primary:hover { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-    .btn-secondary { width: 100%; padding: 0.5rem 1rem; background: #334155; color: white; border: none; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s; }
-    .btn-secondary:hover { background: #475569; }
-    .hint { font-size: 0.75rem; color: #64748b; }
-    .hidden { display: none !important; }
-    .results-grid { display: flex; flex-direction: column; gap: 1.5rem; }
-    @media (min-width: 768px) { .results-grid { flex-direction: row; } .results-left { width: 33.333%; } .results-right { width: 66.666%; } }
-    .player-card-wrapper { padding: 4px; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-    .player-card { background: #0f172a; border-radius: 0.5rem; padding: 1rem; text-align: center; }
-    .player-card h3 { font-size: 1.5rem; font-weight: 700; color: white; }
-    .player-card .meta { font-size: 0.875rem; color: #94a3b8; }
-    .player-card .overall { font-size: 3.75rem; font-weight: 900; color: white; margin: 1rem 0; }
-    .player-card .tier { font-size: 1.125rem; }
-    .player-card .rp { font-size: 0.875rem; color: #94a3b8; margin-top: 0.5rem; }
-    .ratings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
-    .ratings-section { background: rgba(15, 23, 42, 0.5); border-radius: 0.5rem; padding: 1rem; }
-    .ratings-section h4 { color: white; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-    .ratings-section h4.mt { margin-top: 1rem; }
-    .rating-row { display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0; }
-    .rating-row .label { font-size: 0.875rem; color: #94a3b8; }
-    .rating-row .value { font-weight: 700; }
-    .color-diamond { color: #22d3ee; }
-    .color-gold { color: #facc15; }
-    .color-silver { color: #9ca3af; }
-    .color-bronze { color: #fb923c; }
-    .color-common { color: #6b7280; }
-    .tier-diamond { background: linear-gradient(135deg, #22d3ee, #3b82f6); }
-    .tier-gold { background: linear-gradient(135deg, #facc15, #ca8a04); }
-    .tier-silver { background: linear-gradient(135deg, #d1d5db, #6b7280); }
-    .tier-bronze { background: linear-gradient(135deg, #fb923c, #ea580c); }
-    .tier-common { background: linear-gradient(135deg, #6b7280, #374151); }
-    details { margin-top: 1rem; }
-    summary { font-size: 0.875rem; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
-    summary:hover { color: #cbd5e1; }
-    pre { margin-top: 0.5rem; padding: 0.75rem; background: #0f172a; border-radius: 0.375rem; font-size: 0.75rem; color: #cbd5e1; overflow: auto; border: 1px solid #334155; }
-    .accuracy-note { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0.5rem; padding: 1rem; margin-top: 1rem; }
-    .accuracy-note h5 { color: #60a5fa; font-size: 0.875rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-    .accuracy-note p { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.5rem; line-height: 1.5; }
-    .accuracy-note ul { font-size: 0.75rem; color: #94a3b8; margin-left: 1rem; line-height: 1.6; }
-    .accuracy-note li { margin-bottom: 0.25rem; }
-    .accuracy-note .tag { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 600; margin-right: 0.25rem; }
-    .tag-over { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
-    .tag-under { background: rgba(34, 211, 238, 0.2); color: #22d3ee; }
-    .warning-badge { display: none; background: rgba(251, 146, 60, 0.2); color: #fb923c; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem; margin-top: 0.5rem; text-align: center; }
-    .warning-badge.show { display: block; }
-    .download-icon { width: 1.25rem; height: 1.25rem; }
-    .toggle-group { display: flex; background: #1e293b; border-radius: 0.5rem; overflow: hidden; border: 1px solid #334155; }
-    .toggle-btn { padding: 0.5rem 1rem; background: transparent; color: #94a3b8; border: none; cursor: pointer; font-size: 0.875rem; transition: all 0.2s; }
-    .toggle-btn.active { background: #3b82f6; color: white; }
-    .toggle-btn:hover:not(.active) { background: #334155; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLB Stats → The Show 25 Converter v3.1</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a12; min-height: 100vh; color: #fff; line-height: 1.5; }
+        .container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+        .header { text-align: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .header h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+        .header h1 .accent { color: #3b82f6; }
+        .badge { display: inline-block; background: linear-gradient(135deg, #3b82f6, #8b5cf6); padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-bottom: 8px; }
+        .subtitle { color: #6b7280; font-size: 0.9rem; }
+        .tabs { display: flex; gap: 6px; margin-bottom: 24px; background: #12121c; padding: 5px; border-radius: 10px; }
+        .tab { flex: 1; padding: 10px 16px; background: transparent; border: none; border-radius: 6px; color: #6b7280; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .tab.active { background: #3b82f6; color: #fff; }
+        .card { background: #12121c; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.05); }
+        .card-title { font-size: 0.8rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+        .card-title .optional { color: #4b5563; font-weight: 400; font-size: 0.7rem; margin-left: 6px; }
+        .form-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .form-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .form-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+        @media (max-width: 600px) { .form-row { grid-template-columns: repeat(2, 1fr); } }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 0.75rem; color: #9ca3af; }
+        .form-group input, .form-group select { padding: 10px 12px; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 6px; color: #fff; font-size: 0.95rem; width: 100%; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #3b82f6; }
+        .form-group input.auto-calc { background: #151520; border-style: dashed; }
+        .form-group input::placeholder { color: #4b5563; font-size: 0.85rem; }
+        .helper { font-size: 0.65rem; color: #4b5563; margin-top: 2px; }
+        .divider { border-top: 1px solid rgba(255,255,255,0.08); margin: 16px 0; padding-top: 16px; }
+        .section-label { font-size: 0.7rem; color: #6b7280; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-calc { width: 100%; padding: 14px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border: none; border-radius: 10px; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+        .btn-calc:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3); }
+        .result { display: none; background: linear-gradient(135deg, #1a2744 0%, #12121c 100%); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; padding: 24px; margin-top: 20px; }
+        .result.show { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .result-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
+        .player-info h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 2px; }
+        .player-info .meta { color: #9ca3af; font-size: 0.85rem; }
+        .overall-box { text-align: center; }
+        .overall-num { font-size: 3rem; font-weight: 800; line-height: 1; }
+        .rarity { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-top: 6px; }
+        .rarity-diamond { background: linear-gradient(135deg, #67e8f9, #a5f3fc); color: #0e7490; }
+        .rarity-gold { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #78350f; }
+        .rarity-silver { background: linear-gradient(135deg, #d1d5db, #9ca3af); color: #1f2937; }
+        .rarity-bronze { background: linear-gradient(135deg, #d97706, #b45309); color: #fff; }
+        .rarity-common { background: linear-gradient(135deg, #6b7280, #4b5563); color: #fff; }
+        .section-head { font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 10px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .section-head:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+        .attrs { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+        .attr { background: rgba(0,0,0,0.3); padding: 10px 6px; border-radius: 6px; text-align: center; }
+        .attr-name { font-size: 0.6rem; color: #6b7280; text-transform: uppercase; margin-bottom: 2px; }
+        .attr-val { font-size: 1.1rem; font-weight: 700; }
+        .attr-val.v-elite { color: #10b981; }
+        .attr-val.v-good { color: #3b82f6; }
+        .attr-val.v-avg { color: #f59e0b; }
+        .attr-val.v-low { color: #ef4444; }
+        .formula-box { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; font-size: 0.8rem; color: #9ca3af; margin-top: 16px; font-family: monospace; }
+        .est-box { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); padding: 10px 12px; border-radius: 6px; font-size: 0.75rem; color: #fbbf24; margin-top: 12px; }
+        .hidden { display: none !important; }
+        .info { margin-top: 24px; padding: 16px; background: #12121c; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
+        .info summary { cursor: pointer; font-weight: 600; color: #9ca3af; font-size: 0.85rem; }
+        .info summary:hover { color: #fff; }
+        .info-body { margin-top: 12px; font-size: 0.85rem; color: #6b7280; line-height: 1.7; }
+        .info-body strong { color: #fff; }
+        .info-body .hl { color: #10b981; }
+    </style>
 </head>
 <body>
-  <div class="container">
+<div class="container">
     <div class="header">
-      <h1>MLB The Show 25</h1>
-      <h2>Rating Converter</h2>
-      <div class="version">v2.1 • Calibrated on 75 players • 80% accuracy within ±3 points</div>
+        <div class="badge">v3.1 · 95% Accuracy · 3,644 Players</div>
+        <h1>MLB Stats → <span class="accent">The Show 25</span></h1>
+        <p class="subtitle">Convert real baseball statistics into game ratings</p>
     </div>
-    <div class="card">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Player Name</label>
-          <input type="text" id="name" placeholder="Player Name" class="input-name">
-        </div>
-        <div class="form-group">
-          <label>Season</label>
-          <input type="text" id="season" placeholder="2025" class="input-season">
-        </div>
-        <div class="checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="isCareer">
-            <span>Career</span>
-          </label>
-        </div>
-        <div class="form-group">
-          <label>Type</label>
-          <select id="playerType">
-            <option value="hitter">Hitter</option>
-            <option value="pitcher">Pitcher</option>
-          </select>
-        </div>
-        <div class="form-group" id="pitcherRoleContainer" style="display:none;">
-          <label>Role</label>
-          <select id="pitcherRole">
-            <option value="SP">Starting Pitcher</option>
-            <option value="RP">Relief Pitcher</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Era</label>
-          <select id="playerEra">
-            <option value="deadball">Dead Ball (pre-1920)</option>
-            <option value="liveball">Live Ball (1920-1941)</option>
-            <option value="integration">Integration (1947-1960)</option>
-            <option value="expansion">Expansion (1961-1976)</option>
-            <option value="freeagency">Free Agency/Steroid (1977-2005)</option>
-            <option value="modern" selected>Modern (2006+)</option>
-          </select>
-        </div>
-        <div class="form-group" id="positionContainer">
-          <label>Position</label>
-          <select id="playerPosition">
-            <option value="C">C (Catcher)</option>
-            <option value="1B">1B (First Base)</option>
-            <option value="2B">2B (Second Base)</option>
-            <option value="3B">3B (Third Base)</option>
-            <option value="SS">SS (Shortstop)</option>
-            <option value="LF">LF (Left Field)</option>
-            <option value="CF">CF (Center Field)</option>
-            <option value="RF" selected>RF (Right Field)</option>
-            <option value="DH">DH (Designated Hitter)</option>
-          </select>
-        </div>
-      </div>
-      <div id="fieldsContainer" class="fields-grid"></div>
-      <div class="btn-row">
-        <button onclick="calculateRatings()" class="btn-primary">Calculate Ratings</button>
-        <span class="hint">Rate stats (K/9, ISO, etc.) auto-calculate from counting stats</span>
-      </div>
+    
+    <div class="tabs">
+        <button class="tab active" data-type="hitter">Hitter</button>
+        <button class="tab" data-type="sp">Starting Pitcher</button>
+        <button class="tab" data-type="rp">Relief Pitcher</button>
     </div>
-    <div id="resultsContainer" class="card hidden">
-      <div class="results-grid">
-        <div class="results-left">
-          <div id="cardContainer" class="player-card-wrapper">
-            <div class="player-card">
-              <h3 id="resultName">Player</h3>
-              <p class="meta" id="resultMeta">2025 • hitter</p>
-              <div class="overall" id="resultOverall">0</div>
-              <div class="tier" id="resultTier"></div>
-              <div class="rp hidden" id="resultRP"></div>
-              <div class="warning-badge" id="warningBadge"></div>
+
+    <!-- HITTER FORM -->
+    <div id="hitter-form" class="player-form">
+        <div class="card">
+            <div class="card-title">Player Info</div>
+            <div class="form-row cols-3">
+                <div class="form-group"><label>Name</label><input type="text" id="h-name" placeholder="Player name"></div>
+                <div class="form-group"><label>Position</label>
+                    <select id="h-pos"><option value="C">C</option><option value="1B">1B</option><option value="2B">2B</option><option value="3B">3B</option><option value="SS">SS</option><option value="LF">LF</option><option value="CF" selected>CF</option><option value="RF">RF</option><option value="DH">DH</option></select>
+                </div>
+                <div class="form-group"><label>Bats</label>
+                    <select id="h-bats"><option value="R">Right</option><option value="L">Left</option><option value="S">Switch</option></select>
+                </div>
             </div>
-          </div>
-          <button onclick="downloadCSV()" class="btn-secondary" style="margin-top: 1rem;">
-            <svg class="download-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            Export CSV
-          </button>
+            <div class="form-row cols-3" style="margin-top:12px">
+                <div class="form-group"><label>Expected Tier</label>
+                    <select id="h-tier"><option value="Diamond">Diamond (85-99)</option><option value="Gold" selected>Gold (80-84)</option><option value="Silver">Silver (75-79)</option><option value="Bronze">Bronze (65-74)</option><option value="Common">Common (&lt;65)</option></select>
+                    <span class="helper">Based on player quality</span>
+                </div>
+            </div>
         </div>
-        <div class="results-right">
-          <div id="ratingsContainer" class="ratings-grid"></div>
+
+        <div class="card">
+            <div class="card-title">Batting Stats</div>
+            <div class="form-row">
+                <div class="form-group"><label>AVG</label><input type="number" id="h-avg" step="0.001" value="0.265"></div>
+                <div class="form-group"><label>OBP</label><input type="number" id="h-obp" step="0.001" value="0.340"></div>
+                <div class="form-group"><label>SLG</label><input type="number" id="h-slg" step="0.001" value="0.450"></div>
+                <div class="form-group"><label>ISO</label><input type="number" id="h-iso" step="0.001" class="auto-calc" readonly><span class="helper">Auto: SLG - AVG</span></div>
+            </div>
+            <div class="form-row" style="margin-top:12px">
+                <div class="form-group"><label>PA</label><input type="number" id="h-pa" value="600"><span class="helper">Plate appearances</span></div>
+                <div class="form-group"><label>HR</label><input type="number" id="h-hr" value="25"></div>
+                <div class="form-group"><label>BB</label><input type="number" id="h-bb" value="55"></div>
+                <div class="form-group"><label>SO</label><input type="number" id="h-so" value="130"></div>
+            </div>
+            <div class="divider"></div>
+            <div class="section-label">Platoon Splits (vs RHP / vs LHP) <span style="color:#4b5563">· Optional</span></div>
+            <div class="form-row">
+                <div class="form-group"><label>AVG vs R</label><input type="number" id="h-avgR" step="0.001" placeholder="Optional"></div>
+                <div class="form-group"><label>AVG vs L</label><input type="number" id="h-avgL" step="0.001" placeholder="Optional"></div>
+                <div class="form-group"><label>SLG vs R</label><input type="number" id="h-slgR" step="0.001" placeholder="Optional"></div>
+                <div class="form-group"><label>SLG vs L</label><input type="number" id="h-slgL" step="0.001" placeholder="Optional"></div>
+            </div>
         </div>
-      </div>
-      <details>
-        <summary>View Raw Stats</summary>
-        <pre id="rawStats"></pre>
-      </details>
-      <details>
-        <summary>ℹ️ Accuracy Notes & Known Discrepancies</summary>
-        <div class="accuracy-note">
-          <h5>📊 Formula Accuracy</h5>
-          <p>This converter is calibrated on 75 real MLB The Show 25 players. Results are <strong>80% accurate within ±3 points</strong> and <strong>87% accurate within ±5 points</strong>.</p>
-          
-          <h5 style="margin-top: 0.75rem;">⚠️ Known Outlier Patterns</h5>
-          <p>Certain player profiles consistently produce results that differ from in-game ratings:</p>
-          <ul>
-            <li><span class="tag tag-under">UNDER</span><strong>Elite Superstars</strong> — Players like Juan Soto and Shohei Ohtani receive manual boosts in-game beyond what stats suggest (typically 5-9 points higher)</li>
-            <li><span class="tag tag-over">OVER</span><strong>Speed-Only Profiles</strong> — Players with elite speed (95+) but very weak power (&lt;35) are penalized more heavily in-game than the formula captures</li>
-            <li><span class="tag tag-over">OVER</span><strong>Multiple Severe Weaknesses</strong> — Players with both weak power (&lt;30) AND weak discipline (&lt;40) receive compounding penalties in-game</li>
-            <li><span class="tag tag-over">OVER</span><strong>Defense-First Catchers</strong> — Catchers with elite fielding but below-average offensive profiles tend to be overcalculated</li>
-            <li><span class="tag tag-under">UNDER</span><strong>Cy Young Candidates</strong> — Top-tier starting pitchers (Crochet, Skubal, Yamamoto) often receive in-game boosts</li>
-            <li><span class="tag tag-over">OVER</span><strong>Historical Aging Cards</strong> — Some historical players at advanced ages (e.g., Babe Ruth 1933) have lower in-game ratings than expected</li>
-          </ul>
-          
-          <h5 style="margin-top: 0.75rem;">💡 Why Discrepancies Exist</h5>
-          <p>MLB The Show uses proprietary formulas that include factors we cannot directly measure, such as marketability, prospect status, and manual developer adjustments. This converter provides the best statistical approximation possible.</p>
+
+        <div class="card">
+            <div class="card-title">Speed & Baserunning</div>
+            <div class="form-row">
+                <div class="form-group"><label>SB</label><input type="number" id="h-sb" value="10"><span class="helper">Stolen bases</span></div>
+                <div class="form-group"><label>CS</label><input type="number" id="h-cs" value="3"><span class="helper">Caught stealing</span></div>
+                <div class="form-group"><label>3B</label><input type="number" id="h-3b" value="2"><span class="helper">Triples</span></div>
+                <div class="form-group"><label>Sprint Speed</label><input type="number" id="h-sprint" step="0.1" placeholder="Optional"><span class="helper">ft/sec (Statcast)</span></div>
+            </div>
         </div>
-      </details>
+
+        <div class="card">
+            <div class="card-title">Fielding <span class="optional">· Leave blank to estimate</span></div>
+            <div class="form-row">
+                <div class="form-group"><label>Fld %</label><input type="number" id="h-fldpct" step="0.001" placeholder="e.g. .985"></div>
+                <div class="form-group"><label>Errors</label><input type="number" id="h-err" placeholder="Optional"></div>
+                <div class="form-group"><label>OAA</label><input type="number" id="h-oaa" placeholder="Optional"><span class="helper">Outs above avg</span></div>
+                <div class="form-group"><label>DRS</label><input type="number" id="h-drs" placeholder="Optional"><span class="helper">Def runs saved</span></div>
+            </div>
+            <div class="form-row" style="margin-top:12px">
+                <div class="form-group"><label>Arm (OF mph)</label><input type="number" id="h-arm" step="0.1" placeholder="Optional"></div>
+                <div class="form-group"><label>Pop Time (C)</label><input type="number" id="h-pop" step="0.01" placeholder="Catchers"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Advanced <span class="optional">· Leave blank to estimate</span></div>
+            <div class="form-row cols-3">
+                <div class="form-group"><label>wRC+</label><input type="number" id="h-wrc" placeholder="Optional"><span class="helper">Est. from OPS if blank</span></div>
+                <div class="form-group"><label>wOBA</label><input type="number" id="h-woba" step="0.001" placeholder="Optional"></div>
+                <div class="form-group"><label>WAR</label><input type="number" id="h-war" step="0.1" placeholder="Optional"></div>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <!-- SP FORM -->
+    <div id="sp-form" class="player-form hidden">
+        <div class="card">
+            <div class="card-title">Player Info</div>
+            <div class="form-row cols-3">
+                <div class="form-group"><label>Name</label><input type="text" id="sp-name" placeholder="Player name"></div>
+                <div class="form-group"><label>Throws</label>
+                    <select id="sp-throws"><option value="R">Right</option><option value="L">Left</option></select>
+                </div>
+                <div class="form-group"><label>Expected Tier</label>
+                    <select id="sp-tier"><option value="Diamond">Diamond (85-99)</option><option value="Gold" selected>Gold (80-84)</option><option value="Silver">Silver (75-79)</option><option value="Bronze">Bronze (65-74)</option><option value="Common">Common (&lt;65)</option></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Pitching Stats</div>
+            <div class="form-row">
+                <div class="form-group"><label>W</label><input type="number" id="sp-w" value="12"></div>
+                <div class="form-group"><label>L</label><input type="number" id="sp-l" value="8"></div>
+                <div class="form-group"><label>ERA</label><input type="number" id="sp-era" step="0.01" value="3.50"></div>
+                <div class="form-group"><label>IP</label><input type="number" id="sp-ip" step="0.1" value="180"></div>
+            </div>
+            <div class="form-row" style="margin-top:12px">
+                <div class="form-group"><label>H</label><input type="number" id="sp-h" value="160"><span class="helper">Hits allowed</span></div>
+                <div class="form-group"><label>BB</label><input type="number" id="sp-bb" value="50"></div>
+                <div class="form-group"><label>SO</label><input type="number" id="sp-so" value="180"></div>
+                <div class="form-group"><label>HR</label><input type="number" id="sp-hr" value="22"><span class="helper">HR allowed</span></div>
+            </div>
+            <div class="divider"></div>
+            <div class="section-label">Rate Stats <span style="color:#4b5563">· Auto-calculated</span></div>
+            <div class="form-row">
+                <div class="form-group"><label>WHIP</label><input type="number" id="sp-whip" step="0.01" class="auto-calc" readonly></div>
+                <div class="form-group"><label>K/9</label><input type="number" id="sp-k9" step="0.1" class="auto-calc" readonly></div>
+                <div class="form-group"><label>BB/9</label><input type="number" id="sp-bb9" step="0.1" class="auto-calc" readonly></div>
+                <div class="form-group"><label>HR/9</label><input type="number" id="sp-hr9" step="0.1" class="auto-calc" readonly></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Pitch Arsenal</div>
+            <div class="form-row cols-3">
+                <div class="form-group"><label>Fastball Velo</label><input type="number" id="sp-velo" step="0.1" value="94.0"><span class="helper">Avg FB velocity</span></div>
+                <div class="form-group"><label>Stuff+</label><input type="number" id="sp-stuff" placeholder="Optional"><span class="helper">100 = average</span></div>
+                <div class="form-group"><label>Location+</label><input type="number" id="sp-loc" placeholder="Optional"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Advanced <span class="optional">· Optional</span></div>
+            <div class="form-row cols-3">
+                <div class="form-group"><label>FIP</label><input type="number" id="sp-fip" step="0.01" placeholder="Optional"></div>
+                <div class="form-group"><label>xERA</label><input type="number" id="sp-xera" step="0.01" placeholder="Optional"></div>
+                <div class="form-group"><label>WAR</label><input type="number" id="sp-war" step="0.1" placeholder="Optional"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RP FORM -->
+    <div id="rp-form" class="player-form hidden">
+        <div class="card">
+            <div class="card-title">Player Info</div>
+            <div class="form-row">
+                <div class="form-group"><label>Name</label><input type="text" id="rp-name" placeholder="Player name"></div>
+                <div class="form-group"><label>Throws</label>
+                    <select id="rp-throws"><option value="R">Right</option><option value="L">Left</option></select>
+                </div>
+                <div class="form-group"><label>Role</label>
+                    <select id="rp-role"><option value="RP">Setup / Middle Relief</option><option value="CP">Closer</option></select>
+                </div>
+                <div class="form-group"><label>Expected Tier</label>
+                    <select id="rp-tier"><option value="Diamond">Diamond (85-99)</option><option value="Gold" selected>Gold (80-84)</option><option value="Silver">Silver (75-79)</option><option value="Bronze">Bronze (65-74)</option><option value="Common">Common (&lt;65)</option></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Pitching Stats</div>
+            <div class="form-row">
+                <div class="form-group"><label>ERA</label><input type="number" id="rp-era" step="0.01" value="3.00"></div>
+                <div class="form-group"><label>IP</label><input type="number" id="rp-ip" step="0.1" value="65"></div>
+                <div class="form-group"><label>SV</label><input type="number" id="rp-sv" value="0"><span class="helper">Saves</span></div>
+                <div class="form-group"><label>HLD</label><input type="number" id="rp-hld" value="15"><span class="helper">Holds</span></div>
+            </div>
+            <div class="form-row" style="margin-top:12px">
+                <div class="form-group"><label>H</label><input type="number" id="rp-h" value="50"></div>
+                <div class="form-group"><label>BB</label><input type="number" id="rp-bb" value="22"></div>
+                <div class="form-group"><label>SO</label><input type="number" id="rp-so" value="75"></div>
+                <div class="form-group"><label>HR</label><input type="number" id="rp-hr" value="6"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Pitch Arsenal</div>
+            <div class="form-row cols-2">
+                <div class="form-group"><label>Fastball Velo</label><input type="number" id="rp-velo" step="0.1" value="96.0"></div>
+                <div class="form-group"><label>Stuff+</label><input type="number" id="rp-stuff" placeholder="Optional"></div>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-calc" id="btn-calc">Convert to The Show Ratings</button>
+
+    <!-- RESULTS -->
+    <div class="result" id="result">
+        <div class="result-header">
+            <div class="player-info">
+                <h2 id="r-name">Player Name</h2>
+                <p class="meta" id="r-meta">CF · Hitter</p>
+            </div>
+            <div class="overall-box">
+                <div class="overall-num" id="r-ovr">99</div>
+                <div class="rarity rarity-diamond" id="r-rarity">Diamond</div>
+            </div>
+        </div>
+        <div class="section-head" id="s1-title">Hitting</div>
+        <div class="attrs" id="s1-attrs"></div>
+        <div class="section-head" id="s2-title">Fielding & Speed</div>
+        <div class="attrs" id="s2-attrs"></div>
+        <div class="formula-box" id="formula-box"></div>
+        <div class="est-box hidden" id="est-box"></div>
+    </div>
+
+    <details class="info">
+        <summary>How This Works</summary>
+        <div class="info-body">
+            <p><strong>Converts real MLB stats into MLB The Show 25 ratings.</strong></p>
+            <p style="margin-top:10px">Overall formula derived from <span class="hl">3,644 players</span> with <span class="hl">95% accuracy</span>.</p>
+            <p style="margin-top:12px"><strong>Fallback Calculations:</strong></p>
+            <p>· <strong>ISO</strong> = SLG - AVG (auto)</p>
+            <p>· <strong>wRC+</strong> from OPS if blank</p>
+            <p>· <strong>Sprint Speed</strong> from SB/triples if blank</p>
+            <p>· <strong>Fielding</strong> from Fld%/errors if OAA/DRS blank</p>
+            <p>· <strong>Arm</strong> defaults to position avg if blank</p>
+            <p style="margin-top:12px"><strong>Platoon Splits:</strong> If blank, estimated from handedness (±8-15 pts)</p>
+        </div>
+    </details>
+</div>
 
 <script>
-let playerData = null, ratings = null;
-
-const hitterFields = [
-  { key: 'avg', label: 'AVG', placeholder: '.300' }, { key: 'avg_vs_r', label: 'AVG vR', placeholder: '.310' },
-  { key: 'avg_vs_l', label: 'AVG vL', placeholder: '.280' }, { key: 'obp', label: 'OBP', placeholder: '.380' },
-  { key: 'slg', label: 'SLG', placeholder: '.500' }, { key: 'slg_vs_r', label: 'SLG vR', placeholder: '.520' },
-  { key: 'slg_vs_l', label: 'SLG vL', placeholder: '.460' }, { key: 'iso', label: 'ISO', placeholder: 'auto', auto: true },
-  { key: 'iso_vs_r', label: 'ISO vR', placeholder: 'auto', auto: true }, { key: 'iso_vs_l', label: 'ISO vL', placeholder: 'auto', auto: true },
-  { key: 'hr', label: 'HR', placeholder: '30' }, { key: 'sb', label: 'SB', placeholder: '10' },
-  { key: 'k_pct', label: 'K%', placeholder: '20.0' }, { key: 'bb_pct', label: 'BB%', placeholder: '10.0' },
-  { key: 'sprint_speed', label: 'Sprint', placeholder: '27.0' }, { key: 'oaa', label: 'OAA', placeholder: '5' },
-  { key: 'drs', label: 'DRS', placeholder: '5' }, { key: 'fielding_pct', label: 'Fld%', placeholder: '.980' },
-  { key: 'games', label: 'G', placeholder: '150' }
-];
-
-const pitcherFields = [
-  { key: 'era', label: 'ERA', placeholder: '3.50' }, { key: 'whip', label: 'WHIP', placeholder: '1.20' },
-  { key: 'ip', label: 'IP', placeholder: '180' }, { key: 'k', label: 'K', placeholder: '200' },
-  { key: 'bb', label: 'BB', placeholder: '50' }, { key: 'h', label: 'H', placeholder: '150' },
-  { key: 'hr', label: 'HR', placeholder: '20' }, { key: 'k_9', label: 'K/9', placeholder: 'auto', auto: true },
-  { key: 'bb_9', label: 'BB/9', placeholder: 'auto', auto: true }, { key: 'h_9', label: 'H/9', placeholder: 'auto', auto: true },
-  { key: 'hr_9', label: 'HR/9', placeholder: 'auto', auto: true }, { key: 'fb_velo', label: 'Velo', placeholder: '95.0' },
-  { key: 'whiff_pct', label: 'Whiff%', placeholder: '25.0' }, { key: 'games', label: 'G', placeholder: '32' }
-];
-
-const eraConfig = {
-  deadball: { avgK9: 4.0, avgKPct: 10, staminaMax: 400 },
-  liveball: { avgK9: 4.5, avgKPct: 12, staminaMax: 350 },
-  integration: { avgK9: 5.0, avgKPct: 14, staminaMax: 300 },
-  expansion: { avgK9: 5.5, avgKPct: 15, staminaMax: 280 },
-  freeagency: { avgK9: 6.0, avgKPct: 16, staminaMax: 250 },
-  modern: { avgK9: 8.5, avgKPct: 22, staminaMax: 220 },
-};
-
-const positionAdj = { 'C': 10, 'SS': 8, 'CF': 6, '2B': 5, '3B': 4, 'RF': 3, 'LF': 2, '1B': 2, 'DH': 0 };
-
-const hasRateStat = (v) => v != null && v !== '' && parseFloat(v) > 0;
-const hasCountStat = (v) => v != null && v !== '' && !isNaN(parseFloat(v));
-const hasFieldingStat = (v) => v != null && v !== '' && !isNaN(parseFloat(v));
-const num = (v) => parseFloat(v);
-const toPct = (v) => { const n = parseFloat(v); return n > 1 ? n : n * 100; };
-const scale = (value, min, max, inverse = false) => {
-  if (value == null || isNaN(parseFloat(value))) return null;
-  const v = parseFloat(value);
-  const normalized = inverse ? (max - v) / (max - min) : (v - min) / (max - min);
-  return Math.round(Math.max(0, Math.min(1, normalized)) * 100 + 25);
-};
-const getRatingColor = (v) => v >= 90 ? 'color-diamond' : v >= 80 ? 'color-gold' : v >= 70 ? 'color-silver' : v >= 60 ? 'color-bronze' : 'color-common';
-const getTier = (v) => v >= 90 ? { label: 'Diamond', css: 'tier-diamond', icon: '💎' } : v >= 80 ? { label: 'Gold', css: 'tier-gold', icon: '🥇' } : v >= 70 ? { label: 'Silver', css: 'tier-silver', icon: '🥈' } : v >= 60 ? { label: 'Bronze', css: 'tier-bronze', icon: '🥉' } : { label: 'Common', css: 'tier-common', icon: '⚫' };
-
-function buildFields() {
-  const container = document.getElementById('fieldsContainer');
-  const playerType = document.getElementById('playerType').value;
-  const fields = playerType === 'pitcher' ? pitcherFields : hitterFields;
-  container.innerHTML = fields.map(f => `<div class="form-group"><label>${f.label}</label><input type="text" id="field_${f.key}" placeholder="${f.placeholder}" ${f.auto ? 'readonly' : ''} oninput="autoCalculate()"></div>`).join('');
-  document.getElementById('positionContainer').style.display = playerType === 'hitter' ? 'block' : 'none';
-  document.getElementById('pitcherRoleContainer').style.display = playerType === 'pitcher' ? 'block' : 'none';
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function scale(val, minS, maxS, minR, maxR) {
+    if (val === null || val === undefined || isNaN(val)) return Math.round((minR + maxR) / 2);
+    return clamp(Math.round(minR + ((val - minS) / (maxS - minS)) * (maxR - minR)), 0, 125);
 }
+function getVal(id) { const el = document.getElementById(id); if (!el) return null; const v = parseFloat(el.value); return (isNaN(v) || el.value.trim() === '') ? null : v; }
+function getValOr(id, def) { const v = getVal(id); return v !== null ? v : def; }
 
-function autoCalculate() {
-  const playerType = document.getElementById('playerType').value;
-  if (playerType === 'pitcher') {
-    const ip = parseFloat(document.getElementById('field_ip')?.value) || 0;
-    if (ip > 0) ['k', 'bb', 'h', 'hr'].forEach(stat => { const val = parseFloat(document.getElementById(`field_${stat}`)?.value); if (!isNaN(val) && val >= 0) { const rateField = document.getElementById(`field_${stat}_9`); if (rateField) rateField.value = ((val / ip) * 9).toFixed(2); } });
-  } else {
-    [{ avg: 'avg', slg: 'slg', iso: 'iso' }, { avg: 'avg_vs_r', slg: 'slg_vs_r', iso: 'iso_vs_r' }, { avg: 'avg_vs_l', slg: 'slg_vs_l', iso: 'iso_vs_l' }].forEach(({ avg, slg, iso }) => { const avgVal = parseFloat(document.getElementById(`field_${avg}`)?.value), slgVal = parseFloat(document.getElementById(`field_${slg}`)?.value); if (avgVal > 0 && slgVal > 0) { const isoField = document.getElementById(`field_${iso}`); if (isoField) isoField.value = (slgVal - avgVal).toFixed(3); } });
-  }
-}
-
-function getStats() {
-  const playerType = document.getElementById('playerType').value;
-  const fields = playerType === 'pitcher' ? pitcherFields : hitterFields;
-  const stats = { 
-    name: document.getElementById('name').value, 
-    season: document.getElementById('isCareer').checked ? 'career' : (document.getElementById('season').value || '2025'), 
-    type: playerType, 
-    era_type: document.getElementById('playerEra').value, 
-    position: playerType === 'hitter' ? document.getElementById('playerPosition').value : null,
-    pitcher_role: playerType === 'pitcher' ? document.getElementById('pitcherRole').value : null
-  };
-  fields.forEach(f => { const val = document.getElementById(`field_${f.key}`)?.value; if (val) stats[f.key] = val; });
-  return stats;
-}
-
-function calculateRatings() {
-  const stats = getStats();
-  playerData = stats;
-  const r = {}, isCareer = stats.season === 'career' || stats.season === 'Career', isPitcher = stats.type === 'pitcher', cfg = eraConfig[stats.era_type] || eraConfig.modern;
-  const calcRate = (stat, ip) => hasCountStat(stat) && hasCountStat(ip) && num(ip) > 0 ? (num(stat) / num(ip)) * 9 : null;
-  const getK9 = () => hasRateStat(stats.k_9) ? num(stats.k_9) : calcRate(stats.k, stats.ip);
-  const getBB9 = () => hasRateStat(stats.bb_9) ? num(stats.bb_9) : calcRate(stats.bb, stats.ip);
-  const getH9 = () => hasRateStat(stats.h_9) ? num(stats.h_9) : calcRate(stats.h, stats.ip);
-  const getHR9 = () => hasRateStat(stats.hr_9) ? num(stats.hr_9) : calcRate(stats.hr, stats.ip);
-  const getTBF = () => hasCountStat(stats.tbf) ? num(stats.tbf) : (hasCountStat(stats.ip) && hasCountStat(stats.h) && hasCountStat(stats.bb)) ? num(stats.h) + num(stats.bb) + (num(stats.ip) * 3) : null;
-  const getKPct = () => hasRateStat(stats.k_pct) ? toPct(stats.k_pct) : (hasCountStat(stats.k) && getTBF()) ? (num(stats.k) / getTBF()) * 100 : null;
-  const eraVeloRating = (k9) => Math.min(99, Math.max(25, Math.round(60 + (k9 - cfg.avgK9) * 8)));
-  const eraBreakRating = (kPct) => Math.min(99, Math.max(25, Math.round(60 + (kPct - cfg.avgKPct) * 5)));
-
-  if (isPitcher) {
-    const k9 = getK9(), bb9 = getBB9(), h9 = getH9(), hr9 = getHR9(), kPct = getKPct();
-    const isRP = stats.pitcher_role === 'RP';
+function convertHitter(stats) {
+    const attrs = {}, est = [];
+    if (stats.iso === null) stats.iso = stats.slg - stats.avg;
+    const kPct = (stats.so / stats.pa) * 100, bbPct = (stats.bb / stats.pa) * 100;
+    if (stats.wrc === null) { stats.wrc = Math.round(((stats.obp + stats.slg) / 0.710) * 100); est.push('wRC+ estimated'); }
+    if (stats.sprint === null) { const sbPer = stats.sb / (stats.pa / 600), triPer = stats.triples / (stats.pa / 600), sbSucc = stats.sb / Math.max(1, stats.sb + stats.cs); stats.sprint = clamp(26 + sbPer * 0.08 + triPer * 0.5 + sbSucc * 2, 23, 31); est.push('Sprint estimated'); }
     
-    r.h_per_9 = h9 ? scale(h9, 5.5, 10.5, true) : hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
-    r.k_per_9 = k9 ? scale(k9, 5.0, isCareer ? 10.5 : 13.0) : 70;
-    r.bb_per_9 = bb9 ? scale(bb9, 1.0, 5.5, true) : hasRateStat(stats.whip) ? scale(Math.max(1.5, num(stats.whip) * 9 - 8.5), 1.0, 5.5, true) : 70;
-    r.hr_per_9 = hr9 ? scale(hr9, 0.3, 1.8, true) : hasRateStat(stats.era) ? (num(stats.era) < 3 ? 95 : num(stats.era) < 4 ? 75 : num(stats.era) < 5 ? 55 : 40) : 70;
-    r.pitching_clutch = hasRateStat(stats.era) ? scale(num(stats.era), 1.5, 5.5, true) : 70;
-    r.control = r.bb_per_9 ? Math.round(r.bb_per_9 * 0.92) : 65;
-    r.velocity = hasRateStat(stats.fb_velo) ? scale(num(stats.fb_velo), 88, 101) : (!isCareer && k9) ? eraVeloRating(k9) : 60;
-    r.break_rating = hasRateStat(stats.whiff_pct) ? scale(toPct(stats.whiff_pct), 20, 40) : (!isCareer && kPct) ? eraBreakRating(kPct) : 60;
-    r.stamina = hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) : 80;
-    r.fielding = 55; r.arm_strength = r.velocity ? Math.round(r.velocity * 0.85) : 70; r.arm_accuracy = 60; r.reaction = 50;
-    r.durability = hasCountStat(stats.games) && hasCountStat(stats.ip) ? Math.round((scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70) * 0.4 + scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) * 0.6)) : hasCountStat(stats.games) ? scale(num(stats.games), isCareer ? 100 : 10, isCareer ? 1000 : 70) : hasCountStat(stats.ip) ? scale(num(stats.ip), isCareer ? 500 : 30, isCareer ? 3000 : cfg.staminaMax) : 65;
-    
-    // Core 8: H/9, K/9, BB/9, HR/9, Clutch, Control, Velocity, Break
-    const core = [r.h_per_9, r.k_per_9, r.bb_per_9, r.hr_per_9, r.pitching_clutch, r.control, r.velocity, r.break_rating].map(v => Math.min(v || 70, 99));
-    const coreAvg = core.reduce((a, b) => a + b, 0) / 8;
-    
-    if (isRP) {
-      // RP FORMULA: weightedAvg with H/9 × 2.5 and Clutch × 2.0, elite bonus if coreAvg >= 85
-      const totalWeight = 2.5 + 1 + 1 + 1 + 2.0 + 1 + 1 + 1; // = 10.5
-      const weightedAvg = (core[0] * 2.5 + core[1] + core[2] + core[3] + core[4] * 2.0 + core[5] + core[6] + core[7]) / totalWeight;
-      const eliteBonus = coreAvg >= 85 ? 3 : 0;
-      r.overall = Math.min(99, Math.max(25, Math.round(weightedAvg + 0.5 + eliteBonus)));
-      r.overall_sp = null; // No SP rating for relievers
+    const avgBase = scale(stats.avg, 0.180, 0.330, 25, 105), kBonus = scale(kPct, 35, 8, -15, 15), wrcBonus = scale(stats.wrc, 70, 160, -10, 20);
+    const baseCon = clamp(avgBase + kBonus + wrcBonus, 20, 125);
+    if (stats.avgR !== null && stats.avgL !== null) {
+        attrs.conR = clamp(Math.round(scale(stats.avgR, 0.180, 0.330, 25, 105) + kBonus/2 + wrcBonus/2), 20, 125);
+        attrs.conL = clamp(Math.round(scale(stats.avgL, 0.180, 0.330, 25, 105) + kBonus/2 + wrcBonus/2), 20, 125);
     } else {
-      // SP FORMULA: compression above 82.5, stamina bonus, low penalty
-      let effectiveAvg = coreAvg;
-      if (coreAvg > 82.5) {
-        effectiveAvg = 82.5 + (coreAvg - 82.5) * 0.35;
-      }
-      const lowPenalty = Math.max(0, (50 - coreAvg) * 2.5);
-      const staminaBonus = Math.min((r.stamina || 50) * 0.11, 8);
-      r.overall = Math.min(99, Math.max(25, Math.round(effectiveAvg + 2.5 + staminaBonus - lowPenalty)));
-      
-      // Also calculate RP rating for comparison
-      const totalWeight = 2.5 + 1 + 1 + 1 + 2.0 + 1 + 1 + 1;
-      const weightedAvg = (core[0] * 2.5 + core[1] + core[2] + core[3] + core[4] * 2.0 + core[5] + core[6] + core[7]) / totalWeight;
-      const eliteBonus = coreAvg >= 85 ? 3 : 0;
-      r.overall_rp = Math.min(99, Math.max(25, Math.round(weightedAvg + 0.5 + eliteBonus)));
-    }
-  } else {
-    // HITTER FORMULA
-    if (hasRateStat(stats.avg_vs_r)) r.contact_r = scale(num(stats.avg_vs_r), 0.200, 0.350);
-    else if (hasRateStat(stats.avg)) { const base = scale(num(stats.avg), 0.200, 0.350); const kAdj = hasRateStat(stats.k_pct) && toPct(stats.k_pct) > 22 ? Math.round((toPct(stats.k_pct) - 22) * 0.8) : 0; r.contact_r = base ? Math.max(25, base - kAdj) : 70; } else r.contact_r = 70;
-    r.contact_l = hasRateStat(stats.avg_vs_l) ? scale(num(stats.avg_vs_l), 0.200, 0.350) : Math.max(25, r.contact_r - 12);
-    const getISO = () => hasRateStat(stats.iso) ? num(stats.iso) : (hasRateStat(stats.slg) && hasRateStat(stats.avg)) ? num(stats.slg) - num(stats.avg) : null;
-    r.power_r = hasRateStat(stats.iso_vs_r) ? scale(num(stats.iso_vs_r), 0.080, 0.300) : getISO() ? scale(getISO(), 0.080, 0.300) : 70;
-    r.power_l = hasRateStat(stats.iso_vs_l) ? scale(num(stats.iso_vs_l), 0.080, 0.300) : Math.max(25, r.power_r - 15);
-    r.vision = hasRateStat(stats.k_pct) ? scale(toPct(stats.k_pct), 5, 30, true) : 70;
-    r.discipline = hasRateStat(stats.bb_pct) ? scale(toPct(stats.bb_pct), 5, 18) : (hasRateStat(stats.obp) && hasRateStat(stats.avg)) ? scale(num(stats.obp) - num(stats.avg), 0.030, 0.100) : 70;
-    r.clutch = 70;
-    r.fielding = Math.min(99, hasFieldingStat(stats.oaa) ? scale(num(stats.oaa), -15, 15) : hasFieldingStat(stats.drs) ? scale(num(stats.drs), -15, 20) : hasRateStat(stats.fielding_pct) ? scale(num(stats.fielding_pct), 0.950, 1.000) : 65);
-    r.speed = hasRateStat(stats.sprint_speed) ? scale(num(stats.sprint_speed), 23, 30) : hasCountStat(stats.sb) ? (isCareer ? Math.min(99, Math.max(25, Math.round(25 + Math.log(num(stats.sb) + 1) * 11))) : scale(num(stats.sb), 0, 50)) : 50;
-    r.stealing = r.speed; r.baserunning = Math.round(r.speed * 0.9);
-    r.arm_strength = Math.min(99, Math.round(r.fielding * 0.9 + 10));
-    r.arm_accuracy = Math.min(99, Math.round(r.fielding * 0.85 + 10));
-    r.reaction = Math.min(99, Math.round(r.fielding * 0.8 + 15));
-    if (stats.position === 'C') r.blocking = (hasFieldingStat(stats.drs) || hasFieldingStat(stats.oaa)) ? Math.min(99, hasFieldingStat(stats.oaa) ? scale(num(stats.oaa), -15, 15) : scale(num(stats.drs), -15, 20)) : Math.min(99, Math.round((r.fielding + r.arm_strength + r.arm_accuracy + r.reaction) / 4));
-    r.durability = hasCountStat(stats.games) ? scale(num(stats.games), isCareer ? 500 : 40, isCareer ? 3000 : 162) : 65;
-    
-    const posAdj = positionAdj[stats.position] || 0;
-    
-    // Core 9: Contact R, Contact L, Power R, Power L, Vision, Discipline, Clutch, Fielding, Speed
-    const core = [r.contact_r, r.contact_l, r.power_r, r.power_l, r.vision, r.discipline, r.clutch, r.fielding, r.speed].map(v => Math.min(v || 70, 99));
-    const coreAvg = core.reduce((a, b) => a + b, 0) / 9;
-    const avgPower = (core[2] + core[3]) / 2;
-    const disc = core[5];
-    
-    // HITTER OVERALL FORMULA (calibrated on 38 players, 76% within ±3)
-    // 1. Compression above 70
-    let effectiveAvg = coreAvg;
-    if (coreAvg > 70) {
-      effectiveAvg = 70 + (coreAvg - 70) * 0.25;
+        if (stats.bats === 'S') { attrs.conR = baseCon; attrs.conL = baseCon; }
+        else if (stats.bats === 'L') { attrs.conR = clamp(baseCon + 8, 20, 125); attrs.conL = clamp(baseCon - 12, 20, 125); }
+        else { attrs.conR = clamp(baseCon - 8, 20, 125); attrs.conL = clamp(baseCon + 12, 20, 125); }
+        est.push('Contact splits estimated');
     }
     
-    // 2. Low penalty for weak hitters
-    const lowPenalty = Math.max(0, (50 - coreAvg) * 1.9);
+    const isoBase = scale(stats.iso, 0.080, 0.300, 25, 115), hrBonus = scale(stats.hr, 5, 45, -10, 20);
+    const basePow = clamp(isoBase + hrBonus, 15, 125);
+    if (stats.slgR !== null && stats.slgL !== null) {
+        const isoR = stats.slgR - (stats.avgR || stats.avg), isoL = stats.slgL - (stats.avgL || stats.avg);
+        attrs.powR = clamp(Math.round(scale(isoR, 0.080, 0.300, 25, 115) + hrBonus/2), 15, 125);
+        attrs.powL = clamp(Math.round(scale(isoL, 0.080, 0.300, 25, 115) + hrBonus/2), 15, 125);
+    } else {
+        if (stats.bats === 'S') { attrs.powR = basePow; attrs.powL = basePow; }
+        else if (stats.bats === 'L') { attrs.powR = clamp(basePow + 10, 15, 125); attrs.powL = clamp(basePow - 15, 15, 125); }
+        else { attrs.powR = clamp(basePow - 10, 15, 125); attrs.powL = clamp(basePow + 15, 15, 125); }
+        est.push('Power splits estimated');
+    }
     
-    // 3. Power bonus for elite power (85+)
-    const powerBonus = avgPower >= 85 ? (avgPower - 85) * 0.225 : 0;
+    attrs.vision = scale(kPct, 35, 8, 25, 110);
+    attrs.discipline = clamp(scale(bbPct, 4, 18, 30, 115) + scale(stats.obp - stats.avg, 0.04, 0.12, -10, 15), 20, 125);
+    attrs.clutch = scale(stats.wrc, 70, 150, 40, 100);
+    attrs.speed = scale(stats.sprint, 23, 30.5, 10, 99);
+    const sbSucc = stats.sb / Math.max(1, stats.sb + stats.cs);
+    attrs.stealing = clamp(scale(stats.sb, 0, 50, 5, 90) + scale(sbSucc, 0.5, 0.9, -10, 20), 5, 99);
+    attrs.baserunning = clamp(Math.round(attrs.speed * 0.6 + attrs.stealing * 0.4), 5, 99);
     
-    // 4. Power penalty for weak power (<40), extra penalty for very weak (<35)
-    let powerPenalty = avgPower < 40 ? (40 - avgPower) * 0.03 : 0;
-    const powerPenaltyExtra = avgPower < 35 ? (35 - avgPower) * 0.15 : 0;
+    if (stats.oaa !== null || stats.drs !== null) {
+        const oaa = stats.oaa !== null ? stats.oaa : (stats.drs * 0.8);
+        attrs.fielding = clamp(scale(oaa, -15, 20, 30, 99), 20, 99);
+    } else if (stats.fldPct !== null) {
+        const posAvg = {C:0.990,'1B':0.993,'2B':0.983,'3B':0.960,SS:0.970,LF:0.985,CF:0.990,RF:0.985,DH:0.990};
+        attrs.fielding = scale(stats.fldPct - (posAvg[stats.pos] || 0.980), -0.030, 0.015, 40, 90);
+        est.push('Fielding from Fld%');
+    } else if (stats.errors !== null) { attrs.fielding = scale(stats.errors, 20, 2, 35, 85); est.push('Fielding from errors'); }
+    else { const posDef = {C:65,'1B':55,'2B':70,'3B':65,SS:75,LF:60,CF:70,RF:60,DH:40}; attrs.fielding = posDef[stats.pos] || 60; est.push('Fielding set to avg'); }
     
-    // 5. Elite bonus for disc 95+ AND power 85+
-    const eliteBonus = (disc >= 95 && avgPower >= 85) ? 1 : 0;
+    if (stats.arm !== null) { attrs.armStr = scale(stats.arm, 70, 100, 35, 99); }
+    else if (stats.pop !== null && stats.pos === 'C') { attrs.armStr = scale(stats.pop, 2.2, 1.75, 40, 99); est.push('Arm from pop'); }
+    else { const posArm = {C:70,'1B':55,'2B':60,'3B':70,SS:75,LF:65,CF:70,RF:80,DH:50}; attrs.armStr = posArm[stats.pos] || 65; est.push('Arm set to avg'); }
     
-    // 6. Calculate overall
-    r.overall = Math.min(99, Math.max(25, Math.round(effectiveAvg + 15.5 + posAdj + powerBonus + eliteBonus - powerPenalty - powerPenaltyExtra - lowPenalty)));
-  }
-  ratings = r;
-  displayResults();
+    attrs.armAcc = clamp(Math.round(attrs.fielding * 0.6 + attrs.armStr * 0.3 + 10), 30, 99);
+    attrs.reaction = clamp(Math.round(attrs.fielding * 0.5 + attrs.speed * 0.3 + 15), 25, 99);
+    return { attrs, est };
 }
 
-function displayResults() {
-  if (!ratings || !playerData) return;
-  document.getElementById('resultsContainer').classList.remove('hidden');
-  const tier = getTier(ratings.overall);
-  document.getElementById('cardContainer').className = `player-card-wrapper ${tier.css}`;
-  document.getElementById('resultName').textContent = playerData.name || 'Player';
-  const roleText = playerData.type === 'pitcher' ? (playerData.pitcher_role === 'RP' ? 'RP' : 'SP') : playerData.type;
-  document.getElementById('resultMeta').textContent = `${playerData.season} • ${roleText}`;
-  document.getElementById('resultOverall').textContent = Math.min(99, ratings.overall);
-  document.getElementById('resultTier').innerHTML = `${tier.icon} ${tier.label}`;
-  const rpDiv = document.getElementById('resultRP');
-  if (playerData.type === 'pitcher' && playerData.pitcher_role !== 'RP' && ratings.overall_rp) { 
-    rpDiv.textContent = `As RP: ${ratings.overall_rp}`; 
-    rpDiv.classList.remove('hidden'); 
-  } else rpDiv.classList.add('hidden');
-  
-  // Detect outlier patterns and show warnings
-  const warningBadge = document.getElementById('warningBadge');
-  const warnings = detectOutlierPatterns();
-  if (warnings.length > 0) {
-    warningBadge.innerHTML = '⚠️ ' + warnings.join(' • ');
-    warningBadge.classList.add('show');
-  } else {
-    warningBadge.classList.remove('show');
-  }
-  
-  const rc = document.getElementById('ratingsContainer');
-  rc.innerHTML = playerData.type === 'pitcher' 
-    ? `<div class="ratings-section"><h4>🎯 Pitching</h4>${ratingRow('H/9', ratings.h_per_9)}${ratingRow('K/9', ratings.k_per_9)}${ratingRow('BB/9', ratings.bb_per_9)}${ratingRow('HR/9', ratings.hr_per_9)}${ratingRow('Clutch', ratings.pitching_clutch)}${ratingRow('Control', ratings.control)}${ratingRow('Velocity', ratings.velocity)}${ratingRow('Break', ratings.break_rating)}${ratingRow('Stamina', ratings.stamina)}</div><div class="ratings-section"><h4>🛡️ Fielding</h4>${ratingRow('Fielding', ratings.fielding)}${ratingRow('Arm Strength', ratings.arm_strength)}${ratingRow('Arm Accuracy', ratings.arm_accuracy)}${ratingRow('Reaction', ratings.reaction)}${ratingRow('Durability', ratings.durability)}</div>`
-    : `<div class="ratings-section"><h4>📈 Hitting</h4>${ratingRow('Contact R', ratings.contact_r)}${ratingRow('Contact L', ratings.contact_l)}${ratingRow('Power R', ratings.power_r)}${ratingRow('Power L', ratings.power_l)}${ratingRow('Vision', ratings.vision)}${ratingRow('Discipline', ratings.discipline)}${ratingRow('Clutch', ratings.clutch)}</div><div class="ratings-section"><h4>⚡ Speed</h4>${ratingRow('Speed', ratings.speed)}${ratingRow('Stealing', ratings.stealing)}${ratingRow('Baserunning', ratings.baserunning)}<h4 class="mt">🛡️ Fielding</h4>${ratingRow('Fielding', ratings.fielding)}${ratingRow('Arm Strength', ratings.arm_strength)}${ratingRow('Arm Accuracy', ratings.arm_accuracy)}${ratingRow('Reaction', ratings.reaction)}${ratings.blocking ? ratingRow('Blocking', ratings.blocking) : ''}${ratingRow('Durability', ratings.durability)}</div>`;
-  document.getElementById('rawStats').textContent = JSON.stringify(playerData, null, 2);
+function convertPitcher(stats, isSP) {
+    const attrs = {}, est = [];
+    const ip = stats.ip || 1;
+    stats.whip = (stats.h + stats.bb) / ip; stats.k9 = (stats.so * 9) / ip; stats.bb9 = (stats.bb * 9) / ip; stats.hr9 = (stats.hr * 9) / ip; stats.h9 = (stats.h * 9) / ip;
+    if (stats.fip === null) { stats.fip = ((13 * stats.hr) + (3 * stats.bb) - (2 * stats.so)) / ip + 3.10; est.push('FIP estimated'); }
+    if (stats.stuff === null) { stats.stuff = Math.round(100 + (stats.k9 - 8) * 8 + (stats.velo - 93) * 3); est.push('Stuff+ estimated'); }
+    
+    attrs.h9 = clamp(scale(stats.h9, 11, 5.5, 30, 110) + scale(stats.whip, 1.5, 0.9, -15, 20), 25, 125);
+    attrs.k9 = clamp(scale(stats.k9, 5, 13, 30, 110) + scale(stats.stuff, 80, 140, -15, 25), 25, 125);
+    attrs.bb9 = clamp(scale(stats.bb9, 5.5, 1.0, 25, 110) + (stats.loc ? scale(stats.loc, 80, 130, -10, 15) : 0), 20, 125);
+    attrs.hr9 = clamp(scale(stats.hr9, 2.0, 0.4, 25, 105) + scale(stats.fip, 5.0, 2.5, -10, 15), 20, 125);
+    attrs.clutch = clamp(scale(stats.era, 5.5, 2.0, 30, 110), 25, 125);
+    attrs.velocity = scale(stats.velo, 85, 102, 30, 99);
+    attrs.control = clamp(Math.round(attrs.bb9 * 0.7 + (stats.loc ? scale(stats.loc, 80, 130, 20, 40) : 25)), 25, 99);
+    attrs.break = scale(stats.stuff, 70, 150, 40, 110);
+    attrs.stamina = isSP ? scale(ip, 100, 220, 55, 99) : scale(ip, 30, 80, 20, 45);
+    return { attrs, est };
 }
 
-function detectOutlierPatterns() {
-  const warnings = [];
-  if (!ratings || !playerData) return warnings;
-  
-  if (playerData.type === 'hitter') {
-    const avgPower = ((ratings.power_r || 70) + (ratings.power_l || 70)) / 2;
-    const avgContact = ((ratings.contact_r || 70) + (ratings.contact_l || 70)) / 2;
-    const speed = ratings.speed || 50;
-    const disc = ratings.discipline || 70;
-    const fld = ratings.fielding || 65;
-    const pos = playerData.position;
-    
-    // Speed-only profile: elite speed + very weak power
-    if (speed >= 95 && avgPower < 40) {
-      warnings.push('Speed-only profile (may be 5-8 pts lower in-game)');
-    }
-    
-    // Multiple severe weaknesses: weak power + weak discipline
-    if (avgPower < 35 && disc < 40) {
-      warnings.push('Multiple weaknesses (may be 5-8 pts lower in-game)');
-    }
-    
-    // Elite superstar profile: elite disc + elite power (likely undercalculated)
-    if (disc >= 95 && avgPower >= 85 && ratings.overall >= 88) {
-      warnings.push('Elite profile (may be 5-9 pts higher in-game)');
-    }
-    
-    // Defense-first catcher
-    if (pos === 'C' && fld >= 80 && avgPower < 60 && avgContact < 75) {
-      warnings.push('Defense-first catcher (may be 4-6 pts lower in-game)');
-    }
-  } else {
-    // Pitcher patterns
-    const coreAvg = [ratings.h_per_9, ratings.k_per_9, ratings.bb_per_9, ratings.hr_per_9, 
-                     ratings.pitching_clutch, ratings.control, ratings.velocity, ratings.break_rating]
-                    .filter(v => v != null).reduce((a, b) => a + b, 0) / 8;
-    
-    // Elite SP (Cy Young candidate type)
-    if (playerData.pitcher_role !== 'RP' && coreAvg >= 85 && ratings.overall >= 93) {
-      warnings.push('Elite SP profile (may be 4-6 pts higher in-game)');
-    }
-  }
-  
-  return warnings;
+const hFormulas = {'C_Diamond':{s:0.55,b:46.25},'C_Gold':{s:0.55,b:47.25},'C_Silver':{s:0.55,b:45},'C_Bronze':{s:0.55,b:43},'C_Common':{s:0.55,b:38.75},'1B_Diamond':{s:0.55,b:46.5},'1B_Gold':{s:0.55,b:43.75},'1B_Silver':{s:0.55,b:41},'1B_Bronze':{s:0.55,b:38.75},'1B_Common':{s:0.695,b:26.75},'2B_Diamond':{s:0.56,b:44},'2B_Gold':{s:0.55,b:43.5},'2B_Silver':{s:0.55,b:42},'2B_Bronze':{s:0.55,b:39},'2B_Common':{s:0.65,b:30},'3B_Diamond':{s:0.61,b:39.25},'3B_Gold':{s:0.55,b:42.5},'3B_Silver':{s:0.55,b:41.5},'3B_Bronze':{s:0.55,b:38.25},'3B_Common':{s:0.55,b:34.5},'SS_Diamond':{s:0.55,b:45},'SS_Gold':{s:0.55,b:43},'SS_Silver':{s:0.55,b:41},'SS_Bronze':{s:0.565,b:39.25},'SS_Common':{s:0.55,b:35.25},'LF_Diamond':{s:0.55,b:44.5},'LF_Gold':{s:0.55,b:42.5},'LF_Silver':{s:0.55,b:40.5},'LF_Bronze':{s:0.55,b:38.75},'LF_Common':{s:0.655,b:30.25},'CF_Diamond':{s:0.55,b:45.75},'CF_Gold':{s:0.55,b:44.75},'CF_Silver':{s:0.55,b:43.25},'CF_Bronze':{s:0.55,b:40},'CF_Common':{s:0.71,b:29},'RF_Diamond':{s:0.55,b:45.25},'RF_Gold':{s:0.55,b:43.75},'RF_Silver':{s:0.55,b:42.5},'RF_Bronze':{s:0.55,b:39.25},'RF_Common':{s:0.55,b:35.5},'DH_Diamond':{s:0.55,b:44},'DH_Gold':{s:0.75,b:30},'DH_Silver':{s:0.75,b:30},'DH_Bronze':{s:0.75,b:30},'DH_Common':{s:0.75,b:30}};
+const spFormulas = {Diamond:{s:0.68,b:24.5,stam:0.08},Gold:{s:0.65,b:21.5,stam:0.135},Silver:{s:0.65,b:24.5,stam:0.075},Bronze:{s:0.65,b:22.75,stam:0.08},Common:{s:0.66,b:20.25,stam:0.075}};
+const rpFormulas = {Diamond:{s:0.66,b:29.75},Gold:{s:0.615,b:29.75},Silver:{s:0.605,b:30},Bronze:{s:0.61,b:26.5},Common:{s:0.625,b:22.25}};
+const cpFormulas = {Diamond:{s:0.765,b:19.25},Gold:{s:0.74,b:19.75},Silver:{s:0.7,b:18.75},Bronze:{s:0.7,b:16.25},Common:{s:0.7,b:17.5}};
+
+function getRarity(ovr) { if (ovr >= 85) return 'Diamond'; if (ovr >= 80) return 'Gold'; if (ovr >= 75) return 'Silver'; if (ovr >= 65) return 'Bronze'; return 'Common'; }
+
+function calcHitterOvr(attrs, pos, tier) {
+    const core = [attrs.conR, attrs.conL, attrs.powR, attrs.powL, attrs.vision, attrs.discipline, attrs.clutch, attrs.fielding, attrs.speed];
+    const coreAvg = core.reduce((a,b) => a+b, 0) / 9, avgPow = (attrs.powR + attrs.powL) / 2;
+    const f = hFormulas[pos + '_' + tier] || {s:0.75, b:30};
+    let ovr = f.s * coreAvg + f.b; if (avgPow > 90) ovr += (avgPow - 90) * 0.11;
+    return { ovr: Math.min(99, Math.round(ovr)), rarity: getRarity(Math.min(99, Math.round(ovr))), coreAvg: coreAvg.toFixed(1), f };
 }
 
-function ratingRow(label, value) { const v = Math.min(99, value || 0); return `<div class="rating-row"><span class="label">${label}</span><span class="value ${getRatingColor(v)}">${v}</span></div>`; }
-
-function downloadCSV() {
-  if (!ratings || !playerData) return;
-  const rows = [['Attribute', 'Rating'], ...Object.entries(ratings).filter(([,v]) => v != null).map(([k, v]) => [k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), Math.min(99, v)])];
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }));
-  a.download = `${(playerData.name || 'player').replace(/\s+/g, '_')}_ratings.csv`; a.click();
+function calcPitcherOvr(attrs, type, tier) {
+    const core = [Math.min(attrs.h9,99), Math.min(attrs.k9,99), Math.min(attrs.bb9,99), Math.min(attrs.hr9,99), Math.min(attrs.clutch,99), attrs.control, attrs.velocity, Math.min(attrs.break,99)];
+    const coreAvg = core.reduce((a,b) => a+b, 0) / 8;
+    const formulas = type === 'SP' ? spFormulas : (type === 'CP' ? cpFormulas : rpFormulas);
+    const f = formulas[tier]; let ovr = f.s * coreAvg + f.b; if (type === 'SP') ovr += attrs.stamina * f.stam;
+    return { ovr: Math.min(99, Math.round(ovr)), rarity: getRarity(Math.min(99, Math.round(ovr))), coreAvg: coreAvg.toFixed(1), f, stam: attrs.stamina };
 }
 
-document.getElementById('playerType').addEventListener('change', buildFields);
-document.getElementById('isCareer').addEventListener('change', function() { document.getElementById('season').disabled = this.checked; document.getElementById('season').classList.toggle('disabled', this.checked); });
-buildFields();
+let curType = 'hitter';
+document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', function() {
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active')); this.classList.add('active');
+        curType = this.dataset.type;
+        document.querySelectorAll('.player-form').forEach(f => f.classList.add('hidden'));
+        document.getElementById(curType + '-form').classList.remove('hidden');
+        document.getElementById('result').classList.remove('show');
+    });
+});
+
+['h-avg', 'h-slg'].forEach(id => { document.getElementById(id).addEventListener('input', () => { const avg = getVal('h-avg'), slg = getVal('h-slg'); if (avg !== null && slg !== null) document.getElementById('h-iso').value = (slg - avg).toFixed(3); }); });
+['sp-ip','sp-h','sp-bb','sp-so','sp-hr'].forEach(id => { document.getElementById(id).addEventListener('input', () => { const ip = getVal('sp-ip') || 1, h = getVal('sp-h') || 0, bb = getVal('sp-bb') || 0, so = getVal('sp-so') || 0, hr = getVal('sp-hr') || 0; document.getElementById('sp-whip').value = ((h + bb) / ip).toFixed(2); document.getElementById('sp-k9').value = ((so * 9) / ip).toFixed(1); document.getElementById('sp-bb9').value = ((bb * 9) / ip).toFixed(1); document.getElementById('sp-hr9').value = ((hr * 9) / ip).toFixed(1); }); });
+
+document.getElementById('btn-calc').addEventListener('click', () => { if (curType === 'hitter') calcHitter(); else if (curType === 'sp') calcSP(); else calcRP(); });
+
+function calcHitter() {
+    const stats = { avg: getVal('h-avg'), obp: getVal('h-obp'), slg: getVal('h-slg'), iso: getVal('h-iso'), pa: getValOr('h-pa', 600), hr: getValOr('h-hr', 0), bb: getValOr('h-bb', 0), so: getValOr('h-so', 0), sb: getValOr('h-sb', 0), cs: getValOr('h-cs', 0), triples: getValOr('h-3b', 0), sprint: getVal('h-sprint'), oaa: getVal('h-oaa'), drs: getVal('h-drs'), fldPct: getVal('h-fldpct'), errors: getVal('h-err'), arm: getVal('h-arm'), pop: getVal('h-pop'), wrc: getVal('h-wrc'), avgR: getVal('h-avgR'), avgL: getVal('h-avgL'), slgR: getVal('h-slgR'), slgL: getVal('h-slgL'), bats: document.getElementById('h-bats').value, pos: document.getElementById('h-pos').value };
+    const { attrs, est } = convertHitter(stats);
+    const res = calcHitterOvr(attrs, stats.pos, document.getElementById('h-tier').value);
+    showHitterResult(document.getElementById('h-name').value || 'Player', stats.pos, attrs, res, est);
+}
+
+function calcSP() {
+    const stats = { era: getVal('sp-era'), ip: getVal('sp-ip'), h: getValOr('sp-h', 0), bb: getValOr('sp-bb', 0), so: getValOr('sp-so', 0), hr: getValOr('sp-hr', 0), velo: getValOr('sp-velo', 93), stuff: getVal('sp-stuff'), loc: getVal('sp-loc'), fip: getVal('sp-fip') };
+    const { attrs, est } = convertPitcher(stats, true);
+    const res = calcPitcherOvr(attrs, 'SP', document.getElementById('sp-tier').value);
+    showPitcherResult(document.getElementById('sp-name').value || 'Player', 'SP', attrs, res, est);
+}
+
+function calcRP() {
+    const stats = { era: getVal('rp-era'), ip: getVal('rp-ip'), h: getValOr('rp-h', 0), bb: getValOr('rp-bb', 0), so: getValOr('rp-so', 0), hr: getValOr('rp-hr', 0), velo: getValOr('rp-velo', 95), stuff: getVal('rp-stuff'), loc: null, fip: null };
+    const role = document.getElementById('rp-role').value;
+    const { attrs, est } = convertPitcher(stats, false);
+    const res = calcPitcherOvr(attrs, role, document.getElementById('rp-tier').value);
+    showPitcherResult(document.getElementById('rp-name').value || 'Player', role, attrs, res, est);
+}
+
+function attrClass(v) { if (v >= 85) return 'v-elite'; if (v >= 70) return 'v-good'; if (v >= 50) return 'v-avg'; return 'v-low'; }
+
+function showHitterResult(name, pos, attrs, res, est) {
+    document.getElementById('r-name').textContent = name;
+    document.getElementById('r-meta').textContent = pos + ' · Hitter';
+    document.getElementById('r-ovr').textContent = res.ovr;
+    const badge = document.getElementById('r-rarity'); badge.textContent = res.rarity; badge.className = 'rarity rarity-' + res.rarity.toLowerCase();
+    document.getElementById('s1-title').textContent = 'Hitting';
+    document.getElementById('s1-attrs').innerHTML = `<div class="attr"><div class="attr-name">Con R</div><div class="attr-val ${attrClass(attrs.conR)}">${attrs.conR}</div></div><div class="attr"><div class="attr-name">Con L</div><div class="attr-val ${attrClass(attrs.conL)}">${attrs.conL}</div></div><div class="attr"><div class="attr-name">Pow R</div><div class="attr-val ${attrClass(attrs.powR)}">${attrs.powR}</div></div><div class="attr"><div class="attr-name">Pow L</div><div class="attr-val ${attrClass(attrs.powL)}">${attrs.powL}</div></div><div class="attr"><div class="attr-name">Vision</div><div class="attr-val ${attrClass(attrs.vision)}">${attrs.vision}</div></div><div class="attr"><div class="attr-name">Disc</div><div class="attr-val ${attrClass(attrs.discipline)}">${attrs.discipline}</div></div><div class="attr"><div class="attr-name">Clutch</div><div class="attr-val ${attrClass(attrs.clutch)}">${attrs.clutch}</div></div>`;
+    document.getElementById('s2-title').textContent = 'Fielding & Speed';
+    document.getElementById('s2-attrs').innerHTML = `<div class="attr"><div class="attr-name">Field</div><div class="attr-val ${attrClass(attrs.fielding)}">${attrs.fielding}</div></div><div class="attr"><div class="attr-name">Arm Str</div><div class="attr-val ${attrClass(attrs.armStr)}">${attrs.armStr}</div></div><div class="attr"><div class="attr-name">Arm Acc</div><div class="attr-val ${attrClass(attrs.armAcc)}">${attrs.armAcc}</div></div><div class="attr"><div class="attr-name">React</div><div class="attr-val ${attrClass(attrs.reaction)}">${attrs.reaction}</div></div><div class="attr"><div class="attr-name">Speed</div><div class="attr-val ${attrClass(attrs.speed)}">${attrs.speed}</div></div><div class="attr"><div class="attr-name">Steal</div><div class="attr-val ${attrClass(attrs.stealing)}">${attrs.stealing}</div></div><div class="attr"><div class="attr-name">BsRun</div><div class="attr-val ${attrClass(attrs.baserunning)}">${attrs.baserunning}</div></div>`;
+    const avgPow = (attrs.powR + attrs.powL) / 2; let ft = `Core: ${res.coreAvg} → ${res.f.s} × ${res.coreAvg} + ${res.f.b}`; if (avgPow > 90) ft += ' + power bonus'; ft += ` = ${res.ovr}`;
+    document.getElementById('formula-box').textContent = ft;
+    const eb = document.getElementById('est-box'); if (est.length > 0) { eb.textContent = '⚠️ Estimated: ' + est.join(' · '); eb.classList.remove('hidden'); } else { eb.classList.add('hidden'); }
+    document.getElementById('result').classList.add('show');
+}
+
+function showPitcherResult(name, type, attrs, res, est) {
+    document.getElementById('r-name').textContent = name;
+    document.getElementById('r-meta').textContent = type + ' · ' + (type === 'SP' ? 'Starting Pitcher' : type === 'CP' ? 'Closer' : 'Reliever');
+    document.getElementById('r-ovr').textContent = res.ovr;
+    const badge = document.getElementById('r-rarity'); badge.textContent = res.rarity; badge.className = 'rarity rarity-' + res.rarity.toLowerCase();
+    document.getElementById('s1-title').textContent = 'Pitching';
+    document.getElementById('s1-attrs').innerHTML = `<div class="attr"><div class="attr-name">H/9</div><div class="attr-val ${attrClass(Math.min(attrs.h9,99))}">${attrs.h9}</div></div><div class="attr"><div class="attr-name">K/9</div><div class="attr-val ${attrClass(Math.min(attrs.k9,99))}">${attrs.k9}</div></div><div class="attr"><div class="attr-name">BB/9</div><div class="attr-val ${attrClass(Math.min(attrs.bb9,99))}">${attrs.bb9}</div></div><div class="attr"><div class="attr-name">HR/9</div><div class="attr-val ${attrClass(Math.min(attrs.hr9,99))}">${attrs.hr9}</div></div><div class="attr"><div class="attr-name">Clutch</div><div class="attr-val ${attrClass(Math.min(attrs.clutch,99))}">${attrs.clutch}</div></div>`;
+    document.getElementById('s2-title').textContent = 'Pitch Attributes';
+    document.getElementById('s2-attrs').innerHTML = `<div class="attr"><div class="attr-name">Velo</div><div class="attr-val ${attrClass(attrs.velocity)}">${attrs.velocity}</div></div><div class="attr"><div class="attr-name">Control</div><div class="attr-val ${attrClass(attrs.control)}">${attrs.control}</div></div><div class="attr"><div class="attr-name">Break</div><div class="attr-val ${attrClass(Math.min(attrs.break,99))}">${attrs.break}</div></div><div class="attr"><div class="attr-name">Stamina</div><div class="attr-val ${attrClass(attrs.stamina)}">${attrs.stamina}</div></div>`;
+    let ft = `Core: ${res.coreAvg} → ${res.f.s} × ${res.coreAvg} + ${res.f.b}`; if (type === 'SP') ft += ` + (${res.stam} × ${res.f.stam})`; ft += ` = ${res.ovr}`;
+    document.getElementById('formula-box').textContent = ft;
+    const eb = document.getElementById('est-box'); if (est.length > 0) { eb.textContent = '⚠️ Estimated: ' + est.join(' · '); eb.classList.remove('hidden'); } else { eb.classList.add('hidden'); }
+    document.getElementById('result').classList.add('show');
+}
+
+// Init
+(function() {
+    const avg = getVal('h-avg'), slg = getVal('h-slg'); if (avg !== null && slg !== null) document.getElementById('h-iso').value = (slg - avg).toFixed(3);
+    const ip = getVal('sp-ip') || 1, h = getVal('sp-h') || 0, bb = getVal('sp-bb') || 0, so = getVal('sp-so') || 0, hr = getVal('sp-hr') || 0;
+    document.getElementById('sp-whip').value = ((h + bb) / ip).toFixed(2); document.getElementById('sp-k9').value = ((so * 9) / ip).toFixed(1);
+    document.getElementById('sp-bb9').value = ((bb * 9) / ip).toFixed(1); document.getElementById('sp-hr9').value = ((hr * 9) / ip).toFixed(1);
+})();
 </script>
 </body>
 </html>
