@@ -87,47 +87,32 @@
 <body>
 <div class="container">
     <div class="header">
-        <div class="badges">
-            <span class="badge">v4.1 · 95% Accuracy</span>
-            <span class="badge new">🔍 Lahman DB: 24,270 Players</span>
-        </div>
+        <div class="badges"><span class="badge">v4.1 · 95% Accuracy</span><span class="badge new">🔍 Lahman DB: 24,270 Players</span></div>
         <h1>MLB Stats → <span class="accent">The Show 25</span></h1>
         <p class="subtitle">Convert real baseball statistics into game ratings</p>
     </div>
-    
     <div class="tabs">
         <button class="tab search-tab active" data-type="search">🔍 Search</button>
         <button class="tab" data-type="hitter">Hitter</button>
         <button class="tab" data-type="sp">SP</button>
         <button class="tab" data-type="rp">RP</button>
     </div>
-
     <div id="search-form" class="player-form">
         <div id="db-status" class="db-status loading">📊 Loading Lahman Database...</div>
         <div class="card">
             <div class="card-title">Search Historical Players (1871-2024)</div>
             <div class="form-row cols-3">
-                <div class="form-group" style="grid-column: span 2;">
-                    <label>Player Name</label>
-                    <div class="search-box">
-                        <input type="text" id="search-name" class="search-input" placeholder="e.g. Babe Ruth, Willie Mays..." autocomplete="off">
-                        <div id="search-results" class="search-results"></div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Year</label>
-                    <input type="number" id="search-year" placeholder="e.g. 1954" min="1871" max="2024">
-                </div>
+                <div class="form-group" style="grid-column: span 2;"><label>Player Name</label><div class="search-box"><input type="text" id="search-name" class="search-input" placeholder="e.g. Babe Ruth, Willie Mays..." autocomplete="off"><div id="search-results" class="search-results"></div></div></div>
+                <div class="form-group"><label>Year</label><input type="number" id="search-year" placeholder="e.g. 1954" min="1871" max="2024"></div>
             </div>
             <div class="form-row cols-3" style="margin-top: 12px;">
                 <div class="form-group"><label>Tier Override</label><select id="search-tier"><option value="">Auto</option><option value="Diamond">Diamond</option><option value="Gold">Gold</option><option value="Silver">Silver</option><option value="Bronze">Bronze</option><option value="Common">Common</option></select></div>
-                <div class="form-group"><label>Velo Override (P)</label><input type="number" id="search-velo" placeholder="Auto" step="0.1"></div>
+                <div class="form-group"><label>Velo Override</label><input type="number" id="search-velo" placeholder="Auto" step="0.1"></div>
                 <div class="form-group"><label>Position Override</label><select id="search-pos"><option value="">Auto</option><option value="C">C</option><option value="1B">1B</option><option value="2B">2B</option><option value="3B">3B</option><option value="SS">SS</option><option value="LF">LF</option><option value="CF">CF</option><option value="RF">RF</option><option value="DH">DH</option><option value="SP">SP</option><option value="RP">RP</option><option value="CP">CP</option></select></div>
             </div>
         </div>
         <button class="btn-calc btn-search" id="btn-search" disabled>🔍 Search & Convert</button>
     </div>
-
     <div id="hitter-form" class="player-form hidden">
         <div class="card">
             <div class="card-title">Player Info</div>
@@ -164,12 +149,11 @@
             <div class="form-row">
                 <div class="form-group"><label>Fld %</label><input type="number" id="h-fldpct" step="0.001" placeholder="e.g. 0.985"><span class="helper">e.g. 0.985</span></div>
                 <div class="form-group"><label>Errors</label><input type="number" id="h-err" placeholder="Optional"></div>
-                <div class="form-group"><label>OAA</label><input type="number" id="h-oaa" placeholder="Optional"><span class="helper">Outs Above Avg</span></div>
-                <div class="form-group"><label>DRS</label><input type="number" id="h-drs" placeholder="Optional"><span class="helper">Def Runs Saved</span></div>
+                <div class="form-group"><label>OAA</label><input type="number" id="h-oaa" placeholder="Optional"></div>
+                <div class="form-group"><label>DRS</label><input type="number" id="h-drs" placeholder="Optional"></div>
             </div>
         </div>
     </div>
-
     <div id="sp-form" class="player-form hidden">
         <div class="card">
             <div class="card-title">Starting Pitcher</div>
@@ -195,7 +179,6 @@
             </div>
         </div>
     </div>
-
     <div id="rp-form" class="player-form hidden">
         <div class="card">
             <div class="card-title">Relief Pitcher</div>
@@ -221,9 +204,7 @@
             </div>
         </div>
     </div>
-
     <button class="btn-calc hidden" id="btn-calc">Convert to The Show Ratings</button>
-
     <div class="result" id="result">
         <div class="result-header">
             <div class="player-info"><h2 id="r-name">Player</h2><p class="meta" id="r-meta">CF · Hitter</p></div>
@@ -237,20 +218,10 @@
         <div class="formula-box" id="formula-box"></div>
         <div class="est-box hidden" id="est-box"></div>
     </div>
-
-    <details class="info"><summary>How This Works</summary>
-        <div class="info-body">
-            <p><strong>🔍 Search:</strong> Powered by <span class="hl">Lahman Database</span> with 24,270 players (1871-2024) including Negro Leagues!</p>
-            <p style="margin-top:8px">Overall formula derived from <span class="hl">3,644 players</span> with <span class="hl">95% accuracy</span>.</p>
-            <p style="margin-top:8px"><strong>Auto-estimates:</strong> wRC+ from OPS, Sprint from SB/3B, Velocity by era</p>
-            <p style="margin-top:8px"><strong>Fielding:</strong> Uses actual fielding % from database, or position defaults if unavailable.</p>
-        </div>
-    </details>
+    <details class="info"><summary>How This Works</summary><div class="info-body"><p><strong>🔍 Search:</strong> Powered by <span class="hl">Lahman Database</span> (1871-2024).</p><p style="margin-top:8px">Formula calibrated on <span class="hl">3,644 players</span> with <span class="hl">95% accuracy</span>.</p></div></details>
 </div>
-
 <script src="lahman_data.js"></script>
 <script>
-// ============ CONVERSION FUNCTIONS (v3.1 accurate) ============
 function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
 function scale(val,minS,maxS,minR,maxR){if(val===null||val===undefined||isNaN(val))return Math.round((minR+maxR)/2);return clamp(Math.round(minR+((val-minS)/(maxS-minS))*(maxR-minR)),0,125)}
 function getVal(id){const el=document.getElementById(id);if(!el)return null;const v=parseFloat(el.value);return(isNaN(v)||el.value.trim()==='')?null:v}
@@ -281,24 +252,34 @@ function convertHitter(stats){
     attrs.stealing=clamp(scale(stats.sb,0,50,5,90)+scale(sbSucc,0.5,0.9,-10,20),5,99);
     attrs.baserunning=clamp(Math.round(attrs.speed*0.6+attrs.stealing*0.4),5,99);
     
-    // Fielding calculation (v3.1 logic)
+    // Fielding calculation
+    
     if(stats.oaa!==null||stats.drs!==null){
         const oaa=stats.oaa!==null?stats.oaa:(stats.drs*0.8);
         attrs.fielding=clamp(scale(oaa,-15,20,30,99),20,99);
-    }else if(stats.fldPct!==null){
+        
+    }else if(stats.fldPct!==null && stats.fldPct>0){
         const posAvg={C:0.990,'1B':0.993,'2B':0.983,'3B':0.960,SS:0.970,LF:0.985,CF:0.990,RF:0.985,DH:0.990};
-        attrs.fielding=clamp(scale(stats.fldPct-(posAvg[stats.pos]||0.980),-0.030,0.015,40,90),20,99);
+        const diff=stats.fldPct-(posAvg[stats.pos]||0.980);
+        
+        attrs.fielding=clamp(scale(diff,-0.030,0.015,40,90),20,99);
+        
     }else if(stats.errors!==null){
-        attrs.fielding=scale(stats.errors,20,2,35,85);est.push('Fielding from errors');
+        attrs.fielding=scale(stats.errors,20,2,35,85);
+        est.push('Fielding');
+        
     }else{
         const posDef={C:65,'1B':55,'2B':70,'3B':65,SS:75,LF:60,CF:70,RF:60,DH:40};
-        attrs.fielding=posDef[stats.pos]||60;est.push('Fielding');
+        attrs.fielding=posDef[stats.pos]||60;
+        est.push('Fielding');
+        
     }
     
     const posArm={C:70,'1B':55,'2B':60,'3B':70,SS:75,LF:65,CF:70,RF:80,DH:50};
     attrs.armStr=posArm[stats.pos]||65;
-    attrs.armAcc=clamp(Math.round(attrs.fielding*0.6+attrs.armStr*0.3+10),30,99);
     attrs.reaction=clamp(Math.round(attrs.fielding*0.5+attrs.speed*0.3+15),25,99);
+    // Arm Accuracy: weighted average of arm strength, fielding, and reaction
+    attrs.armAcc=clamp(Math.round(attrs.armStr*0.5+attrs.fielding*0.3+attrs.reaction*0.2),25,99);
     return{attrs,est}
 }
 
@@ -340,149 +321,68 @@ function calcPitcherOvr(attrs,type,tier){
     return{ovr:Math.min(99,Math.round(ovr)),rarity:getRarity(Math.min(99,Math.round(ovr))),coreAvg:coreAvg.toFixed(1),f,stam:attrs.stamina}
 }
 
-// ============ LAHMAN DATABASE ============
 let dbLoaded=false;
 function initDB(){
     const status=document.getElementById('db-status');
     try{
-        if(typeof PPL==='undefined'||typeof BAT==='undefined')throw new Error('Data not loaded');
+        if(typeof PPL==='undefined')throw new Error('Data not loaded');
         dbLoaded=true;
         status.textContent='✅ Loaded '+PPL.length.toLocaleString()+' players (1871-2024)';
         status.classList.remove('loading','error');
         document.getElementById('btn-search').disabled=false;
-    }catch(e){
-        status.classList.remove('loading');status.classList.add('error');
-        status.innerHTML='❌ Database not loaded. Place <strong>lahman_data.js</strong> in the same folder.';
-    }
+    }catch(e){status.classList.remove('loading');status.classList.add('error');status.innerHTML='❌ Place <strong>lahman_data.js</strong> in same folder.';}
 }
 
 function normalizeStr(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
-
-function searchPlayers(q){
-    if(!dbLoaded||!q||q.length<2)return[];
-    const nq=normalizeStr(q),pts=nq.split(/\s+/);
-    return PPL.filter(p=>{
-        const fn=normalizeStr(p[1]),ln=normalizeStr(p[2]),full=fn+' '+ln;
-        return pts.length===1?(fn.includes(pts[0])||ln.includes(pts[0])):pts.every(pt=>full.includes(pt))
-    }).slice(0,15)
-}
-
-function getPlayerYears(pid){
-    const batYrs=BAT.filter(b=>b[0]===pid).map(b=>b[1]);
-    const pitYrs=PIT.filter(p=>p[0]===pid).map(p=>p[1]);
-    const yrs=[...new Set([...batYrs,...pitYrs])].sort((a,b)=>a-b);
-    return yrs.length?yrs[0]+'-'+yrs[yrs.length-1]:''
-}
-
-function getBatting(pid,yr){
-    const rows=BAT.filter(b=>b[0]===pid&&b[1]===yr);if(!rows.length)return null;
-    let g=0,ab=0,h=0,d=0,tr=0,hr=0,bb=0,so=0,sb=0,cs=0,hbp=0,sf=0;
-    rows.forEach(r=>{g+=r[2];ab+=r[3];h+=r[4];d+=r[5];tr+=r[6];hr+=r[7];bb+=r[8];so+=r[9];sb+=r[10];cs+=r[11];hbp+=r[12];sf+=r[13]});
-    const pa=ab+bb+hbp+sf,avg=ab>0?h/ab:0,obp=pa>0?(h+bb+hbp)/pa:0,tb=h+d+2*tr+3*hr,slg=ab>0?tb/ab:0;
-    return{g,ab,h,d,tr,hr,bb,so,sb,cs,hbp,sf,pa,avg,obp,slg,iso:slg-avg}
-}
-
-function getPitching(pid,yr){
-    const rows=PIT.filter(p=>p[0]===pid&&p[1]===yr);if(!rows.length)return null;
-    let w=0,l=0,g=0,gs=0,sv=0,ipo=0,h=0,er=0,hr=0,bb=0,so=0;
-    rows.forEach(r=>{w+=r[2];l+=r[3];g+=r[4];gs+=r[5];sv+=r[6];ipo+=r[7];h+=r[8];er+=r[9];hr+=r[10];bb+=r[11];so+=r[12]});
-    const ip=ipo/3;
-    return{w,l,g,gs,sv,ip,h,er,hr,bb,so,era:ip>0?(er*9)/ip:0,whip:ip>0?(h+bb)/ip:0,k9:ip>0?(so*9)/ip:0}
-}
+function searchPlayers(q){if(!dbLoaded||!q||q.length<2)return[];const nq=normalizeStr(q),pts=nq.split(/\s+/);return PPL.filter(p=>{const fn=normalizeStr(p[1]),ln=normalizeStr(p[2]),full=fn+' '+ln;return pts.length===1?(fn.includes(pts[0])||ln.includes(pts[0])):pts.every(pt=>full.includes(pt))}).slice(0,15)}
+function getPlayerYears(pid){const batYrs=BAT.filter(b=>b[0]===pid).map(b=>b[1]);const pitYrs=PIT.filter(p=>p[0]===pid).map(p=>p[1]);const yrs=[...new Set([...batYrs,...pitYrs])].sort((a,b)=>a-b);return yrs.length?yrs[0]+'-'+yrs[yrs.length-1]:''}
+function getBatting(pid,yr){const rows=BAT.filter(b=>b[0]===pid&&b[1]===yr);if(!rows.length)return null;let g=0,ab=0,h=0,d=0,tr=0,hr=0,bb=0,so=0,sb=0,cs=0,hbp=0,sf=0;rows.forEach(r=>{g+=r[2];ab+=r[3];h+=r[4];d+=r[5];tr+=r[6];hr+=r[7];bb+=r[8];so+=r[9];sb+=r[10];cs+=r[11];hbp+=r[12];sf+=r[13]});const pa=ab+bb+hbp+sf,avg=ab>0?h/ab:0,obp=pa>0?(h+bb+hbp)/pa:0,tb=h+d+2*tr+3*hr,slg=ab>0?tb/ab:0;return{g,ab,h,d,tr,hr,bb,so,sb,cs,hbp,sf,pa,avg,obp,slg,iso:slg-avg}}
+function getPitching(pid,yr){const rows=PIT.filter(p=>p[0]===pid&&p[1]===yr);if(!rows.length)return null;let w=0,l=0,g=0,gs=0,sv=0,ipo=0,h=0,er=0,hr=0,bb=0,so=0;rows.forEach(r=>{w+=r[2];l+=r[3];g+=r[4];gs+=r[5];sv+=r[6];ipo+=r[7];h+=r[8];er+=r[9];hr+=r[10];bb+=r[11];so+=r[12]});const ip=ipo/3;return{w,l,g,gs,sv,ip,h,er,hr,bb,so,era:ip>0?(er*9)/ip:0,whip:ip>0?(h+bb)/ip:0,k9:ip>0?(so*9)/ip:0}}
 
 function getFielding(pid,yr){
-    // FLD: [playerID, year, position, fldPct*1000, errors]
     const rows=FLD.filter(f=>f[0]===pid&&f[1]===yr);
+    
     if(!rows.length)return{pos:'DH',fldPct:null,errors:null};
     const r=rows[0];
     const pos={C:'C','1B':'1B','2B':'2B','3B':'3B',SS:'SS',LF:'LF',CF:'CF',RF:'RF',OF:'CF'}[r[2]]||'DH';
-    return{pos,fldPct:r[3]/1000,errors:r[4]}
+    // r[3] is fldPct * 1000 (e.g., 990 = .990). Treat 0 as missing.
+    const rawFldPct=r[3];
+    const fldPct=rawFldPct>0?rawFldPct/1000:null;
+    
+    return{pos,fldPct,errors:r[4]}
 }
 
 function estVelo(yr,k9){let v=93;if(yr<1920)v=88;else if(yr<1950)v=90;else if(yr<1970)v=92;else if(yr<1990)v=91;else if(yr<2010)v=93;else v=94;if(k9>10)v+=2;else if(k9>8)v+=1;return v}
 function autoTier(st,isP){if(isP){if(st.era<2.5&&st.ip>100)return'Diamond';if(st.era<3.5)return'Gold';if(st.era<4.2)return'Silver';if(st.era<5)return'Bronze';return'Common'}else{const ops=st.obp+st.slg;if(ops>0.95)return'Diamond';if(ops>0.8)return'Gold';if(ops>0.72)return'Silver';if(ops>0.65)return'Bronze';return'Common'}}
 
-// ============ UI ============
 let curType='search',selectedPlayer=null;
-
-document.querySelectorAll('.tab').forEach(t=>{
-    t.addEventListener('click',function(){
-        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));this.classList.add('active');
-        curType=this.dataset.type;
-        document.querySelectorAll('.player-form').forEach(f=>f.classList.add('hidden'));
-        document.getElementById(curType+'-form').classList.remove('hidden');
-        document.getElementById('result').classList.remove('show');
-        document.getElementById('btn-calc').classList.toggle('hidden',curType==='search');
-    })
-});
-
-const searchIn=document.getElementById('search-name'),searchRes=document.getElementById('search-results');
-let searchTO;
-searchIn.addEventListener('input',function(){
-    clearTimeout(searchTO);const q=this.value.trim();
-    searchTO=setTimeout(()=>{
-        if(q.length<2){searchRes.classList.remove('show');return}
-        const res=searchPlayers(q);
-        searchRes.innerHTML=res.length?res.map(p=>`<div class="search-result" data-id="${p[0]}" data-fn="${p[1]}" data-ln="${p[2]}" data-bats="${p[3]}" data-throws="${p[4]}"><span class="name">${p[1]} ${p[2]}</span><span class="years">${getPlayerYears(p[0])}</span></div>`).join(''):'<div class="search-result"><span class="name">No players found</span></div>';
-        searchRes.classList.add('show')
-    },200)
-});
+document.querySelectorAll('.tab').forEach(t=>{t.addEventListener('click',function(){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));this.classList.add('active');curType=this.dataset.type;document.querySelectorAll('.player-form').forEach(f=>f.classList.add('hidden'));document.getElementById(curType+'-form').classList.remove('hidden');document.getElementById('result').classList.remove('show');document.getElementById('btn-calc').classList.toggle('hidden',curType==='search')})});
+const searchIn=document.getElementById('search-name'),searchRes=document.getElementById('search-results');let searchTO;
+searchIn.addEventListener('input',function(){clearTimeout(searchTO);const q=this.value.trim();searchTO=setTimeout(()=>{if(q.length<2){searchRes.classList.remove('show');return}const res=searchPlayers(q);searchRes.innerHTML=res.length?res.map(p=>`<div class="search-result" data-id="${p[0]}" data-fn="${p[1]}" data-ln="${p[2]}" data-bats="${p[3]}" data-throws="${p[4]}"><span class="name">${p[1]} ${p[2]}</span><span class="years">${getPlayerYears(p[0])}</span></div>`).join(''):'<div class="search-result"><span class="name">No players found</span></div>';searchRes.classList.add('show')},200)});
 searchRes.addEventListener('click',e=>{const r=e.target.closest('.search-result');if(r&&r.dataset.id){selectedPlayer={id:r.dataset.id,fn:r.dataset.fn,ln:r.dataset.ln,bats:r.dataset.bats,throws:r.dataset.throws};searchIn.value=selectedPlayer.fn+' '+selectedPlayer.ln;searchRes.classList.remove('show')}});
 document.addEventListener('click',e=>{if(!e.target.closest('.search-box'))searchRes.classList.remove('show')});
-
 ['h-avg','h-slg'].forEach(id=>{document.getElementById(id).addEventListener('input',()=>{const a=getVal('h-avg'),s=getVal('h-slg');if(a!==null&&s!==null)document.getElementById('h-iso').value=(s-a).toFixed(3)})});
-
 document.getElementById('btn-search').addEventListener('click',searchConvert);
 document.getElementById('btn-calc').addEventListener('click',()=>{if(curType==='hitter')calcHitter();else if(curType==='sp')calcSP();else calcRP()});
 
-function searchConvert(){
-    if(!selectedPlayer){alert('Select a player');return}
-    const yr=+document.getElementById('search-year').value;if(!yr||yr<1871||yr>2024){alert('Enter year 1871-2024');return}
-    const pit=getPitching(selectedPlayer.id,yr),bat=getBatting(selectedPlayer.id,yr);
-    const oPos=document.getElementById('search-pos').value;
-    let isP=['SP','RP','CP'].includes(oPos);if(!oPos&&pit&&pit.ip>30)isP=true;
-    if(isP&&pit)convertSearchPit(selectedPlayer,yr,pit,oPos);else if(bat)convertSearchHit(selectedPlayer,yr,bat,oPos);else alert('No stats for '+selectedPlayer.fn+' '+selectedPlayer.ln+' in '+yr)
-}
+function searchConvert(){if(!selectedPlayer){alert('Select a player');return}const yr=+document.getElementById('search-year').value;if(!yr||yr<1871||yr>2024){alert('Enter year 1871-2024');return}const pit=getPitching(selectedPlayer.id,yr),bat=getBatting(selectedPlayer.id,yr);const oPos=document.getElementById('search-pos').value;let isP=['SP','RP','CP'].includes(oPos);if(!oPos&&pit&&pit.ip>30)isP=true;if(isP&&pit)convertSearchPit(selectedPlayer,yr,pit,oPos);else if(bat)convertSearchHit(selectedPlayer,yr,bat,oPos);else alert('No stats for '+selectedPlayer.fn+' '+selectedPlayer.ln+' in '+yr)}
 
 function convertSearchHit(player,yr,real,oPos){
     const fld=getFielding(player.id,yr);
     const pos=oPos||fld.pos,tier=document.getElementById('search-tier').value||autoTier(real,false);
     const stats={avg:real.avg,obp:real.obp,slg:real.slg,iso:real.iso,pa:real.pa,hr:real.hr,bb:real.bb,so:real.so,sb:real.sb,cs:real.cs,triples:real.tr,sprint:null,wrc:null,oaa:null,drs:null,fldPct:fld.fldPct,errors:fld.errors,bats:player.bats||'R',pos};
+    
     const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,pos,tier);
     const fldStr=fld.fldPct?` · ${(fld.fldPct*100).toFixed(1)}% Fld`:'';
     const realHtml=`<strong>${yr}:</strong> .${(real.avg*1000).toFixed(0).padStart(3,'0')}/.${(real.obp*1000).toFixed(0).padStart(3,'0')}/.${(real.slg*1000).toFixed(0).padStart(3,'0')} · ${real.hr} HR · ${real.sb} SB${fldStr}`;
     showHitterResult(player.fn+' '+player.ln,pos,attrs,res,est,realHtml)
 }
 
-function convertSearchPit(player,yr,real,oPos){
-    const isSP=real.gs>real.g/2,posType=oPos||(isSP?'SP':(real.sv>10?'CP':'RP'));
-    const tier=document.getElementById('search-tier').value||autoTier(real,true);
-    const oVelo=getVal('search-velo'),velo=oVelo||estVelo(yr,real.k9);
-    const stats={era:real.era,ip:real.ip,h:real.h,bb:real.bb,so:real.so,hr:real.hr,velo,stuff:null,fip:null};
-    const{attrs,est}=convertPitcher(stats,posType==='SP'),res=calcPitcherOvr(attrs,posType,tier);
-    est.push('Velo: '+velo.toFixed(0)+' mph');
-    const realHtml=`<strong>${yr}:</strong> ${real.w}-${real.l} · ${real.era.toFixed(2)} ERA · ${real.ip.toFixed(0)} IP · ${real.so} SO · ${real.whip.toFixed(2)} WHIP`;
-    showPitcherResult(player.fn+' '+player.ln,posType,attrs,res,est,realHtml)
-}
+function convertSearchPit(player,yr,real,oPos){const isSP=real.gs>real.g/2,posType=oPos||(isSP?'SP':(real.sv>10?'CP':'RP'));const tier=document.getElementById('search-tier').value||autoTier(real,true);const oVelo=getVal('search-velo'),velo=oVelo||estVelo(yr,real.k9);const stats={era:real.era,ip:real.ip,h:real.h,bb:real.bb,so:real.so,hr:real.hr,velo,stuff:null,fip:null};const{attrs,est}=convertPitcher(stats,posType==='SP'),res=calcPitcherOvr(attrs,posType,tier);est.push('Velo: '+velo.toFixed(0)+' mph');const realHtml=`<strong>${yr}:</strong> ${real.w}-${real.l} · ${real.era.toFixed(2)} ERA · ${real.ip.toFixed(0)} IP · ${real.so} SO`;showPitcherResult(player.fn+' '+player.ln,posType,attrs,res,est,realHtml)}
 
-function calcHitter(){
-    const stats={avg:getVal('h-avg'),obp:getVal('h-obp'),slg:getVal('h-slg'),iso:getVal('h-iso'),pa:getValOr('h-pa',600),hr:getValOr('h-hr',0),bb:getValOr('h-bb',0),so:getValOr('h-so',0),sb:getValOr('h-sb',0),cs:getValOr('h-cs',0),triples:getValOr('h-3b',0),sprint:null,wrc:getVal('h-wrc'),oaa:getVal('h-oaa'),drs:getVal('h-drs'),fldPct:getVal('h-fldpct'),errors:getVal('h-err'),bats:document.getElementById('h-bats').value,pos:document.getElementById('h-pos').value};
-    const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,stats.pos,document.getElementById('h-tier').value);
-    showHitterResult(document.getElementById('h-name').value||'Player',stats.pos,attrs,res,est)
-}
-
-function calcSP(){
-    const stats={era:getVal('sp-era'),ip:getVal('sp-ip'),h:getValOr('sp-h',0),bb:getValOr('sp-bb',0),so:getValOr('sp-so',0),hr:getValOr('sp-hr',0),velo:getValOr('sp-velo',93),stuff:getVal('sp-stuff'),fip:null};
-    const{attrs,est}=convertPitcher(stats,true),res=calcPitcherOvr(attrs,'SP',document.getElementById('sp-tier').value);
-    showPitcherResult(document.getElementById('sp-name').value||'Player','SP',attrs,res,est)
-}
-
-function calcRP(){
-    const stats={era:getVal('rp-era'),ip:getVal('rp-ip'),h:getValOr('rp-h',0),bb:getValOr('rp-bb',0),so:getValOr('rp-so',0),hr:getValOr('rp-hr',0),velo:getValOr('rp-velo',95),stuff:null,fip:null};
-    const role=document.getElementById('rp-role').value;
-    const{attrs,est}=convertPitcher(stats,false),res=calcPitcherOvr(attrs,role,document.getElementById('rp-tier').value);
-    showPitcherResult(document.getElementById('rp-name').value||'Player',role,attrs,res,est)
-}
+function calcHitter(){const stats={avg:getVal('h-avg'),obp:getVal('h-obp'),slg:getVal('h-slg'),iso:getVal('h-iso'),pa:getValOr('h-pa',600),hr:getValOr('h-hr',0),bb:getValOr('h-bb',0),so:getValOr('h-so',0),sb:getValOr('h-sb',0),cs:getValOr('h-cs',0),triples:getValOr('h-3b',0),sprint:null,wrc:getVal('h-wrc'),oaa:getVal('h-oaa'),drs:getVal('h-drs'),fldPct:getVal('h-fldpct'),errors:getVal('h-err'),bats:document.getElementById('h-bats').value,pos:document.getElementById('h-pos').value};const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,stats.pos,document.getElementById('h-tier').value);showHitterResult(document.getElementById('h-name').value||'Player',stats.pos,attrs,res,est)}
+function calcSP(){const stats={era:getVal('sp-era'),ip:getVal('sp-ip'),h:getValOr('sp-h',0),bb:getValOr('sp-bb',0),so:getValOr('sp-so',0),hr:getValOr('sp-hr',0),velo:getValOr('sp-velo',93),stuff:getVal('sp-stuff'),fip:null};const{attrs,est}=convertPitcher(stats,true),res=calcPitcherOvr(attrs,'SP',document.getElementById('sp-tier').value);showPitcherResult(document.getElementById('sp-name').value||'Player','SP',attrs,res,est)}
+function calcRP(){const stats={era:getVal('rp-era'),ip:getVal('rp-ip'),h:getValOr('rp-h',0),bb:getValOr('rp-bb',0),so:getValOr('rp-so',0),hr:getValOr('rp-hr',0),velo:getValOr('rp-velo',95),stuff:null,fip:null};const role=document.getElementById('rp-role').value;const{attrs,est}=convertPitcher(stats,false),res=calcPitcherOvr(attrs,role,document.getElementById('rp-tier').value);showPitcherResult(document.getElementById('rp-name').value||'Player',role,attrs,res,est)}
 
 function attrClass(v){if(v>=85)return'v-elite';if(v>=70)return'v-good';if(v>=50)return'v-avg';return'v-low'}
 
@@ -494,7 +394,7 @@ function showHitterResult(name,pos,attrs,res,est,realHtml){
     document.getElementById('s1-title').textContent='Hitting';
     document.getElementById('s1-attrs').innerHTML=`<div class="attr"><div class="attr-name">Con R</div><div class="attr-val ${attrClass(attrs.conR)}">${attrs.conR}</div></div><div class="attr"><div class="attr-name">Con L</div><div class="attr-val ${attrClass(attrs.conL)}">${attrs.conL}</div></div><div class="attr"><div class="attr-name">Pow R</div><div class="attr-val ${attrClass(attrs.powR)}">${attrs.powR}</div></div><div class="attr"><div class="attr-name">Pow L</div><div class="attr-val ${attrClass(attrs.powL)}">${attrs.powL}</div></div><div class="attr"><div class="attr-name">Vision</div><div class="attr-val ${attrClass(attrs.vision)}">${attrs.vision}</div></div><div class="attr"><div class="attr-name">Disc</div><div class="attr-val ${attrClass(attrs.discipline)}">${attrs.discipline}</div></div><div class="attr"><div class="attr-name">Clutch</div><div class="attr-val ${attrClass(attrs.clutch)}">${attrs.clutch}</div></div>`;
     document.getElementById('s2-title').textContent='Fielding & Speed';
-    document.getElementById('s2-attrs').innerHTML=`<div class="attr"><div class="attr-name">Field</div><div class="attr-val ${attrClass(attrs.fielding)}">${attrs.fielding}</div></div><div class="attr"><div class="attr-name">Arm</div><div class="attr-val ${attrClass(attrs.armStr)}">${attrs.armStr}</div></div><div class="attr"><div class="attr-name">React</div><div class="attr-val ${attrClass(attrs.reaction)}">${attrs.reaction}</div></div><div class="attr"><div class="attr-name">Speed</div><div class="attr-val ${attrClass(attrs.speed)}">${attrs.speed}</div></div><div class="attr"><div class="attr-name">Steal</div><div class="attr-val ${attrClass(attrs.stealing)}">${attrs.stealing}</div></div><div class="attr"><div class="attr-name">BsRun</div><div class="attr-val ${attrClass(attrs.baserunning)}">${attrs.baserunning}</div></div>`;
+    document.getElementById('s2-attrs').innerHTML=`<div class="attr"><div class="attr-name">Field</div><div class="attr-val ${attrClass(attrs.fielding)}">${attrs.fielding}</div></div><div class="attr"><div class="attr-name">Arm</div><div class="attr-val ${attrClass(attrs.armStr)}">${attrs.armStr}</div></div><div class="attr"><div class="attr-name">Acc</div><div class="attr-val ${attrClass(attrs.armAcc)}">${attrs.armAcc}</div></div><div class="attr"><div class="attr-name">React</div><div class="attr-val ${attrClass(attrs.reaction)}">${attrs.reaction}</div></div><div class="attr"><div class="attr-name">Speed</div><div class="attr-val ${attrClass(attrs.speed)}">${attrs.speed}</div></div><div class="attr"><div class="attr-name">Steal</div><div class="attr-val ${attrClass(attrs.stealing)}">${attrs.stealing}</div></div><div class="attr"><div class="attr-name">BsRun</div><div class="attr-val ${attrClass(attrs.baserunning)}">${attrs.baserunning}</div></div>`;
     const avgPow=(attrs.powR+attrs.powL)/2;let ft=`Core: ${res.coreAvg} → ${res.f.s}×${res.coreAvg}+${res.f.b}`;if(avgPow>90)ft+=' +pwr';ft+=` = ${res.ovr}`;
     document.getElementById('formula-box').textContent=ft;
     const realBox=document.getElementById('real-stats-box');if(realHtml){realBox.innerHTML=realHtml;realBox.classList.remove('hidden')}else{realBox.classList.add('hidden')}
@@ -518,7 +418,6 @@ function showPitcherResult(name,type,attrs,res,est,realHtml){
     document.getElementById('result').classList.add('show')
 }
 
-// Init
 setTimeout(initDB,100);
 (function(){const a=getVal('h-avg'),s=getVal('h-slg');if(a!==null&&s!==null)document.getElementById('h-iso').value=(s-a).toFixed(3)})();
 </script>
