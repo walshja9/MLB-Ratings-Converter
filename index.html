@@ -145,6 +145,15 @@
             </div>
         </div>
         <div class="card">
+            <div class="card-title">Splits (Optional)</div>
+            <div class="form-row">
+                <div class="form-group"><label>Con vs R</label><input type="number" id="h-conR" placeholder="Auto"></div>
+                <div class="form-group"><label>Con vs L</label><input type="number" id="h-conL" placeholder="Auto"></div>
+                <div class="form-group"><label>Pow vs R</label><input type="number" id="h-powR" placeholder="Auto"></div>
+                <div class="form-group"><label>Pow vs L</label><input type="number" id="h-powL" placeholder="Auto"></div>
+            </div>
+        </div>
+        <div class="card">
             <div class="card-title">Fielding (Optional)</div>
             <div class="form-row">
                 <div class="form-group"><label>Fld %</label><input type="number" id="h-fldpct" step="0.001" placeholder="e.g. 0.985"><span class="helper">e.g. 0.985</span></div>
@@ -232,22 +241,29 @@ function convertHitter(stats){
     if(stats.iso===null)stats.iso=stats.slg-stats.avg;
     const kPct=(stats.so/stats.pa)*100,bbPct=(stats.bb/stats.pa)*100;
     if(stats.wrc===null){stats.wrc=Math.round(((stats.obp+stats.slg)/0.710)*100);est.push('wRC+')}
-    if(stats.sprint===null){const sbPer=stats.sb/(stats.pa/600),triPer=stats.triples/(stats.pa/600),sbSucc=stats.sb/Math.max(1,stats.sb+stats.cs);stats.sprint=clamp(26+sbPer*0.08+triPer*0.5+sbSucc*2,23,31);est.push('Sprint')}
+    if(stats.sprint===null){
+        const sbPer600=stats.sb/(stats.pa/600),triPer600=stats.triples/(stats.pa/600),sbSucc=stats.sb/Math.max(1,stats.sb+stats.cs);
+        let spd=35+sbPer600*1.2;spd+=Math.min(triPer600*0.8,10);if(stats.sb>=5)spd+=(sbSucc-0.6)*12;
+        stats.sprint=clamp(Math.round(spd),15,99);est.push('Speed');
+    }
     const avgBase=scale(stats.avg,0.180,0.330,25,105),kBonus=scale(kPct,35,8,-15,15),wrcBonus=scale(stats.wrc,70,160,-10,20);
     const baseCon=clamp(avgBase+kBonus+wrcBonus,20,125);
-    if(stats.bats==='S'){attrs.conR=baseCon;attrs.conL=baseCon}
+    // Contact splits - use manual if provided, otherwise estimate from bats
+    if(stats.conR!==null&&stats.conL!==null){attrs.conR=stats.conR;attrs.conL=stats.conL}
+    else if(stats.bats==='S'){attrs.conR=baseCon;attrs.conL=baseCon}
     else if(stats.bats==='L'){attrs.conR=clamp(baseCon+8,20,125);attrs.conL=clamp(baseCon-12,20,125)}
-    else{attrs.conR=clamp(baseCon-8,20,125);attrs.conL=clamp(baseCon+12,20,125)}
-    est.push('Splits');
+    else{attrs.conR=clamp(baseCon-8,20,125);attrs.conL=clamp(baseCon+12,20,125);est.push('Splits')}
     const isoBase=scale(stats.iso,0.080,0.300,25,115),hrBonus=scale(stats.hr,5,45,-10,20);
     const basePow=clamp(isoBase+hrBonus,15,125);
-    if(stats.bats==='S'){attrs.powR=basePow;attrs.powL=basePow}
+    // Power splits - use manual if provided, otherwise estimate from bats
+    if(stats.powR!==null&&stats.powL!==null){attrs.powR=stats.powR;attrs.powL=stats.powL}
+    else if(stats.bats==='S'){attrs.powR=basePow;attrs.powL=basePow}
     else if(stats.bats==='L'){attrs.powR=clamp(basePow+10,15,125);attrs.powL=clamp(basePow-15,15,125)}
     else{attrs.powR=clamp(basePow-10,15,125);attrs.powL=clamp(basePow+15,15,125)}
     attrs.vision=scale(kPct,35,8,25,110);
     attrs.discipline=clamp(scale(bbPct,4,18,30,115)+scale(stats.obp-stats.avg,0.04,0.12,-10,15),20,125);
     attrs.clutch=scale(stats.wrc,70,150,40,100);
-    attrs.speed=scale(stats.sprint,23,30.5,10,99);
+    attrs.speed=stats.sprint;
     const sbSucc=stats.sb/Math.max(1,stats.sb+stats.cs);
     attrs.stealing=clamp(scale(stats.sb,0,50,5,90)+scale(sbSucc,0.5,0.9,-10,20),5,99);
     attrs.baserunning=clamp(Math.round(attrs.speed*0.6+attrs.stealing*0.4),5,99);
@@ -370,7 +386,7 @@ function searchConvert(){if(!selectedPlayer){alert('Select a player');return}con
 function convertSearchHit(player,yr,real,oPos){
     const fld=getFielding(player.id,yr);
     const pos=oPos||fld.pos,tier=document.getElementById('search-tier').value||autoTier(real,false);
-    const stats={avg:real.avg,obp:real.obp,slg:real.slg,iso:real.iso,pa:real.pa,hr:real.hr,bb:real.bb,so:real.so,sb:real.sb,cs:real.cs,triples:real.tr,sprint:null,wrc:null,oaa:null,drs:null,fldPct:fld.fldPct,errors:fld.errors,bats:player.bats||'R',pos};
+    const stats={avg:real.avg,obp:real.obp,slg:real.slg,iso:real.iso,pa:real.pa,hr:real.hr,bb:real.bb,so:real.so,sb:real.sb,cs:real.cs,triples:real.tr,sprint:null,wrc:null,oaa:null,drs:null,fldPct:fld.fldPct,errors:fld.errors,conR:null,conL:null,powR:null,powL:null,bats:player.bats||'R',pos};
     
     const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,pos,tier);
     const fldStr=fld.fldPct?` · ${(fld.fldPct*100).toFixed(1)}% Fld`:'';
@@ -380,7 +396,7 @@ function convertSearchHit(player,yr,real,oPos){
 
 function convertSearchPit(player,yr,real,oPos){const isSP=real.gs>real.g/2,posType=oPos||(isSP?'SP':(real.sv>10?'CP':'RP'));const tier=document.getElementById('search-tier').value||autoTier(real,true);const oVelo=getVal('search-velo'),velo=oVelo||estVelo(yr,real.k9);const stats={era:real.era,ip:real.ip,h:real.h,bb:real.bb,so:real.so,hr:real.hr,velo,stuff:null,fip:null};const{attrs,est}=convertPitcher(stats,posType==='SP'),res=calcPitcherOvr(attrs,posType,tier);est.push('Velo: '+velo.toFixed(0)+' mph');const realHtml=`<strong>${yr}:</strong> ${real.w}-${real.l} · ${real.era.toFixed(2)} ERA · ${real.ip.toFixed(0)} IP · ${real.so} SO`;showPitcherResult(player.fn+' '+player.ln,posType,attrs,res,est,realHtml)}
 
-function calcHitter(){const stats={avg:getVal('h-avg'),obp:getVal('h-obp'),slg:getVal('h-slg'),iso:getVal('h-iso'),pa:getValOr('h-pa',600),hr:getValOr('h-hr',0),bb:getValOr('h-bb',0),so:getValOr('h-so',0),sb:getValOr('h-sb',0),cs:getValOr('h-cs',0),triples:getValOr('h-3b',0),sprint:null,wrc:getVal('h-wrc'),oaa:getVal('h-oaa'),drs:getVal('h-drs'),fldPct:getVal('h-fldpct'),errors:getVal('h-err'),bats:document.getElementById('h-bats').value,pos:document.getElementById('h-pos').value};const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,stats.pos,document.getElementById('h-tier').value);showHitterResult(document.getElementById('h-name').value||'Player',stats.pos,attrs,res,est)}
+function calcHitter(){const stats={avg:getVal('h-avg'),obp:getVal('h-obp'),slg:getVal('h-slg'),iso:getVal('h-iso'),pa:getValOr('h-pa',600),hr:getValOr('h-hr',0),bb:getValOr('h-bb',0),so:getValOr('h-so',0),sb:getValOr('h-sb',0),cs:getValOr('h-cs',0),triples:getValOr('h-3b',0),sprint:null,wrc:getVal('h-wrc'),oaa:getVal('h-oaa'),drs:getVal('h-drs'),fldPct:getVal('h-fldpct'),errors:getVal('h-err'),conR:getVal('h-conR'),conL:getVal('h-conL'),powR:getVal('h-powR'),powL:getVal('h-powL'),bats:document.getElementById('h-bats').value,pos:document.getElementById('h-pos').value};const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,stats.pos,document.getElementById('h-tier').value);showHitterResult(document.getElementById('h-name').value||'Player',stats.pos,attrs,res,est)}
 function calcSP(){const stats={era:getVal('sp-era'),ip:getVal('sp-ip'),h:getValOr('sp-h',0),bb:getValOr('sp-bb',0),so:getValOr('sp-so',0),hr:getValOr('sp-hr',0),velo:getValOr('sp-velo',93),stuff:getVal('sp-stuff'),fip:null};const{attrs,est}=convertPitcher(stats,true),res=calcPitcherOvr(attrs,'SP',document.getElementById('sp-tier').value);showPitcherResult(document.getElementById('sp-name').value||'Player','SP',attrs,res,est)}
 function calcRP(){const stats={era:getVal('rp-era'),ip:getVal('rp-ip'),h:getValOr('rp-h',0),bb:getValOr('rp-bb',0),so:getValOr('rp-so',0),hr:getValOr('rp-hr',0),velo:getValOr('rp-velo',95),stuff:null,fip:null};const role=document.getElementById('rp-role').value;const{attrs,est}=convertPitcher(stats,false),res=calcPitcherOvr(attrs,role,document.getElementById('rp-tier').value);showPitcherResult(document.getElementById('rp-name').value||'Player',role,attrs,res,est)}
 
