@@ -6,7 +6,7 @@ Convert real MLB statistics into MLB The Show 25 player ratings with **95% accur
 
 🔍 **Search 24,270 players** from 1871-2024, including Negro League stars!
 
-![Converter Preview](preview.png)
+![Converter Preview]()
 
 ## Features
 
