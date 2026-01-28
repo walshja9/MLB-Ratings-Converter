@@ -114,6 +114,7 @@ mlb-the-show-converter/
 
 ## Limitations
 
+- **Historical player ratings may vary** - The conversion formulas were calibrated using current players from MLB The Show 25. When converting historical players (especially pre-2000), ratings may differ from what you'd see in The Show's Legends cards. This is because league averages for stats like strikeout rate and walk rate have changed significantly over baseball history. Use the Tier Override to manually adjust ratings if needed.
 - **No platoon splits**: Historical data doesn't include vs-LHP/vs-RHP splits, so these are estimated from handedness
 - **No Statcast for pre-2015**: Sprint speed, arm strength estimated from traditional stats
 - **Database ends at 2024**: Lahman updates annually after each season
