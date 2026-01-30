@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLB Stats → The Show 25 Converter v4.1</title>
+    <title>MLB Stats → The Show 25 Converter v4.2</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a12; min-height: 100vh; color: #fff; line-height: 1.5; }
@@ -87,7 +87,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <div class="badges"><span class="badge">v4.1 · 95% Accuracy</span><span class="badge new">🔍 Lahman DB: 24,270 Players</span></div>
+        <div class="badges"><span class="badge">v4.2 · Improved Calibration</span><span class="badge new">🔍 Lahman DB: 24,270 Players</span></div>
         <h1>MLB Stats → <span class="accent">The Show 25</span></h1>
         <p class="subtitle">Convert real baseball statistics into game ratings</p>
     </div>
@@ -246,68 +246,64 @@ function convertHitter(stats){
         let spd=35+sbPer600*1.2;spd+=Math.min(triPer600*0.8,10);if(stats.sb>=5)spd+=(sbSucc-0.6)*12;
         stats.sprint=clamp(Math.round(spd),15,99);est.push('Speed');
     }
-    const kBonus=scale(kPct,35,8,-15,15),wrcBonus=scale(stats.wrc,70,160,-10,20);
-    // Contact splits - use AVG vs R/L if provided, otherwise estimate from overall AVG + bats
+    // Reduced bonuses to prevent exceeding 99
+    const kBonus=clamp(scale(kPct,32,10,-10,12),-10,12),wrcBonus=clamp(scale(stats.wrc,80,150,-8,15),-8,15);
+    // Contact splits - AVG .200 = 30, AVG .320 = 90 base, bonuses can push to 99
     if(stats.avgR!==null&&stats.avgL!==null){
-        attrs.conR=clamp(scale(stats.avgR,0.180,0.330,25,105)+kBonus+wrcBonus,20,125);
-        attrs.conL=clamp(scale(stats.avgL,0.180,0.330,25,105)+kBonus+wrcBonus,20,125);
+        attrs.conR=clamp(scale(stats.avgR,0.200,0.320,30,90)+kBonus+wrcBonus,20,99);
+        attrs.conL=clamp(scale(stats.avgL,0.200,0.320,30,90)+kBonus+wrcBonus,20,99);
     }else{
-        const avgBase=scale(stats.avg,0.180,0.330,25,105);
-        const baseCon=clamp(avgBase+kBonus+wrcBonus,20,125);
+        const avgBase=scale(stats.avg,0.200,0.320,30,90);
+        const baseCon=clamp(avgBase+kBonus+wrcBonus,20,99);
         if(stats.bats==='S'){attrs.conR=baseCon;attrs.conL=baseCon}
-        else if(stats.bats==='L'){attrs.conR=clamp(baseCon+8,20,125);attrs.conL=clamp(baseCon-12,20,125)}
-        else{attrs.conR=clamp(baseCon-8,20,125);attrs.conL=clamp(baseCon+12,20,125)}
+        else if(stats.bats==='L'){attrs.conR=clamp(baseCon+6,20,99);attrs.conL=clamp(baseCon-9,20,99)}
+        else{attrs.conR=clamp(baseCon-6,20,99);attrs.conL=clamp(baseCon+9,20,99)}
         est.push('Splits');
     }
-    const hrBonus=scale(stats.hr,5,45,-10,20);
-    // Power splits - use SLG vs R/L if provided, otherwise estimate from overall ISO + bats
+    // Power: ISO .100 = 30, ISO .280 = 90 base. HR bonus reduced.
+    const hrBonus=clamp(scale(stats.hr,8,45,-8,15),-8,15);
     if(stats.slgR!==null&&stats.slgL!==null){
         const isoR=stats.avgR!==null?stats.slgR-stats.avgR:stats.slgR-stats.avg;
         const isoL=stats.avgL!==null?stats.slgL-stats.avgL:stats.slgL-stats.avg;
-        attrs.powR=clamp(scale(isoR,0.080,0.300,25,115)+hrBonus,15,125);
-        attrs.powL=clamp(scale(isoL,0.080,0.300,25,115)+hrBonus,15,125);
+        attrs.powR=clamp(scale(isoR,0.100,0.280,30,90)+hrBonus,15,99);
+        attrs.powL=clamp(scale(isoL,0.100,0.280,30,90)+hrBonus,15,99);
     }else{
-        const isoBase=scale(stats.iso,0.080,0.300,25,115);
-        const basePow=clamp(isoBase+hrBonus,15,125);
+        const isoBase=scale(stats.iso,0.100,0.280,30,90);
+        const basePow=clamp(isoBase+hrBonus,15,99);
         if(stats.bats==='S'){attrs.powR=basePow;attrs.powL=basePow}
-        else if(stats.bats==='L'){attrs.powR=clamp(basePow+10,15,125);attrs.powL=clamp(basePow-15,15,125)}
-        else{attrs.powR=clamp(basePow-10,15,125);attrs.powL=clamp(basePow+15,15,125)}
+        else if(stats.bats==='L'){attrs.powR=clamp(basePow+8,15,99);attrs.powL=clamp(basePow-12,15,99)}
+        else{attrs.powR=clamp(basePow-8,15,99);attrs.powL=clamp(basePow+12,15,99)}
     }
-    attrs.vision=scale(kPct,35,8,25,110);
-    attrs.discipline=clamp(scale(bbPct,4,18,30,115)+scale(stats.obp-stats.avg,0.04,0.12,-10,15),20,125);
-    attrs.clutch=scale(stats.wrc,70,150,40,100);
+    // Vision: K% 30+ = 30, K% 10 = 99
+    attrs.vision=clamp(scale(kPct,30,10,30,99),25,99);
+    // Discipline: BB% 5 = 35, BB% 15 = 90 base. OBP-AVG adds small bonus.
+    attrs.discipline=clamp(scale(bbPct,5,15,35,90)+clamp(scale(stats.obp-stats.avg,0.05,0.11,-5,10),-5,10),20,99);
+    attrs.clutch=clamp(scale(stats.wrc,70,150,40,99),35,99);
     attrs.speed=stats.sprint;
     const sbSucc=stats.sb/Math.max(1,stats.sb+stats.cs);
-    attrs.stealing=clamp(scale(stats.sb,0,50,5,90)+scale(sbSucc,0.5,0.9,-10,20),5,99);
+    attrs.stealing=clamp(scale(stats.sb,0,50,5,90)+scale(sbSucc,0.5,0.9,-10,15),5,99);
     attrs.baserunning=clamp(Math.round(attrs.speed*0.6+attrs.stealing*0.4),5,99);
-    
+
     // Fielding calculation
-    
     if(stats.oaa!==null||stats.drs!==null){
         const oaa=stats.oaa!==null?stats.oaa:(stats.drs*0.8);
         attrs.fielding=clamp(scale(oaa,-15,20,30,99),20,99);
-        
     }else if(stats.fldPct!==null && stats.fldPct>0){
         const posAvg={C:0.990,'1B':0.993,'2B':0.983,'3B':0.960,SS:0.970,LF:0.985,CF:0.990,RF:0.985,DH:0.990};
         const diff=stats.fldPct-(posAvg[stats.pos]||0.980);
-        
-        attrs.fielding=clamp(scale(diff,-0.030,0.015,40,90),20,99);
-        
+        attrs.fielding=clamp(scale(diff,-0.025,0.012,40,90),20,99);
     }else if(stats.errors!==null){
-        attrs.fielding=scale(stats.errors,20,2,35,85);
+        attrs.fielding=clamp(scale(stats.errors,18,2,35,85),25,99);
         est.push('Fielding');
-        
     }else{
         const posDef={C:65,'1B':55,'2B':70,'3B':65,SS:75,LF:60,CF:70,RF:60,DH:40};
         attrs.fielding=posDef[stats.pos]||60;
         est.push('Fielding');
-        
     }
-    
+
     const posArm={C:70,'1B':55,'2B':60,'3B':70,SS:75,LF:65,CF:70,RF:80,DH:50};
     attrs.armStr=posArm[stats.pos]||65;
     attrs.reaction=clamp(Math.round(attrs.fielding*0.5+attrs.speed*0.3+15),25,99);
-    // Arm Accuracy: weighted average of arm strength, fielding, and reaction
     attrs.armAcc=clamp(Math.round(attrs.armStr*0.5+attrs.fielding*0.3+attrs.reaction*0.2),25,99);
     return{attrs,est}
 }
@@ -317,14 +313,19 @@ function convertPitcher(stats,isSP){
     stats.whip=(stats.h+stats.bb)/ip;stats.k9=(stats.so*9)/ip;stats.bb9=(stats.bb*9)/ip;stats.hr9=(stats.hr*9)/ip;stats.h9=(stats.h*9)/ip;
     if(stats.fip===null){stats.fip=((13*stats.hr)+(3*stats.bb)-(2*stats.so))/ip+3.10;est.push('FIP')}
     if(stats.stuff===null){stats.stuff=Math.round(100+(stats.k9-8)*8+(stats.velo-93)*3);est.push('Stuff+')}
-    attrs.h9=clamp(scale(stats.h9,11,5.5,30,110)+scale(stats.whip,1.5,0.9,-15,20),25,125);
-    attrs.k9=clamp(scale(stats.k9,5,13,30,110)+scale(stats.stuff,80,140,-15,25),25,125);
-    attrs.bb9=clamp(scale(stats.bb9,5.5,1.0,25,110),20,125);
-    attrs.hr9=clamp(scale(stats.hr9,2.0,0.4,25,105)+scale(stats.fip,5.0,2.5,-10,15),20,125);
-    attrs.clutch=clamp(scale(stats.era,5.5,2.0,30,110),25,125);
+    // H/9: 10+ is terrible (25), 6.5 is elite (99). WHIP adds small modifier (-8 to +8)
+    attrs.h9=clamp(scale(stats.h9,10.5,6.5,25,99)+clamp(scale(stats.whip,1.45,0.95,-8,8),-8,8),20,99);
+    // K/9: 5 is poor (30), 12 is elite (99). Stuff+ adds small modifier (-8 to +10)
+    attrs.k9=clamp(scale(stats.k9,5,12,30,99)+clamp(scale(stats.stuff,85,135,-8,10),-8,10),25,99);
+    // BB/9: 5+ is terrible (25), 1.5 is elite (99)
+    attrs.bb9=clamp(scale(stats.bb9,5.0,1.5,25,99),20,99);
+    // HR/9: 1.8+ is terrible (25), 0.5 is elite (99). No FIP modifier (avoids double-counting HRs)
+    attrs.hr9=clamp(scale(stats.hr9,1.8,0.5,25,99),20,99);
+    // Clutch: ERA 5.5+ is poor (30), ERA 2.0 is elite (99). FIP adds small modifier for consistency
+    attrs.clutch=clamp(scale(stats.era,5.5,2.0,30,99)+clamp(scale(stats.fip,5.0,2.5,-5,8),-5,8),25,99);
     attrs.velocity=scale(stats.velo,85,102,30,99);
     attrs.control=clamp(Math.round(attrs.bb9*0.7+25),25,99);
-    attrs.break=scale(stats.stuff,70,150,40,110);
+    attrs.break=clamp(scale(stats.stuff,70,145,40,99),30,99);
     attrs.stamina=isSP?scale(ip,100,220,55,99):scale(ip,30,80,20,45);
     return{attrs,est}
 }
@@ -336,8 +337,9 @@ const cpFormulas={Diamond:{s:0.765,b:19.25},Gold:{s:0.74,b:19.75},Silver:{s:0.7,
 
 function getRarity(ovr){if(ovr>=85)return'Diamond';if(ovr>=80)return'Gold';if(ovr>=75)return'Silver';if(ovr>=65)return'Bronze';return'Common'}
 function calcHitterOvr(attrs,pos,tier){
-    const core=[attrs.conR,attrs.conL,attrs.powR,attrs.powL,attrs.vision,attrs.discipline,attrs.clutch,attrs.fielding,attrs.speed];
-    const coreAvg=core.reduce((a,b)=>a+b,0)/9,avgPow=(attrs.powR+attrs.powL)/2;
+    // Ensure all core attributes are capped at 99 for calculation
+    const core=[Math.min(attrs.conR,99),Math.min(attrs.conL,99),Math.min(attrs.powR,99),Math.min(attrs.powL,99),Math.min(attrs.vision,99),Math.min(attrs.discipline,99),Math.min(attrs.clutch,99),Math.min(attrs.fielding,99),Math.min(attrs.speed,99)];
+    const coreAvg=core.reduce((a,b)=>a+b,0)/9,avgPow=(Math.min(attrs.powR,99)+Math.min(attrs.powL,99))/2;
     const f=hFormulas[pos+'_'+tier]||{s:0.75,b:30};
     let ovr=f.s*coreAvg+f.b;if(avgPow>90)ovr+=(avgPow-90)*0.11;
     return{ovr:Math.min(99,Math.round(ovr)),rarity:getRarity(Math.min(99,Math.round(ovr))),coreAvg:coreAvg.toFixed(1),f}
