@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLB Stats → The Show 25 Converter v4.2</title>
+    <title>MLB Stats → The Show 25 Converter v4.3</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a12; min-height: 100vh; color: #fff; line-height: 1.5; }
@@ -87,7 +87,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <div class="badges"><span class="badge">v4.2 · Improved Calibration</span><span class="badge new">🔍 Lahman DB: 24,270 Players</span></div>
+        <div class="badges"><span class="badge">v4.3 · Era Adjusted</span><span class="badge new">🔍 Lahman DB: 24,270 Players</span></div>
         <h1>MLB Stats → <span class="accent">The Show 25</span></h1>
         <p class="subtitle">Convert real baseball statistics into game ratings</p>
     </div>
@@ -236,48 +236,61 @@ function scale(val,minS,maxS,minR,maxR){if(val===null||val===undefined||isNaN(va
 function getVal(id){const el=document.getElementById(id);if(!el)return null;const v=parseFloat(el.value);return(isNaN(v)||el.value.trim()==='')?null:v}
 function getValOr(id,def){const v=getVal(id);return v!==null?v:def}
 
-function convertHitter(stats){
+// Era adjustment multipliers for historical accuracy
+function getEraAdj(yr){
+    if(!yr||yr>=2010)return{pow:1.0,con:1.0,spd:1.0,velo:0}; // Modern baseline
+    if(yr>=1995)return{pow:1.08,con:0.98,spd:1.0,velo:-1}; // Steroid era boost
+    if(yr>=1969)return{pow:1.0,con:1.0,spd:1.02,velo:-2}; // Expansion era
+    if(yr>=1947)return{pow:0.95,con:1.02,spd:1.0,velo:-3}; // Integration era
+    if(yr>=1920)return{pow:0.88,con:1.05,spd:1.03,velo:-5}; // Live-ball era
+    return{pow:0.75,con:1.12,spd:1.05,velo:-8}; // Dead-ball era
+}
+
+function convertHitter(stats,yr){
     const attrs={},est=[];
+    const era=getEraAdj(yr);
     if(stats.iso===null)stats.iso=stats.slg-stats.avg;
     const kPct=(stats.so/stats.pa)*100,bbPct=(stats.bb/stats.pa)*100;
     if(stats.wrc===null){stats.wrc=Math.round(((stats.obp+stats.slg)/0.710)*100);est.push('wRC+')}
     if(stats.sprint===null){
         const sbPer600=stats.sb/(stats.pa/600),triPer600=stats.triples/(stats.pa/600),sbSucc=stats.sb/Math.max(1,stats.sb+stats.cs);
         let spd=35+sbPer600*1.2;spd+=Math.min(triPer600*0.8,10);if(stats.sb>=5)spd+=(sbSucc-0.6)*12;
-        stats.sprint=clamp(Math.round(spd),15,99);est.push('Speed');
+        stats.sprint=clamp(Math.round(spd*era.spd),15,99);est.push('Speed');
     }
-    // Reduced bonuses to prevent exceeding 99
-    const kBonus=clamp(scale(kPct,32,10,-10,12),-10,12),wrcBonus=clamp(scale(stats.wrc,80,150,-8,15),-8,15);
-    // Contact splits - AVG .200 = 30, AVG .320 = 90 base, bonuses can push to 99
+    // K% and wRC+ bonuses (allow values to exceed 99 for elite players like Arraez VIS 115)
+    const kBonus=clamp(scale(kPct,30,8,-12,18),-12,18),wrcBonus=clamp(scale(stats.wrc,80,160,-10,18),-10,18);
+    // Contact splits - .200 = 25, .340 = 99 base (Arraez .314 → 92 con R)
     if(stats.avgR!==null&&stats.avgL!==null){
-        attrs.conR=clamp(scale(stats.avgR,0.200,0.320,30,90)+kBonus+wrcBonus,20,99);
-        attrs.conL=clamp(scale(stats.avgL,0.200,0.320,30,90)+kBonus+wrcBonus,20,99);
+        attrs.conR=clamp(Math.round((scale(stats.avgR,0.200,0.340,25,99)+kBonus+wrcBonus)*era.con),20,125);
+        attrs.conL=clamp(Math.round((scale(stats.avgL,0.200,0.340,25,99)+kBonus+wrcBonus)*era.con),20,125);
     }else{
-        const avgBase=scale(stats.avg,0.200,0.320,30,90);
-        const baseCon=clamp(avgBase+kBonus+wrcBonus,20,99);
+        const avgBase=scale(stats.avg,0.200,0.340,25,99);
+        const baseCon=clamp(Math.round((avgBase+kBonus+wrcBonus)*era.con),20,125);
+        // Wider platoon splits: L bats = +18 vs R, -25 vs L; R bats = -12 vs R, +18 vs L
         if(stats.bats==='S'){attrs.conR=baseCon;attrs.conL=baseCon}
-        else if(stats.bats==='L'){attrs.conR=clamp(baseCon+6,20,99);attrs.conL=clamp(baseCon-9,20,99)}
-        else{attrs.conR=clamp(baseCon-6,20,99);attrs.conL=clamp(baseCon+9,20,99)}
+        else if(stats.bats==='L'){attrs.conR=clamp(baseCon+18,20,125);attrs.conL=clamp(baseCon-25,20,125)}
+        else{attrs.conR=clamp(baseCon-12,20,125);attrs.conL=clamp(baseCon+18,20,125)}
         est.push('Splits');
     }
-    // Power: ISO .100 = 30, ISO .280 = 90 base. HR bonus reduced.
-    const hrBonus=clamp(scale(stats.hr,8,45,-8,15),-8,15);
+    // Power: ISO .080 = 20, ISO .300 = 99 base. Allow >99 for elite (Soto POW R 105)
+    const hrBonus=clamp(scale(stats.hr,5,50,-10,20),-10,20);
     if(stats.slgR!==null&&stats.slgL!==null){
         const isoR=stats.avgR!==null?stats.slgR-stats.avgR:stats.slgR-stats.avg;
         const isoL=stats.avgL!==null?stats.slgL-stats.avgL:stats.slgL-stats.avg;
-        attrs.powR=clamp(scale(isoR,0.100,0.280,30,90)+hrBonus,15,99);
-        attrs.powL=clamp(scale(isoL,0.100,0.280,30,90)+hrBonus,15,99);
+        attrs.powR=clamp(Math.round((scale(isoR,0.080,0.300,20,99)+hrBonus)*era.pow),15,125);
+        attrs.powL=clamp(Math.round((scale(isoL,0.080,0.300,20,99)+hrBonus)*era.pow),15,125);
     }else{
-        const isoBase=scale(stats.iso,0.100,0.280,30,90);
-        const basePow=clamp(isoBase+hrBonus,15,99);
+        const isoBase=scale(stats.iso,0.080,0.300,20,99);
+        const basePow=clamp(Math.round((isoBase+hrBonus)*era.pow),15,125);
+        // Wider power splits: L bats = +22 vs R, -30 vs L; R bats = -15 vs R, +22 vs L
         if(stats.bats==='S'){attrs.powR=basePow;attrs.powL=basePow}
-        else if(stats.bats==='L'){attrs.powR=clamp(basePow+8,15,99);attrs.powL=clamp(basePow-12,15,99)}
-        else{attrs.powR=clamp(basePow-8,15,99);attrs.powL=clamp(basePow+12,15,99)}
+        else if(stats.bats==='L'){attrs.powR=clamp(basePow+22,15,125);attrs.powL=clamp(basePow-30,15,125)}
+        else{attrs.powR=clamp(basePow-15,15,125);attrs.powL=clamp(basePow+22,15,125)}
     }
-    // Vision: K% 30+ = 30, K% 10 = 99
-    attrs.vision=clamp(scale(kPct,30,10,30,99),25,99);
-    // Discipline: BB% 5 = 35, BB% 15 = 90 base. OBP-AVG adds small bonus.
-    attrs.discipline=clamp(scale(bbPct,5,15,35,90)+clamp(scale(stats.obp-stats.avg,0.05,0.11,-5,10),-5,10),20,99);
+    // Vision: K% 28+ = 25, K% 5 = 125 (Arraez 3.8% K → 115)
+    attrs.vision=clamp(scale(kPct,28,5,25,125),20,125);
+    // Discipline: BB% 4 = 25, BB% 18 = 115 (Soto 21.5% BB → 115). OBP-AVG adds bonus.
+    attrs.discipline=clamp(scale(bbPct,4,18,25,115)+clamp(scale(stats.obp-stats.avg,0.04,0.14,-5,12),-5,12),20,125);
     attrs.clutch=clamp(scale(stats.wrc,70,150,40,99),35,99);
     attrs.speed=stats.sprint;
     const sbSucc=stats.sb/Math.max(1,stats.sb+stats.cs);
@@ -308,25 +321,32 @@ function convertHitter(stats){
     return{attrs,est}
 }
 
-function convertPitcher(stats,isSP){
+function convertPitcher(stats,isSP,yr){
     const attrs={},est=[];const ip=stats.ip||1;
+    const era=getEraAdj(yr);
     stats.whip=(stats.h+stats.bb)/ip;stats.k9=(stats.so*9)/ip;stats.bb9=(stats.bb*9)/ip;stats.hr9=(stats.hr*9)/ip;stats.h9=(stats.h*9)/ip;
     if(stats.fip===null){stats.fip=((13*stats.hr)+(3*stats.bb)-(2*stats.so))/ip+3.10;est.push('FIP')}
     if(stats.stuff===null){stats.stuff=Math.round(100+(stats.k9-8)*8+(stats.velo-93)*3);est.push('Stuff+')}
-    // H/9: 10+ is terrible (25), 6.5 is elite (99). WHIP adds small modifier (-8 to +8)
-    attrs.h9=clamp(scale(stats.h9,10.5,6.5,25,99)+clamp(scale(stats.whip,1.45,0.95,-8,8),-8,8),20,99);
-    // K/9: 5 is poor (30), 12 is elite (99). Stuff+ adds small modifier (-8 to +10)
-    attrs.k9=clamp(scale(stats.k9,5,12,30,99)+clamp(scale(stats.stuff,85,135,-8,10),-8,10),25,99);
-    // BB/9: 5+ is terrible (25), 1.5 is elite (99)
-    attrs.bb9=clamp(scale(stats.bb9,5.0,1.5,25,99),20,99);
-    // HR/9: 1.8+ is terrible (25), 0.5 is elite (99). No FIP modifier (avoids double-counting HRs)
-    attrs.hr9=clamp(scale(stats.hr9,1.8,0.5,25,99),20,99);
-    // Clutch: ERA 5.5+ is poor (30), ERA 2.0 is elite (99). FIP adds small modifier for consistency
-    attrs.clutch=clamp(scale(stats.era,5.5,2.0,30,99)+clamp(scale(stats.fip,5.0,2.5,-5,8),-5,8),25,99);
-    attrs.velocity=scale(stats.velo,85,102,30,99);
-    attrs.control=clamp(Math.round(attrs.bb9*0.7+25),25,99);
-    attrs.break=clamp(scale(stats.stuff,70,145,40,99),30,99);
-    attrs.stamina=isSP?scale(ip,100,220,55,99):scale(ip,30,80,20,45);
+    // H/9: Calibrated on Crochet (5.98→85) and Hicks (8.4→48). 10 H/9 = 25, 5 H/9 = 99
+    attrs.h9=clamp(scale(stats.h9,10,5,25,99),20,99);
+    // K/9: Calibrated on Crochet (12.9→86) and Hicks (7.6→57). 4 K/9 = 35, 14.5 K/9 = 99
+    attrs.k9=clamp(scale(stats.k9,4,14.5,35,99),25,99);
+    // BB/9: Calibrated on Crochet (2.0→89) and Hicks (3.0→72). 4.5 BB/9 = 45, 1.5 BB/9 = 99
+    attrs.bb9=clamp(scale(stats.bb9,4.5,1.5,45,99),35,99);
+    // HR/9: Calibrated on Crochet (1.36→76). Base + ERA quality bonus. 1.6 HR/9 = 50, 0.5 HR/9 = 90
+    const hr9Base=scale(stats.hr9,1.6,0.5,50,90);
+    const eraBonus=clamp(scale(stats.era,5.5,2.0,-5,15),-5,15); // Good ERA adds up to +15
+    attrs.hr9=clamp(hr9Base+eraBonus,35,99);
+    // Clutch/PCLT: ERA-based. Crochet 3.58 ERA → 86. 5.5 ERA = 35, 2.0 ERA = 95
+    attrs.clutch=clamp(scale(stats.era,5.5,2.0,35,95),30,99);
+    // Velocity: 85 mph = 30, 102 mph = 99. Era adjustment for historical pitchers
+    attrs.velocity=clamp(scale(stats.velo+era.velo,85,102,30,99),25,99);
+    // Control: Derived from BB/9. Crochet BB/9 89 → CTRL 74 (roughly 0.8x + offset)
+    attrs.control=clamp(Math.round(attrs.bb9*0.75+7),25,99);
+    // Break: Stuff+ based. Crochet high K/9 → BRK 74, Hicks BRK 95 (high movement guy)
+    attrs.break=clamp(scale(stats.stuff,80,140,50,99),35,99);
+    // Stamina: IP-based. Crochet 146 IP → 91
+    attrs.stamina=isSP?clamp(scale(ip,80,210,50,99),40,99):clamp(scale(ip,25,80,20,45),15,50);
     return{attrs,est}
 }
 
@@ -403,17 +423,17 @@ function convertSearchHit(player,yr,real,oPos){
     const pos=oPos||fld.pos,tier=document.getElementById('search-tier').value||autoTier(real,false);
     const stats={avg:real.avg,obp:real.obp,slg:real.slg,iso:real.iso,pa:real.pa,hr:real.hr,bb:real.bb,so:real.so,sb:real.sb,cs:real.cs,triples:real.tr,sprint:null,wrc:null,oaa:null,drs:null,fldPct:fld.fldPct,errors:fld.errors,avgR:null,avgL:null,slgR:null,slgL:null,bats:player.bats||'R',pos};
     
-    const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,pos,tier);
+    const{attrs,est}=convertHitter(stats,yr),res=calcHitterOvr(attrs,pos,tier);
     const fldStr=fld.fldPct?` · ${(fld.fldPct*100).toFixed(1)}% Fld`:'';
     const realHtml=`<strong>${yr}:</strong> .${(real.avg*1000).toFixed(0).padStart(3,'0')}/.${(real.obp*1000).toFixed(0).padStart(3,'0')}/.${(real.slg*1000).toFixed(0).padStart(3,'0')} · ${real.hr} HR · ${real.sb} SB${fldStr}`;
     showHitterResult(player.fn+' '+player.ln,pos,attrs,res,est,realHtml)
 }
 
-function convertSearchPit(player,yr,real,oPos){const isSP=real.gs>real.g/2,posType=oPos||(isSP?'SP':(real.sv>10?'CP':'RP'));const tier=document.getElementById('search-tier').value||autoTier(real,true);const oVelo=getVal('search-velo'),velo=oVelo||estVelo(yr,real.k9);const stats={era:real.era,ip:real.ip,h:real.h,bb:real.bb,so:real.so,hr:real.hr,velo,stuff:null,fip:null};const{attrs,est}=convertPitcher(stats,posType==='SP'),res=calcPitcherOvr(attrs,posType,tier);est.push('Velo: '+velo.toFixed(0)+' mph');const realHtml=`<strong>${yr}:</strong> ${real.w}-${real.l} · ${real.era.toFixed(2)} ERA · ${real.ip.toFixed(0)} IP · ${real.so} SO`;showPitcherResult(player.fn+' '+player.ln,posType,attrs,res,est,realHtml)}
+function convertSearchPit(player,yr,real,oPos){const isSP=real.gs>real.g/2,posType=oPos||(isSP?'SP':(real.sv>10?'CP':'RP'));const tier=document.getElementById('search-tier').value||autoTier(real,true);const oVelo=getVal('search-velo'),velo=oVelo||estVelo(yr,real.k9);const stats={era:real.era,ip:real.ip,h:real.h,bb:real.bb,so:real.so,hr:real.hr,velo,stuff:null,fip:null};const{attrs,est}=convertPitcher(stats,posType==='SP',yr),res=calcPitcherOvr(attrs,posType,tier);est.push('Velo: '+velo.toFixed(0)+' mph');const realHtml=`<strong>${yr}:</strong> ${real.w}-${real.l} · ${real.era.toFixed(2)} ERA · ${real.ip.toFixed(0)} IP · ${real.so} SO`;showPitcherResult(player.fn+' '+player.ln,posType,attrs,res,est,realHtml)}
 
-function calcHitter(){const stats={avg:getVal('h-avg'),obp:getVal('h-obp'),slg:getVal('h-slg'),iso:getVal('h-iso'),pa:getValOr('h-pa',600),hr:getValOr('h-hr',0),bb:getValOr('h-bb',0),so:getValOr('h-so',0),sb:getValOr('h-sb',0),cs:getValOr('h-cs',0),triples:getValOr('h-3b',0),sprint:null,wrc:getVal('h-wrc'),oaa:getVal('h-oaa'),drs:getVal('h-drs'),fldPct:getVal('h-fldpct'),errors:getVal('h-err'),avgR:getVal('h-avgR'),avgL:getVal('h-avgL'),slgR:getVal('h-slgR'),slgL:getVal('h-slgL'),bats:document.getElementById('h-bats').value,pos:document.getElementById('h-pos').value};const{attrs,est}=convertHitter(stats),res=calcHitterOvr(attrs,stats.pos,document.getElementById('h-tier').value);showHitterResult(document.getElementById('h-name').value||'Player',stats.pos,attrs,res,est)}
-function calcSP(){const stats={era:getVal('sp-era'),ip:getVal('sp-ip'),h:getValOr('sp-h',0),bb:getValOr('sp-bb',0),so:getValOr('sp-so',0),hr:getValOr('sp-hr',0),velo:getValOr('sp-velo',93),stuff:getVal('sp-stuff'),fip:null};const{attrs,est}=convertPitcher(stats,true),res=calcPitcherOvr(attrs,'SP',document.getElementById('sp-tier').value);showPitcherResult(document.getElementById('sp-name').value||'Player','SP',attrs,res,est)}
-function calcRP(){const stats={era:getVal('rp-era'),ip:getVal('rp-ip'),h:getValOr('rp-h',0),bb:getValOr('rp-bb',0),so:getValOr('rp-so',0),hr:getValOr('rp-hr',0),velo:getValOr('rp-velo',95),stuff:null,fip:null};const role=document.getElementById('rp-role').value;const{attrs,est}=convertPitcher(stats,false),res=calcPitcherOvr(attrs,role,document.getElementById('rp-tier').value);showPitcherResult(document.getElementById('rp-name').value||'Player',role,attrs,res,est)}
+function calcHitter(){const stats={avg:getVal('h-avg'),obp:getVal('h-obp'),slg:getVal('h-slg'),iso:getVal('h-iso'),pa:getValOr('h-pa',600),hr:getValOr('h-hr',0),bb:getValOr('h-bb',0),so:getValOr('h-so',0),sb:getValOr('h-sb',0),cs:getValOr('h-cs',0),triples:getValOr('h-3b',0),sprint:null,wrc:getVal('h-wrc'),oaa:getVal('h-oaa'),drs:getVal('h-drs'),fldPct:getVal('h-fldpct'),errors:getVal('h-err'),avgR:getVal('h-avgR'),avgL:getVal('h-avgL'),slgR:getVal('h-slgR'),slgL:getVal('h-slgL'),bats:document.getElementById('h-bats').value,pos:document.getElementById('h-pos').value};const{attrs,est}=convertHitter(stats,null),res=calcHitterOvr(attrs,stats.pos,document.getElementById('h-tier').value);showHitterResult(document.getElementById('h-name').value||'Player',stats.pos,attrs,res,est)}
+function calcSP(){const stats={era:getVal('sp-era'),ip:getVal('sp-ip'),h:getValOr('sp-h',0),bb:getValOr('sp-bb',0),so:getValOr('sp-so',0),hr:getValOr('sp-hr',0),velo:getValOr('sp-velo',93),stuff:getVal('sp-stuff'),fip:null};const{attrs,est}=convertPitcher(stats,true,null),res=calcPitcherOvr(attrs,'SP',document.getElementById('sp-tier').value);showPitcherResult(document.getElementById('sp-name').value||'Player','SP',attrs,res,est)}
+function calcRP(){const stats={era:getVal('rp-era'),ip:getVal('rp-ip'),h:getValOr('rp-h',0),bb:getValOr('rp-bb',0),so:getValOr('rp-so',0),hr:getValOr('rp-hr',0),velo:getValOr('rp-velo',95),stuff:null,fip:null};const role=document.getElementById('rp-role').value;const{attrs,est}=convertPitcher(stats,false,null),res=calcPitcherOvr(attrs,role,document.getElementById('rp-tier').value);showPitcherResult(document.getElementById('rp-name').value||'Player',role,attrs,res,est)}
 
 function attrClass(v){if(v>=85)return'v-elite';if(v>=70)return'v-good';if(v>=50)return'v-avg';return'v-low'}
 
@@ -423,7 +443,9 @@ function showHitterResult(name,pos,attrs,res,est,realHtml){
     document.getElementById('r-ovr').textContent=res.ovr;
     const badge=document.getElementById('r-rarity');badge.textContent=res.rarity;badge.className='rarity rarity-'+res.rarity.toLowerCase();
     document.getElementById('s1-title').textContent='Hitting';
-    document.getElementById('s1-attrs').innerHTML=`<div class="attr"><div class="attr-name">Con R</div><div class="attr-val ${attrClass(attrs.conR)}">${attrs.conR}</div></div><div class="attr"><div class="attr-name">Con L</div><div class="attr-val ${attrClass(attrs.conL)}">${attrs.conL}</div></div><div class="attr"><div class="attr-name">Pow R</div><div class="attr-val ${attrClass(attrs.powR)}">${attrs.powR}</div></div><div class="attr"><div class="attr-name">Pow L</div><div class="attr-val ${attrClass(attrs.powL)}">${attrs.powL}</div></div><div class="attr"><div class="attr-name">Vision</div><div class="attr-val ${attrClass(attrs.vision)}">${attrs.vision}</div></div><div class="attr"><div class="attr-name">Disc</div><div class="attr-val ${attrClass(attrs.discipline)}">${attrs.discipline}</div></div><div class="attr"><div class="attr-name">Clutch</div><div class="attr-val ${attrClass(attrs.clutch)}">${attrs.clutch}</div></div>`;
+    // Cap display at 99 for player creation (game can show >99 but creation is capped)
+    const c=k=>Math.min(k,99);
+    document.getElementById('s1-attrs').innerHTML=`<div class="attr"><div class="attr-name">Con R</div><div class="attr-val ${attrClass(attrs.conR)}">${c(attrs.conR)}</div></div><div class="attr"><div class="attr-name">Con L</div><div class="attr-val ${attrClass(attrs.conL)}">${c(attrs.conL)}</div></div><div class="attr"><div class="attr-name">Pow R</div><div class="attr-val ${attrClass(attrs.powR)}">${c(attrs.powR)}</div></div><div class="attr"><div class="attr-name">Pow L</div><div class="attr-val ${attrClass(attrs.powL)}">${c(attrs.powL)}</div></div><div class="attr"><div class="attr-name">Vision</div><div class="attr-val ${attrClass(attrs.vision)}">${c(attrs.vision)}</div></div><div class="attr"><div class="attr-name">Disc</div><div class="attr-val ${attrClass(attrs.discipline)}">${c(attrs.discipline)}</div></div><div class="attr"><div class="attr-name">Clutch</div><div class="attr-val ${attrClass(attrs.clutch)}">${c(attrs.clutch)}</div></div>`;
     document.getElementById('s2-title').textContent='Fielding & Speed';
     document.getElementById('s2-attrs').innerHTML=`<div class="attr"><div class="attr-name">Field</div><div class="attr-val ${attrClass(attrs.fielding)}">${attrs.fielding}</div></div><div class="attr"><div class="attr-name">Arm</div><div class="attr-val ${attrClass(attrs.armStr)}">${attrs.armStr}</div></div><div class="attr"><div class="attr-name">Acc</div><div class="attr-val ${attrClass(attrs.armAcc)}">${attrs.armAcc}</div></div><div class="attr"><div class="attr-name">React</div><div class="attr-val ${attrClass(attrs.reaction)}">${attrs.reaction}</div></div><div class="attr"><div class="attr-name">Speed</div><div class="attr-val ${attrClass(attrs.speed)}">${attrs.speed}</div></div><div class="attr"><div class="attr-name">Steal</div><div class="attr-val ${attrClass(attrs.stealing)}">${attrs.stealing}</div></div><div class="attr"><div class="attr-name">BsRun</div><div class="attr-val ${attrClass(attrs.baserunning)}">${attrs.baserunning}</div></div>`;
     const avgPow=(attrs.powR+attrs.powL)/2;let ft=`Core: ${res.coreAvg} → ${res.f.s}×${res.coreAvg}+${res.f.b}`;if(avgPow>90)ft+=' +pwr';ft+=` = ${res.ovr}`;
