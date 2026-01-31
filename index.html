@@ -351,10 +351,13 @@ function convertPitcher(stats,isSP,yr){
 }
 
 // Position formulas recalibrated for weighted core (hit/def/spd weights vary by position)
-const hFormulas={'C_Diamond':{s:0.55,b:46.25},'C_Gold':{s:0.55,b:44},'C_Silver':{s:0.55,b:42},'C_Bronze':{s:0.55,b:39},'C_Common':{s:0.55,b:35},'1B_Diamond':{s:0.55,b:48},'1B_Gold':{s:0.55,b:45},'1B_Silver':{s:0.55,b:42},'1B_Bronze':{s:0.55,b:39},'1B_Common':{s:0.65,b:30},'2B_Diamond':{s:0.56,b:44},'2B_Gold':{s:0.55,b:42},'2B_Silver':{s:0.55,b:40},'2B_Bronze':{s:0.55,b:37},'2B_Common':{s:0.60,b:32},'3B_Diamond':{s:0.58,b:43},'3B_Gold':{s:0.55,b:41},'3B_Silver':{s:0.55,b:39},'3B_Bronze':{s:0.55,b:36},'3B_Common':{s:0.55,b:32},'SS_Diamond':{s:0.55,b:45},'SS_Gold':{s:0.55,b:43},'SS_Silver':{s:0.55,b:41},'SS_Bronze':{s:0.55,b:38},'SS_Common':{s:0.55,b:34},'LF_Diamond':{s:0.55,b:48.5},'LF_Gold':{s:0.55,b:45.5},'LF_Silver':{s:0.55,b:42.5},'LF_Bronze':{s:0.55,b:39},'LF_Common':{s:0.60,b:33},'CF_Diamond':{s:0.55,b:46},'CF_Gold':{s:0.55,b:44},'CF_Silver':{s:0.55,b:42},'CF_Bronze':{s:0.55,b:39},'CF_Common':{s:0.65,b:31},'RF_Diamond':{s:0.55,b:48.5},'RF_Gold':{s:0.55,b:45.5},'RF_Silver':{s:0.55,b:42.5},'RF_Bronze':{s:0.55,b:39},'RF_Common':{s:0.60,b:33},'DH_Diamond':{s:0.55,b:49},'DH_Gold':{s:0.55,b:46},'DH_Silver':{s:0.55,b:43},'DH_Bronze':{s:0.55,b:40},'DH_Common':{s:0.60,b:34}};
-const spFormulas={Diamond:{s:0.68,b:24.5,stam:0.08},Gold:{s:0.65,b:21.5,stam:0.135},Silver:{s:0.65,b:24.5,stam:0.075},Bronze:{s:0.65,b:22.75,stam:0.08},Common:{s:0.66,b:20.25,stam:0.075}};
-const rpFormulas={Diamond:{s:0.66,b:29.75},Gold:{s:0.615,b:29.75},Silver:{s:0.605,b:30},Bronze:{s:0.61,b:26.5},Common:{s:0.625,b:22.25}};
-const cpFormulas={Diamond:{s:0.765,b:19.25},Gold:{s:0.74,b:19.75},Silver:{s:0.7,b:18.75},Bronze:{s:0.7,b:16.25},Common:{s:0.7,b:17.5}};
+const hFormulas={'C_Diamond':{s:0.55,b:42.25},'C_Gold':{s:0.55,b:40},'C_Silver':{s:0.55,b:38},'C_Bronze':{s:0.55,b:35},'C_Common':{s:0.55,b:31},'1B_Diamond':{s:0.55,b:48},'1B_Gold':{s:0.55,b:45},'1B_Silver':{s:0.55,b:45},'1B_Bronze':{s:0.55,b:39},'1B_Common':{s:0.65,b:30},'2B_Diamond':{s:0.56,b:44},'2B_Gold':{s:0.55,b:43},'2B_Silver':{s:0.55,b:40.5},'2B_Bronze':{s:0.55,b:37.5},'2B_Common':{s:0.60,b:32},'3B_Diamond':{s:0.58,b:43},'3B_Gold':{s:0.55,b:41},'3B_Silver':{s:0.55,b:39},'3B_Bronze':{s:0.55,b:36},'3B_Common':{s:0.55,b:32},'SS_Diamond':{s:0.55,b:45},'SS_Gold':{s:0.55,b:43},'SS_Silver':{s:0.55,b:41},'SS_Bronze':{s:0.55,b:38},'SS_Common':{s:0.55,b:34},'LF_Diamond':{s:0.55,b:45.5},'LF_Gold':{s:0.55,b:40},'LF_Silver':{s:0.55,b:37.5},'LF_Bronze':{s:0.55,b:34.5},'LF_Common':{s:0.58,b:29},'CF_Diamond':{s:0.60,b:48},'CF_Gold':{s:0.60,b:46},'CF_Silver':{s:0.55,b:38},'CF_Bronze':{s:0.55,b:35},'CF_Common':{s:0.65,b:27},'RF_Diamond':{s:0.55,b:48.5},'RF_Gold':{s:0.55,b:45.5},'RF_Silver':{s:0.55,b:42.5},'RF_Bronze':{s:0.55,b:39},'RF_Common':{s:0.60,b:33},'DH_Diamond':{s:0.55,b:49},'DH_Gold':{s:0.55,b:46},'DH_Silver':{s:0.55,b:43},'DH_Bronze':{s:0.55,b:40},'DH_Common':{s:0.60,b:34}};
+// SP: Stamina matters most, progressive base values by tier
+const spFormulas={Diamond:{s:0.65,b:26,stam:0.09},Gold:{s:0.65,b:23,stam:0.10},Silver:{s:0.65,b:20,stam:0.09},Bronze:{s:0.65,b:17,stam:0.08},Common:{s:0.65,b:14,stam:0.07}};
+// RP: Middle relievers, less stamina dependency
+const rpFormulas={Diamond:{s:0.66,b:30},Gold:{s:0.64,b:28},Silver:{s:0.62,b:26},Bronze:{s:0.60,b:24},Common:{s:0.58,b:22}};
+// CP: Closers more attribute-heavy (higher slope), lower base
+const cpFormulas={Diamond:{s:0.76,b:20},Gold:{s:0.74,b:18},Silver:{s:0.72,b:16},Bronze:{s:0.70,b:14},Common:{s:0.68,b:12}};
 
 function getRarity(ovr){if(ovr>=85)return'Diamond';if(ovr>=80)return'Gold';if(ovr>=75)return'Silver';if(ovr>=65)return'Bronze';return'Common'}
 function calcHitterOvr(attrs,pos,tier){
@@ -373,6 +376,24 @@ function calcHitterOvr(attrs,pos,tier){
     const avgPow=(c(attrs.powR)+c(attrs.powL))/2;
     const f=hFormulas[pos+'_'+tier]||{s:0.75,b:30};
     let ovr=f.s*weightedCore+f.b;if(avgPow>90)ovr+=(avgPow-90)*0.08;
+    // CF/RF fielding penalty for poor defenders (game penalizes bad OF defense heavily)
+    if(pos==='CF'&&attrs.fielding<50)ovr-=(50-attrs.fielding)*0.29;
+    if(pos==='RF'&&attrs.fielding<50)ovr-=(50-attrs.fielding)*0.37;
+    // RF speed bonus for fast players (offsets fielding penalty for speedsters like Hooper)
+    if(pos==='RF'&&attrs.speed>75)ovr+=(attrs.speed-75)*0.45;
+    // RF contact bonus for high-contact players (Moses-style)
+    if(pos==='RF'){const avgCon=(c(attrs.conR)+c(attrs.conL))/2;if(avgCon>90)ovr+=(avgCon-90)*0.5;}
+    // RF power bonus for sluggers (Colavito-style)
+    if(pos==='RF'&&avgPow>75)ovr+=(avgPow-75)*0.40;
+    // 2B bonus for elite defenders with good speed (Lajoie-style players)
+    if(pos==='2B'&&attrs.fielding>85)ovr+=(attrs.fielding-85)*0.6;
+    if(pos==='2B'&&attrs.speed>70)ovr+=(attrs.speed-70)*0.25;
+    // 1B penalty for low power (game expects power at 1B - Anson-style contact hitters penalized)
+    if(pos==='1B'&&avgPow<50)ovr-=(50-avgPow)*0.30;
+    // 1B penalty for poor fielding (even at 1B, terrible gloves hurt)
+    if(pos==='1B'&&attrs.fielding<50)ovr-=(50-attrs.fielding)*0.15;
+    // 1B bonus for solid power (Skowron-style well-rounded hitters)
+    if(pos==='1B'&&avgPow>70)ovr+=(avgPow-70)*0.55;
     return{ovr:Math.min(99,Math.round(ovr)),rarity:getRarity(Math.min(99,Math.round(ovr))),coreAvg:weightedCore.toFixed(1),f}
 }
 function calcPitcherOvr(attrs,type,tier){
@@ -380,6 +401,26 @@ function calcPitcherOvr(attrs,type,tier){
     const coreAvg=core.reduce((a,b)=>a+b,0)/8;
     const formulas=type==='SP'?spFormulas:(type==='CP'?cpFormulas:rpFormulas);
     const f=formulas[tier];let ovr=f.s*coreAvg+f.b;if(type==='SP')ovr+=attrs.stamina*f.stam;
+    // SP: Power pitcher bonus (high velo + high K/9 = dominant starter)
+    if(type==='SP'&&attrs.velocity>88&&attrs.k9>80)ovr+=(attrs.velocity-88)*0.15+(attrs.k9-80)*0.10;
+    // SP: Control artist bonus (elite control pitchers)
+    if(type==='SP'&&attrs.control>85)ovr+=(attrs.control-85)*0.20;
+    // SP: Workhorse bonus (high stamina starters get extra credit)
+    if(type==='SP'&&attrs.stamina>85)ovr+=(attrs.stamina-85)*0.12;
+    // SP: Low velocity penalty (soft-tossers need exceptional other attributes)
+    if(type==='SP'&&attrs.velocity<70)ovr-=(70-attrs.velocity)*0.15;
+    // RP: Strikeout specialist bonus (high K/9 relievers dominate)
+    if(type==='RP'&&attrs.k9>80)ovr+=(attrs.k9-80)*0.18;
+    // RP: Elite control bonus
+    if(type==='RP'&&attrs.control>80)ovr+=(attrs.control-80)*0.12;
+    // CP: Dominant closer bonus (high velo + high K/9)
+    if(type==='CP'&&attrs.velocity>85&&attrs.k9>75)ovr+=(attrs.velocity-85)*0.12+(attrs.k9-75)*0.15;
+    // CP: Elite clutch bonus (closers need to perform under pressure)
+    if(type==='CP'&&attrs.clutch>85)ovr+=(attrs.clutch-85)*0.20;
+    // All: Wild pitcher penalty (poor control hurts everyone)
+    if(attrs.control<55)ovr-=(55-attrs.control)*0.18;
+    // All: Home run prone penalty (giving up dingers is costly)
+    if(attrs.hr9<50)ovr-=(50-attrs.hr9)*0.10;
     return{ovr:Math.min(99,Math.round(ovr)),rarity:getRarity(Math.min(99,Math.round(ovr))),coreAvg:coreAvg.toFixed(1),f,stam:attrs.stamina}
 }
 
@@ -403,15 +444,22 @@ function getPitching(pid,yr){const rows=PIT.filter(p=>p[0]===pid&&p[1]===yr);if(
 
 function getFielding(pid,yr){
     const rows=FLD.filter(f=>f[0]===pid&&f[1]===yr);
-    
+
     if(!rows.length)return{pos:'DH',fldPct:null,errors:null};
-    const r=rows[0];
-    const pos={C:'C','1B':'1B','2B':'2B','3B':'3B',SS:'SS',LF:'LF',CF:'CF',RF:'RF',OF:'CF'}[r[2]]||'DH';
+    // Pick position with most games (r[5] is games count), prioritize non-OF specific positions
+    const posMap={C:'C','1B':'1B','2B':'2B','3B':'3B',SS:'SS',LF:'LF',CF:'CF',RF:'RF',OF:'CF'};
+    let bestRow=rows[0],bestGames=rows[0][5]||0;
+    for(const r of rows){
+        const g=r[5]||0;
+        // Prefer specific OF positions (LF/CF/RF) over generic OF, and most games
+        if(g>bestGames||(g===bestGames&&posMap[r[2]]!=='CF'&&posMap[bestRow[2]]==='CF')){bestRow=r;bestGames=g}
+    }
+    const pos=posMap[bestRow[2]]||'DH';
     // r[3] is fldPct * 1000 (e.g., 990 = .990). Treat 0 as missing.
-    const rawFldPct=r[3];
+    const rawFldPct=bestRow[3];
     const fldPct=rawFldPct>0?rawFldPct/1000:null;
-    
-    return{pos,fldPct,errors:r[4]}
+
+    return{pos,fldPct,errors:bestRow[4]}
 }
 
 function estVelo(yr,k9){let v=93;if(yr<1920)v=88;else if(yr<1950)v=90;else if(yr<1970)v=92;else if(yr<1990)v=91;else if(yr<2010)v=93;else v=94;if(k9>10)v+=2;else if(k9>8)v+=1;return v}
