@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLB Stats → The Show 25 Converter v4.3</title>
+    <title>MLB Stats → The Show 25 Converter v4.4</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a12; min-height: 100vh; color: #fff; line-height: 1.5; }
@@ -87,7 +87,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <div class="badges"><span class="badge">v4.3 · Era Adjusted</span><span class="badge new">🔍 Lahman DB: 24,270 Players</span></div>
+        <div class="badges"><span class="badge">v4.4 · Position Weighted</span><span class="badge new">🔍 Lahman DB: 24,270 Players</span></div>
         <h1>MLB Stats → <span class="accent">The Show 25</span></h1>
         <p class="subtitle">Convert real baseball statistics into game ratings</p>
     </div>
@@ -350,19 +350,30 @@ function convertPitcher(stats,isSP,yr){
     return{attrs,est}
 }
 
-const hFormulas={'C_Diamond':{s:0.55,b:46.25},'C_Gold':{s:0.55,b:47.25},'C_Silver':{s:0.55,b:45},'C_Bronze':{s:0.55,b:43},'C_Common':{s:0.55,b:38.75},'1B_Diamond':{s:0.55,b:46.5},'1B_Gold':{s:0.55,b:43.75},'1B_Silver':{s:0.55,b:41},'1B_Bronze':{s:0.55,b:38.75},'1B_Common':{s:0.695,b:26.75},'2B_Diamond':{s:0.56,b:44},'2B_Gold':{s:0.55,b:43.5},'2B_Silver':{s:0.55,b:42},'2B_Bronze':{s:0.55,b:39},'2B_Common':{s:0.65,b:30},'3B_Diamond':{s:0.61,b:39.25},'3B_Gold':{s:0.55,b:42.5},'3B_Silver':{s:0.55,b:41.5},'3B_Bronze':{s:0.55,b:38.25},'3B_Common':{s:0.55,b:34.5},'SS_Diamond':{s:0.55,b:45},'SS_Gold':{s:0.55,b:43},'SS_Silver':{s:0.55,b:41},'SS_Bronze':{s:0.565,b:39.25},'SS_Common':{s:0.55,b:35.25},'LF_Diamond':{s:0.55,b:44.5},'LF_Gold':{s:0.55,b:42.5},'LF_Silver':{s:0.55,b:40.5},'LF_Bronze':{s:0.55,b:38.75},'LF_Common':{s:0.655,b:30.25},'CF_Diamond':{s:0.55,b:45.75},'CF_Gold':{s:0.55,b:44.75},'CF_Silver':{s:0.55,b:43.25},'CF_Bronze':{s:0.55,b:40},'CF_Common':{s:0.71,b:29},'RF_Diamond':{s:0.55,b:45.25},'RF_Gold':{s:0.55,b:43.75},'RF_Silver':{s:0.55,b:42.5},'RF_Bronze':{s:0.55,b:39.25},'RF_Common':{s:0.55,b:35.5},'DH_Diamond':{s:0.55,b:44},'DH_Gold':{s:0.75,b:30},'DH_Silver':{s:0.75,b:30},'DH_Bronze':{s:0.75,b:30},'DH_Common':{s:0.75,b:30}};
+// Position formulas recalibrated for weighted core (hit/def/spd weights vary by position)
+const hFormulas={'C_Diamond':{s:0.55,b:46.25},'C_Gold':{s:0.55,b:44},'C_Silver':{s:0.55,b:42},'C_Bronze':{s:0.55,b:39},'C_Common':{s:0.55,b:35},'1B_Diamond':{s:0.55,b:48},'1B_Gold':{s:0.55,b:45},'1B_Silver':{s:0.55,b:42},'1B_Bronze':{s:0.55,b:39},'1B_Common':{s:0.65,b:30},'2B_Diamond':{s:0.56,b:44},'2B_Gold':{s:0.55,b:42},'2B_Silver':{s:0.55,b:40},'2B_Bronze':{s:0.55,b:37},'2B_Common':{s:0.60,b:32},'3B_Diamond':{s:0.58,b:43},'3B_Gold':{s:0.55,b:41},'3B_Silver':{s:0.55,b:39},'3B_Bronze':{s:0.55,b:36},'3B_Common':{s:0.55,b:32},'SS_Diamond':{s:0.55,b:45},'SS_Gold':{s:0.55,b:43},'SS_Silver':{s:0.55,b:41},'SS_Bronze':{s:0.55,b:38},'SS_Common':{s:0.55,b:34},'LF_Diamond':{s:0.55,b:48.5},'LF_Gold':{s:0.55,b:45.5},'LF_Silver':{s:0.55,b:42.5},'LF_Bronze':{s:0.55,b:39},'LF_Common':{s:0.60,b:33},'CF_Diamond':{s:0.55,b:46},'CF_Gold':{s:0.55,b:44},'CF_Silver':{s:0.55,b:42},'CF_Bronze':{s:0.55,b:39},'CF_Common':{s:0.65,b:31},'RF_Diamond':{s:0.55,b:48.5},'RF_Gold':{s:0.55,b:45.5},'RF_Silver':{s:0.55,b:42.5},'RF_Bronze':{s:0.55,b:39},'RF_Common':{s:0.60,b:33},'DH_Diamond':{s:0.55,b:49},'DH_Gold':{s:0.55,b:46},'DH_Silver':{s:0.55,b:43},'DH_Bronze':{s:0.55,b:40},'DH_Common':{s:0.60,b:34}};
 const spFormulas={Diamond:{s:0.68,b:24.5,stam:0.08},Gold:{s:0.65,b:21.5,stam:0.135},Silver:{s:0.65,b:24.5,stam:0.075},Bronze:{s:0.65,b:22.75,stam:0.08},Common:{s:0.66,b:20.25,stam:0.075}};
 const rpFormulas={Diamond:{s:0.66,b:29.75},Gold:{s:0.615,b:29.75},Silver:{s:0.605,b:30},Bronze:{s:0.61,b:26.5},Common:{s:0.625,b:22.25}};
 const cpFormulas={Diamond:{s:0.765,b:19.25},Gold:{s:0.74,b:19.75},Silver:{s:0.7,b:18.75},Bronze:{s:0.7,b:16.25},Common:{s:0.7,b:17.5}};
 
 function getRarity(ovr){if(ovr>=85)return'Diamond';if(ovr>=80)return'Gold';if(ovr>=75)return'Silver';if(ovr>=65)return'Bronze';return'Common'}
 function calcHitterOvr(attrs,pos,tier){
-    // Ensure all core attributes are capped at 99 for calculation
-    const core=[Math.min(attrs.conR,99),Math.min(attrs.conL,99),Math.min(attrs.powR,99),Math.min(attrs.powL,99),Math.min(attrs.vision,99),Math.min(attrs.discipline,99),Math.min(attrs.clutch,99),Math.min(attrs.fielding,99),Math.min(attrs.speed,99)];
-    const coreAvg=core.reduce((a,b)=>a+b,0)/9,avgPow=(Math.min(attrs.powR,99)+Math.min(attrs.powL,99))/2;
+    // Position-weighted core calculation - corner OF/DH weight hitting more, middle infield weights defense more
+    const c=v=>Math.min(v,99);
+    const hit=(c(attrs.conR)+c(attrs.conL)+c(attrs.powR)+c(attrs.powL)+c(attrs.vision)+c(attrs.discipline)+c(attrs.clutch))/7;
+    const def=(c(attrs.fielding)+c(attrs.armStr)+c(attrs.armAcc)+c(attrs.reaction))/4;
+    const spd=(c(attrs.speed)+c(attrs.stealing)+c(attrs.baserunning))/3;
+    // Position weights: [hitWeight, defWeight, spdWeight]
+    const posWeights={
+        'DH':[0.95,0.0,0.05],'1B':[0.85,0.08,0.07],'LF':[0.82,0.08,0.10],'RF':[0.82,0.08,0.10],
+        'CF':[0.70,0.15,0.15],'3B':[0.72,0.18,0.10],'2B':[0.65,0.22,0.13],'SS':[0.60,0.25,0.15],'C':[0.65,0.25,0.10]
+    };
+    const w=posWeights[pos]||[0.75,0.15,0.10];
+    const weightedCore=hit*w[0]+def*w[1]+spd*w[2];
+    const avgPow=(c(attrs.powR)+c(attrs.powL))/2;
     const f=hFormulas[pos+'_'+tier]||{s:0.75,b:30};
-    let ovr=f.s*coreAvg+f.b;if(avgPow>90)ovr+=(avgPow-90)*0.11;
-    return{ovr:Math.min(99,Math.round(ovr)),rarity:getRarity(Math.min(99,Math.round(ovr))),coreAvg:coreAvg.toFixed(1),f}
+    let ovr=f.s*weightedCore+f.b;if(avgPow>90)ovr+=(avgPow-90)*0.08;
+    return{ovr:Math.min(99,Math.round(ovr)),rarity:getRarity(Math.min(99,Math.round(ovr))),coreAvg:weightedCore.toFixed(1),f}
 }
 function calcPitcherOvr(attrs,type,tier){
     const core=[Math.min(attrs.h9,99),Math.min(attrs.k9,99),Math.min(attrs.bb9,99),Math.min(attrs.hr9,99),Math.min(attrs.clutch,99),attrs.control,attrs.velocity,Math.min(attrs.break,99)];
