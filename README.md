@@ -13,6 +13,9 @@ Works for any season from the deadball era to today — Nap Lajoie 1897, Sandy K
 - Auto-detects pitcher vs hitter
 - Pre-Statcast eras get era-appropriate fallbacks (Total Zone for fielding, SB-based speed, manual arsenal overrides for pre-2008 pitchers)
 
+<img width="2551" height="1307" alt="image" src="https://github.com/user-attachments/assets/b996773d-9164-4d94-90a8-3689bcab655f" />
+
+
 ## Quick start
 
 ```bash
