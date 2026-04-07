@@ -37,9 +37,34 @@ def _load_arsenal_overrides():
     return _ARSENAL_OVERRIDES
 
 
+# Default Show-style break rating per pitch type (0-99). Used for pre-2008
+# manual arsenal overrides where no measured movement data exists. Override
+# any individual pitch by adding a "break" field to its JSON entry.
+_DEFAULT_BREAK_BY_TYPE = {
+    "KN": 92,  # knuckleball
+    "EP": 95,  # eephus
+    "SC": 82,  # screwball
+    "CU": 75,  # curveball
+    "KC": 75,  # knuckle curve
+    "CS": 72,  # slow curve
+    "SV": 72,  # slurve
+    "ST": 75,  # sweeper
+    "SL": 70,  # slider
+    "FS": 72,  # splitter
+    "SP": 72,  # splitter (alt code)
+    "CH": 60,  # changeup
+    "FC": 58,  # cutter
+    "SI": 52,  # sinker
+    "FF": 42,  # 4-seam
+}
+
+
 def get_arsenal_override(player_name, year):
     """Look up a manual arsenal for a pitcher. Returns dict with throws + arsenal,
-    or None. Year-specific entry under 'years' takes precedence over default."""
+    or None. Year-specific entry under 'years' takes precedence over default.
+
+    Per-pitch break_rating is populated from the JSON 'break' field if present,
+    otherwise from the pitch-type heuristic above."""
     overrides = _load_arsenal_overrides()
     entry = overrides.get(player_name)
     if not entry or not isinstance(entry, dict):
@@ -49,7 +74,20 @@ def get_arsenal_override(player_name, year):
     throws = (year_entry or entry).get("throws") or entry.get("throws", "R")
     if not arsenal:
         return None
-    return {"throws": throws, "arsenal": arsenal, "estimated": True}
+
+    # Populate break_rating per pitch (manual override > pitch-type default)
+    enriched = []
+    for p in arsenal:
+        p2 = dict(p)
+        if "break_rating" not in p2:
+            manual = p2.pop("break", None)
+            if manual is not None:
+                p2["break_rating"] = int(manual)
+            else:
+                p2["break_rating"] = _DEFAULT_BREAK_BY_TYPE.get(p2.get("code", ""), 55)
+        enriched.append(p2)
+
+    return {"throws": throws, "arsenal": enriched, "estimated": True}
 
 warnings.filterwarnings("ignore")
 
@@ -928,8 +966,13 @@ def pull_all_pitcher_data(player_name, year):
     # MLBAM ID for Statcast
     print("  Looking up player ID...")
     mlbam_id = lookup_mlbam_id(player_name, year)
-    if mlbam_id:
+    # Statcast pitch tracking begins in 2008. For earlier seasons, skip the
+    # Savant pull entirely — it occasionally returns 1-2 garbage records
+    # (e.g. a stray pitchout) that pollute the arsenal.
+    if mlbam_id and year >= 2008:
         data["statcast"] = pull_pitcher_statcast(mlbam_id, year)
+    elif mlbam_id:
+        data["statcast"] = {}
     else:
         print(f"    WARNING: Could not find MLBAM ID for {player_name}")
         data["statcast"] = {}

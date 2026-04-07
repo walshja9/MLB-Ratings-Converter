@@ -1,5 +1,81 @@
 {
-  "_comment": "Manual pre-2008 pitcher arsenal overrides. Used when Statcast returns no pitch data (pre-pitch-tracking era). Sources: Neyer/James Guide to Pitchers, contemporary scouting reports. Usage% values are rough estimates — mark as estimated in UI. Schema: { 'Player Name': { 'throws': 'L|R', 'arsenal': [{code, name, usage, velo?}], 'years'?: { '1995': {...override for that year...} } } }",
+  "_comment": "Manual pre-2008 pitcher arsenal overrides. Used when Statcast returns no pitch data for pre-pitch-tracking seasons. Pitch families are curated from well-documented pitcher repertoires; usage and velo are rough estimates and should be shown as estimated in the UI. Schema: {'Player Name': {'throws': 'L|R', 'arsenal': [{code, name, usage, velo?}], 'years'?: {'1995': {...override for that year...}}}}",
+  "Barry Zito": {
+    "throws": "L",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 40, "velo": 86},
+      {"code": "CU", "name": "Curveball", "usage": 35, "velo": 71, "break": 90},
+      {"code": "CH", "name": "Changeup",  "usage": 25, "velo": 78}
+    ]
+  },
+  "Bert Blyleven": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 40, "velo": 92},
+      {"code": "CU", "name": "Curveball", "usage": 40, "velo": 74, "break": 96},
+      {"code": "CH", "name": "Changeup",  "usage": 15, "velo": 82},
+      {"code": "SL", "name": "Slider",    "usage": 5,  "velo": 81}
+    ]
+  },
+  "Billy Wagner": {
+    "throws": "L",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 70, "velo": 98},
+      {"code": "SL", "name": "Slider",    "usage": 25, "velo": 88},
+      {"code": "CH", "name": "Changeup",  "usage": 5,  "velo": 87}
+    ]
+  },
+  "Bruce Sutter": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FS", "name": "Splitter",  "usage": 70, "velo": 84, "break": 88},
+      {"code": "FF", "name": "4-Seam FB", "usage": 25, "velo": 92},
+      {"code": "SL", "name": "Slider",    "usage": 5,  "velo": 82}
+    ]
+  },
+  "Curt Schilling": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 50, "velo": 95},
+      {"code": "FS", "name": "Splitter",  "usage": 30, "velo": 86},
+      {"code": "SL", "name": "Slider",    "usage": 15, "velo": 84},
+      {"code": "CH", "name": "Changeup",  "usage": 3,  "velo": 83},
+      {"code": "CU", "name": "Curveball", "usage": 2,  "velo": 77}
+    ]
+  },
+  "Dennis Eckersley": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "SI", "name": "Sinker",    "usage": 60, "velo": 90},
+      {"code": "SL", "name": "Slider",    "usage": 35, "velo": 80},
+      {"code": "FF", "name": "4-Seam FB", "usage": 5,  "velo": 91}
+    ]
+  },
+  "Dwight Gooden": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 55, "velo": 96},
+      {"code": "CU", "name": "Curveball", "usage": 30, "velo": 81, "break": 90},
+      {"code": "CH", "name": "Changeup",  "usage": 15, "velo": 84}
+    ]
+  },
+  "Fergie Jenkins": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 45, "velo": 91},
+      {"code": "SL", "name": "Slider",    "usage": 25, "velo": 83},
+      {"code": "CH", "name": "Changeup",  "usage": 20, "velo": 80},
+      {"code": "CU", "name": "Curveball", "usage": 10, "velo": 74}
+    ]
+  },
+  "Goose Gossage": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 85, "velo": 99},
+      {"code": "SV", "name": "Slurve",    "usage": 10, "velo": 85},
+      {"code": "CH", "name": "Changeup",  "usage": 5,  "velo": 87}
+    ]
+  },
   "Greg Maddux": {
     "throws": "R",
     "arsenal": [
@@ -7,15 +83,112 @@
       {"code": "SI", "name": "Sinker",    "usage": 25, "velo": 86},
       {"code": "FC", "name": "Cutter",    "usage": 20, "velo": 85},
       {"code": "CH", "name": "Changeup",  "usage": 15, "velo": 80},
-      {"code": "SL", "name": "Slider",    "usage":  5, "velo": 82}
+      {"code": "SL", "name": "Slider",    "usage": 5,  "velo": 82}
     ]
   },
-  "Sandy Koufax": {
+  "Hoyt Wilhelm": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "KN", "name": "Knuckleball", "usage": 85, "velo": 65, "break": 99},
+      {"code": "FF", "name": "4-Seam FB",   "usage": 15, "velo": 82}
+    ]
+  },
+  "Jack Morris": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 50, "velo": 93},
+      {"code": "FS", "name": "Splitter",  "usage": 25, "velo": 84},
+      {"code": "SL", "name": "Slider",    "usage": 15, "velo": 83},
+      {"code": "CU", "name": "Curveball", "usage": 10, "velo": 76}
+    ]
+  },
+  "Johan Santana": {
     "throws": "L",
     "arsenal": [
-      {"code": "FF", "name": "4-Seam FB",  "usage": 60, "velo": 95},
-      {"code": "CU", "name": "Curveball",  "usage": 35, "velo": 78},
-      {"code": "CH", "name": "Changeup",   "usage":  5, "velo": 82}
+      {"code": "FF", "name": "4-Seam FB", "usage": 40, "velo": 93},
+      {"code": "CH", "name": "Changeup",  "usage": 35, "velo": 83},
+      {"code": "SL", "name": "Slider",    "usage": 20, "velo": 85},
+      {"code": "CU", "name": "Curveball", "usage": 5,  "velo": 76}
+    ]
+  },
+  "John Smoltz": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 45, "velo": 95},
+      {"code": "SL", "name": "Slider",    "usage": 30, "velo": 86},
+      {"code": "FS", "name": "Splitter",  "usage": 15, "velo": 88},
+      {"code": "CU", "name": "Curveball", "usage": 5,  "velo": 79},
+      {"code": "CH", "name": "Changeup",  "usage": 5,  "velo": 84}
+    ],
+    "years": {
+      "2002": {
+        "throws": "R",
+        "arsenal": [
+          {"code": "FF", "name": "4-Seam FB", "usage": 55, "velo": 96},
+          {"code": "SL", "name": "Slider",    "usage": 30, "velo": 87},
+          {"code": "FS", "name": "Splitter",  "usage": 15, "velo": 89}
+        ]
+      },
+      "2003": {
+        "throws": "R",
+        "arsenal": [
+          {"code": "FF", "name": "4-Seam FB", "usage": 55, "velo": 96},
+          {"code": "SL", "name": "Slider",    "usage": 30, "velo": 87},
+          {"code": "FS", "name": "Splitter",  "usage": 15, "velo": 89}
+        ]
+      },
+      "2004": {
+        "throws": "R",
+        "arsenal": [
+          {"code": "FF", "name": "4-Seam FB", "usage": 55, "velo": 96},
+          {"code": "SL", "name": "Slider",    "usage": 30, "velo": 87},
+          {"code": "FS", "name": "Splitter",  "usage": 15, "velo": 89}
+        ]
+      }
+    }
+  },
+  "Lee Smith": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 70, "velo": 96},
+      {"code": "SL", "name": "Slider",    "usage": 25, "velo": 86},
+      {"code": "CH", "name": "Changeup",  "usage": 5,  "velo": 84}
+    ]
+  },
+  "Mariano Rivera": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FC", "name": "Cutter",    "usage": 85, "velo": 93, "break": 95},
+      {"code": "FF", "name": "4-Seam FB", "usage": 15, "velo": 93}
+    ]
+  },
+  "Mike Mussina": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB",     "usage": 30, "velo": 92},
+      {"code": "SI", "name": "Sinker",        "usage": 15, "velo": 90},
+      {"code": "KC", "name": "Knuckle Curve", "usage": 25, "velo": 76, "break": 86},
+      {"code": "SL", "name": "Slider",        "usage": 15, "velo": 82},
+      {"code": "CH", "name": "Changeup",      "usage": 10, "velo": 81},
+      {"code": "FS", "name": "Splitter",      "usage": 5,  "velo": 84}
+    ]
+  },
+  "Nolan Ryan": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 65, "velo": 99},
+      {"code": "CU", "name": "Curveball", "usage": 25, "velo": 82, "break": 88},
+      {"code": "CH", "name": "Changeup",  "usage": 10, "velo": 87}
+    ]
+  },
+  "Orel Hershiser": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "SI", "name": "Sinker",    "usage": 35, "velo": 88},
+      {"code": "FC", "name": "Cutter",    "usage": 20, "velo": 86},
+      {"code": "CU", "name": "Curveball", "usage": 20, "velo": 73},
+      {"code": "CH", "name": "Changeup",  "usage": 20, "velo": 79},
+      {"code": "SL", "name": "Slider",    "usage": 5,  "velo": 82}
     ]
   },
   "Pedro Martinez": {
@@ -27,12 +200,19 @@
       {"code": "FC", "name": "Cutter",    "usage": 10, "velo": 88}
     ]
   },
+  "Phil Niekro": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "KN", "name": "Knuckleball", "usage": 85, "velo": 68, "break": 99},
+      {"code": "FF", "name": "4-Seam FB",   "usage": 15, "velo": 82}
+    ]
+  },
   "Randy Johnson": {
     "throws": "L",
     "arsenal": [
       {"code": "FF", "name": "4-Seam FB", "usage": 60, "velo": 97},
       {"code": "SL", "name": "Slider",    "usage": 35, "velo": 88},
-      {"code": "SP", "name": "Splitter",  "usage":  5, "velo": 86}
+      {"code": "FS", "name": "Splitter",  "usage": 5,  "velo": 86}
     ]
   },
   "Roger Clemens": {
@@ -41,21 +221,69 @@
       {"code": "FF", "name": "4-Seam FB", "usage": 55, "velo": 95},
       {"code": "FS", "name": "Splitter",  "usage": 25, "velo": 87},
       {"code": "SL", "name": "Slider",    "usage": 15, "velo": 86},
-      {"code": "CU", "name": "Curveball", "usage":  5, "velo": 78}
+      {"code": "CU", "name": "Curveball", "usage": 5,  "velo": 78}
     ]
   },
-  "Phil Niekro": {
+  "Rollie Fingers": {
     "throws": "R",
     "arsenal": [
-      {"code": "KN", "name": "Knuckleball", "usage": 85, "velo": 68},
-      {"code": "FF", "name": "4-Seam FB",   "usage": 15, "velo": 82}
+      {"code": "FF", "name": "4-Seam FB", "usage": 55, "velo": 92},
+      {"code": "SL", "name": "Slider",    "usage": 25, "velo": 82},
+      {"code": "CH", "name": "Changeup",  "usage": 20, "velo": 80}
     ]
   },
-  "Mariano Rivera": {
+  "Roy Halladay": {
     "throws": "R",
     "arsenal": [
-      {"code": "FC", "name": "Cutter",    "usage": 85, "velo": 93},
-      {"code": "FF", "name": "4-Seam FB", "usage": 15, "velo": 93}
+      {"code": "SI", "name": "Sinker",    "usage": 35, "velo": 92},
+      {"code": "FF", "name": "4-Seam FB", "usage": 20, "velo": 93},
+      {"code": "FC", "name": "Cutter",    "usage": 20, "velo": 91},
+      {"code": "CU", "name": "Curveball", "usage": 15, "velo": 76},
+      {"code": "CH", "name": "Changeup",  "usage": 10, "velo": 84}
+    ]
+  },
+  "Sandy Koufax": {
+    "throws": "L",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 60, "velo": 95},
+      {"code": "CU", "name": "Curveball", "usage": 35, "velo": 78, "break": 95},
+      {"code": "CH", "name": "Changeup",  "usage": 5,  "velo": 82}
+    ]
+  },
+  "Steve Carlton": {
+    "throws": "L",
+    "arsenal": [
+      {"code": "SL", "name": "Slider",    "usage": 45, "velo": 84},
+      {"code": "FF", "name": "4-Seam FB", "usage": 35, "velo": 93},
+      {"code": "CU", "name": "Curveball", "usage": 10, "velo": 76},
+      {"code": "CH", "name": "Changeup",  "usage": 10, "velo": 82}
+    ]
+  },
+  "Tim Wakefield": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "KN", "name": "Knuckleball", "usage": 80, "velo": 64, "break": 99},
+      {"code": "FF", "name": "4-Seam FB",   "usage": 15, "velo": 74},
+      {"code": "CU", "name": "Curveball",   "usage": 5,  "velo": 59}
+    ]
+  },
+  "Tom Glavine": {
+    "throws": "L",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 35, "velo": 88},
+      {"code": "SI", "name": "Sinker",    "usage": 20, "velo": 86},
+      {"code": "CH", "name": "Changeup",  "usage": 30, "velo": 78},
+      {"code": "CU", "name": "Curveball", "usage": 10, "velo": 72},
+      {"code": "SL", "name": "Slider",    "usage": 5,  "velo": 80}
+    ]
+  },
+  "Trevor Hoffman": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "CH", "name": "Changeup",  "usage": 45, "velo": 75, "break": 92},
+      {"code": "FF", "name": "4-Seam FB", "usage": 35, "velo": 88},
+      {"code": "FC", "name": "Cutter",    "usage": 15, "velo": 85},
+      {"code": "SL", "name": "Slider",    "usage": 5,  "velo": 80}
     ]
   }
 }
