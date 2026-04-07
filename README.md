@@ -4,8 +4,6 @@ A reverse-engineered MLB The Show 26 rating system. Type a player name and a yea
 
 Works for any season from the deadball era to today — Nap Lajoie 1897, Sandy Koufax 1965, Barry Bonds 1995, Bobby Witt Jr. 2025.
 
-![card](docs/example-card.png)
-
 ## What it does
 
 - Pulls real MLB stats from Baseball-Reference and Baseball Savant (Statcast)
