@@ -1,0 +1,1693 @@
+"""
+MLB The Show 26 - Historical Player Card Generator
+Generates Show-style player rating cards from real MLB season stats.
+
+Usage: python generate_card.py "Juan Soto" 2025
+       python generate_card.py "Barry Bonds" 2001 --position LF
+       python generate_card.py "Garrett Crochet" 2025 --pitcher
+"""
+
+import sys
+import os
+import json
+import argparse
+import warnings
+import time
+
+# Optional: if you keep your pybaseball venv in a sibling project, point at it
+# via the MLB_SHOW_VENV_SITE env var. Otherwise we use the active interpreter.
+_venv_site = os.environ.get("MLB_SHOW_VENV_SITE")
+if _venv_site and os.path.isdir(_venv_site):
+    sys.path.insert(0, _venv_site)
+
+# --- Manual pre-2008 pitcher arsenal overrides ---
+_ARSENAL_OVERRIDES = None
+
+def _load_arsenal_overrides():
+    global _ARSENAL_OVERRIDES
+    if _ARSENAL_OVERRIDES is not None:
+        return _ARSENAL_OVERRIDES
+    path = os.path.join(os.path.dirname(__file__), "pitcher_arsenals.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            _ARSENAL_OVERRIDES = json.load(f)
+    except Exception as e:
+        print(f"  WARNING: Could not load pitcher_arsenals.json: {e}")
+        _ARSENAL_OVERRIDES = {}
+    return _ARSENAL_OVERRIDES
+
+
+def get_arsenal_override(player_name, year):
+    """Look up a manual arsenal for a pitcher. Returns dict with throws + arsenal,
+    or None. Year-specific entry under 'years' takes precedence over default."""
+    overrides = _load_arsenal_overrides()
+    entry = overrides.get(player_name)
+    if not entry or not isinstance(entry, dict):
+        return None
+    year_entry = (entry.get("years") or {}).get(str(year))
+    arsenal = (year_entry or entry).get("arsenal")
+    throws = (year_entry or entry).get("throws") or entry.get("throws", "R")
+    if not arsenal:
+        return None
+    return {"throws": throws, "arsenal": arsenal, "estimated": True}
+
+warnings.filterwarnings("ignore")
+
+import numpy as np
+from pybaseball import (
+    statcast_sprint_speed,
+    statcast_batter,
+    statcast_pitcher,
+    playerid_lookup,
+)
+
+# FanGraphs is dead behind a Cloudflare interactive challenge as of 2026-04.
+# We replace pybaseball's batting/pitching/fielding leaderboards with direct
+# Baseball-Reference scraping (see bbref_scraper.py). Statcast paths are
+# untouched — they still hit Baseball Savant.
+from bbref_scraper import (
+    bbref_batting_df  as batting_stats,
+    bbref_pitching_df as pitching_stats,
+    bbref_fielding_df as fielding_stats,
+)
+
+# ================================================================
+# CONSTANTS
+# ================================================================
+
+FIELDING_YEAR_WEIGHTS = {0: 0.45, -1: 0.30, -2: 0.15, -3: 0.10}
+
+POSITION_DEFAULTS = {
+    "C":  {"arm_str": 80, "arm_acc": 65, "react_l": 0, "react_r": 0, "react_f": 0, "react_b": 0, "clutch": 65, "bunt": 35, "drag": 25},
+    "1B": {"arm_str": 58, "arm_acc": 62, "react_l": 65, "react_r": 60, "react_f": 50, "react_b": 60, "clutch": 65, "bunt": 35, "drag": 25},
+    "2B": {"arm_str": 60, "arm_acc": 70, "react_l": 65, "react_r": 70, "react_f": 75, "react_b": 60, "clutch": 65, "bunt": 45, "drag": 35},
+    "SS": {"arm_str": 68, "arm_acc": 75, "react_l": 55, "react_r": 80, "react_f": 80, "react_b": 70, "clutch": 65, "bunt": 35, "drag": 25},
+    "3B": {"arm_str": 65, "arm_acc": 72, "react_l": 55, "react_r": 60, "react_f": 75, "react_b": 60, "clutch": 65, "bunt": 35, "drag": 35},
+    "LF": {"arm_str": 60, "arm_acc": 65, "react_l": 60, "react_r": 55, "react_f": 55, "react_b": 60, "clutch": 65, "bunt": 35, "drag": 30},
+    "CF": {"arm_str": 75, "arm_acc": 70, "react_l": 70, "react_r": 65, "react_f": 60, "react_b": 60, "clutch": 65, "bunt": 45, "drag": 40},
+    "RF": {"arm_str": 75, "arm_acc": 70, "react_l": 60, "react_r": 60, "react_f": 55, "react_b": 60, "clutch": 65, "bunt": 35, "drag": 25},
+    "DH": {"arm_str": 55, "arm_acc": 65, "react_l": 45, "react_r": 45, "react_f": 45, "react_b": 45, "clutch": 65, "bunt": 35, "drag": 25},
+    "OF": {"arm_str": 68, "arm_acc": 68, "react_l": 63, "react_r": 60, "react_f": 57, "react_b": 60, "clutch": 65, "bunt": 38, "drag": 30},
+}
+
+
+def clamp(val):
+    return max(0, min(99, round(val)))
+
+
+def detect_player_type(player_name, year):
+    """Auto-detect if a player is a pitcher or hitter for a given year.
+    Compares IP vs PA for the exact name match to avoid wrong-player collisions.
+    Returns 'pitcher' or 'hitter'."""
+    print(f"  Auto-detecting player type for {player_name} ({year})...")
+    ip = 0
+    pa = 0
+
+    # Check pitching stats — strict name match only
+    try:
+        pit_df = pitching_stats(year)
+        match = pit_df[pit_df["Name"] == player_name]
+        if not match.empty:
+            ip = float(match.sort_values("IP", ascending=False).iloc[0]["IP"])
+    except Exception:
+        pass
+
+    # Check batting stats — strict name match only
+    try:
+        bat_df = batting_stats(year)
+        match = bat_df[bat_df["Name"] == player_name]
+        if not match.empty:
+            pa = int(match.sort_values("PA", ascending=False).iloc[0]["PA"])
+    except Exception:
+        pass
+
+    # If found in both, compare: pitcher if IP > PA/3 (rough heuristic)
+    # A full-time hitter has ~600 PA and maybe 0 IP
+    # A full-time pitcher has ~180 IP and maybe 50 PA
+    if ip > 0 and pa > 0:
+        # Pitcher if IP is substantial and PA is low relative to a hitter
+        if ip >= 20 and pa < 100:
+            print(f"    -> Pitcher ({ip:.0f} IP, {pa} PA)")
+            return "pitcher"
+        elif pa >= 100:
+            print(f"    -> Hitter ({pa} PA, {ip:.0f} IP)")
+            return "hitter"
+
+    if ip >= 20:
+        print(f"    -> Pitcher ({ip:.0f} IP)")
+        return "pitcher"
+
+    print(f"    -> Hitter ({pa} PA)")
+    return "hitter"
+
+
+def estimate_ovr_hitter(ratings, overalls):
+    """Estimate hitter OVR from sub-attributes.
+
+    Recalibrated 2026-04-07 against the BBRef-fed pipeline (NNLS, N=11).
+    NNLS RMSE=3.89, prior FG-fit RMSE=6.30 on the same set.
+
+    Old FG-pipeline coefficients (kept for comparison):
+        OVR = 0.780*CoreHit + 0.166*Fielding + 0.066*Speed + 0.157*Durability + 1.8
+
+    Limitations of the current fit:
+    - Small calibration set (N=11). NNLS forced speed weight to 0 because
+      the set lacks variance separating speed from core_hit.
+    - Speed-first hitters (PCA, Simpson) are systematically under-predicted.
+    - TODO: grow the calibration set with more speed-first profiles
+      (e.g. Esteury Ruiz, Trea Turner, Elly De La Cruz) and re-fit; restore
+      a non-zero speed weight only when the data actually supports it.
+    """
+    core_hitting = np.mean([
+        ratings["contact_right"], ratings["contact_left"],
+        ratings["power_right"], ratings["power_left"],
+        ratings["vision"], ratings["discipline"],
+        ratings["batting_clutch"],
+    ])
+    ovr = (0.9808 * core_hitting +
+           0.2628 * overalls["fielding"] +
+           0.0000 * ratings["speed"] +
+           0.0269 * overalls["durability"])
+    return clamp(ovr)
+
+
+def estimate_ovr_pitcher(ratings, overalls):
+    """Estimate pitcher OVR from sub-attributes.
+
+    Recalibrated 2026-04-07 against the BBRef-fed pipeline (NNLS, N=10).
+    NNLS RMSE=2.24, prior FG-fit RMSE=4.46 on the same set.
+
+    Old FG-pipeline coefficients (kept for comparison):
+        OVR = 1.21*Pitching + 0.14*Fielding - 0.13*Durability - 4.6
+
+    NNLS dropped fielding to 0 — Show appears to weight pitcher fielding
+    very lightly, which matches intuition. Durability flipped from negative
+    (old fit was wrong-signed) to a sensible positive weight.
+    """
+    ovr = (0.8422 * overalls["pitching"] +
+           0.0000 * overalls["fielding"] +
+           0.3179 * overalls["durability"])
+    return clamp(ovr)
+
+
+# ================================================================
+# DATA PULLING
+# ================================================================
+
+def find_player(df, name):
+    """Find player in a FanGraphs dataframe by name."""
+    match = df[df["Name"] == name]
+    if not match.empty:
+        return match.iloc[0] if len(match) == 1 else match.sort_values("PA", ascending=False).iloc[0]
+    # Partial match
+    for part in name.split():
+        if len(part) > 3 and part not in ("Jr.", "Sr.", "III", "II"):
+            m = df[df["Name"].str.contains(part, case=False, na=False)]
+            if len(m) == 1:
+                return m.iloc[0]
+            if len(m) > 1:
+                return m.sort_values("PA", ascending=False).iloc[0]
+    return None
+
+
+def lookup_mlbam_id(player_name, year=None):
+    """Look up a player's MLBAM ID for Statcast queries.
+    Handles accented characters and filters by active year to avoid name collisions."""
+    import unicodedata
+
+    def strip_accents(s):
+        return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+    def add_common_accents(s):
+        """Generate common accented variations of a name.
+        Uses unicode escapes to be encoding-safe across editors/tools."""
+        variations = [s]
+        # Encoding-safe accent map: \u00e1=á, \u00e9=é, \u00ed=í, \u00f3=ó, \u00fa=ú, \u00f1=ñ
+        replacements = {
+            "a": "\u00e1", "e": "\u00e9", "i": "\u00ed",
+            "o": "\u00f3", "u": "\u00fa", "n": "\u00f1",
+        }
+        for plain, accented in replacements.items():
+            if plain in s.lower():
+                variations.append(s.replace(plain, accented).replace(plain.upper(), accented.upper()))
+        return variations
+
+    def pick_best(result, year):
+        """Pick the player active in the requested year, or most recent."""
+        if result.empty:
+            return None
+        if year:
+            # Filter to players active in the requested year
+            active = result[
+                (result["mlb_played_first"].fillna(9999).astype(int) <= year) &
+                (result["mlb_played_last"].fillna(0).astype(int) >= year)
+            ]
+            if not active.empty:
+                return int(active.iloc[0]["key_mlbam"])
+        # Fallback: most recent player
+        result = result.sort_values("mlb_played_last", ascending=False)
+        return int(result.iloc[0]["key_mlbam"])
+
+    parts = player_name.replace("Jr.", "").replace("Sr.", "").replace("III", "").strip().split()
+    first = parts[0]
+    last = " ".join(parts[1:]) if len(parts) > 1 else parts[0]
+
+    # Try original name, then stripped accents, then common accent additions
+    name_pairs = [(last, first)]
+    stripped_last = strip_accents(last)
+    stripped_first = strip_accents(first)
+    if stripped_last != last or stripped_first != first:
+        name_pairs.append((stripped_last, stripped_first))
+    for var in add_common_accents(last):
+        if var != last:
+            name_pairs.append((var, first))
+
+    for try_last, try_first in name_pairs:
+        try:
+            result = playerid_lookup(try_last, try_first)
+            mlbam = pick_best(result, year)
+            if mlbam:
+                return mlbam
+        except Exception:
+            pass
+
+    # Last resort: search by last name only
+    try:
+        result = playerid_lookup(last)
+        if not result.empty:
+            match = result[result["name_first"].str.contains(first, case=False, na=False)]
+            mlbam = pick_best(match, year)
+            if mlbam:
+                return mlbam
+    except Exception:
+        pass
+
+    return None
+
+
+def pull_season_batting(player_name, year):
+    """Pull single-season batting stats from FanGraphs."""
+    print(f"  Pulling {year} batting stats...")
+    df = batting_stats(year)
+    row = find_player(df, player_name)
+    if row is None:
+        print(f"    WARNING: {player_name} not found in {year} batting")
+        return None
+
+    import math as _math
+
+    def safe_int(val, default=0):
+        if val is None or (isinstance(val, float) and _math.isnan(val)):
+            return default
+        return int(val)
+
+    def safe_float(val, default=0.0):
+        if val is None or (isinstance(val, float) and _math.isnan(val)):
+            return default
+        return float(val)
+
+    fg_spd = row.get("Spd")
+    fg_spd = round(float(fg_spd), 1) if fg_spd and not (isinstance(fg_spd, float) and _math.isnan(fg_spd)) else None
+    bsr = row.get("BsR")
+    bsr = round(float(bsr), 1) if bsr and not (isinstance(bsr, float) and _math.isnan(bsr)) else None
+
+    return {
+        "G": safe_int(row.get("G")),
+        "PA": safe_int(row.get("PA")),
+        "BA": round(safe_float(row.get("AVG")), 3),
+        "OBP": round(safe_float(row.get("OBP")), 3),
+        "SLG": round(safe_float(row.get("SLG")), 3),
+        "ISO": round(safe_float(row.get("ISO")), 3),
+        "HR": safe_int(row.get("HR")),
+        "SB": safe_int(row.get("SB")),
+        "BB_pct": round(safe_float(row.get("BB%")) * 100, 1),
+        "K_pct": round(safe_float(row.get("K%")) * 100, 1),
+        "wOBA": round(safe_float(row.get("wOBA")), 3),
+        "WAR": round(safe_float(row.get("WAR")), 1),
+        "fg_spd": fg_spd,
+        "bsr": bsr,
+        "team": str(row.get("Team", "?")),
+    }
+
+
+def pull_career_batting(player_name, year, num_years=4):
+    """Pull multi-year batting stats and compute PA-weighted career averages.
+    Starts from target year and works backwards. Stops if player not found (rookie detection)."""
+    yearly = {}
+    # Pull target year first (most important), then go backwards
+    for y in range(year, year - num_years, -1):
+        try:
+            print(f"  Pulling {y} batting stats (career)...")
+            df = batting_stats(y)
+            # Strict name match only for career years to avoid wrong-player bugs
+            match = df[df["Name"] == player_name]
+            if match.empty:
+                if y == year:
+                    # For the target year, try partial match as fallback
+                    row = find_player(df, player_name)
+                else:
+                    # For prior years, strict match only — stop if not found
+                    print(f"    {player_name} not found in {y}, stopping career search.")
+                    break
+            else:
+                row = match.iloc[0] if len(match) == 1 else match.sort_values("PA", ascending=False).iloc[0]
+
+            if row is not None:
+                import math as _m
+                _pa = row.get("PA")
+                if _pa is None or (isinstance(_pa, float) and _m.isnan(_pa)):
+                    _pa = 0
+                else:
+                    _pa = int(_pa)
+                if _pa >= 10:
+                    def _sf(v, d=0.0):
+                        return d if (v is None or (isinstance(v, float) and _m.isnan(v))) else float(v)
+                    def _si(v, d=0):
+                        return d if (v is None or (isinstance(v, float) and _m.isnan(v))) else int(v)
+                    yearly[y] = {
+                        "PA": _pa,
+                        "BA": round(_sf(row.get("AVG")), 3),
+                        "OBP": round(_sf(row.get("OBP")), 3),
+                        "SLG": round(_sf(row.get("SLG")), 3),
+                        "ISO": round(_sf(row.get("ISO")), 3),
+                        "G": _si(row.get("G")),
+                        "SB": _si(row.get("SB")),
+                    }
+        except Exception:
+            break
+
+    if not yearly:
+        return None, {}
+
+    # PA-weighted averages
+    total_pa = sum(d["PA"] for d in yearly.values())
+    avg = {}
+    for stat in ["BA", "OBP", "SLG", "ISO"]:
+        avg[stat] = sum(d[stat] * d["PA"] for d in yearly.values()) / total_pa
+
+    avg["total_PA"] = total_pa
+    avg["total_G"] = sum(d["G"] for d in yearly.values())
+    avg["total_SB"] = sum(d["SB"] for d in yearly.values())
+    avg["num_years"] = len(yearly)
+    avg["avg_G_per_year"] = avg["total_G"] / len(yearly)
+
+    return avg, yearly
+
+
+def pull_sprint_speed(player_name, year):
+    """Pull Statcast sprint speed."""
+    print(f"  Pulling {year} sprint speed...")
+    try:
+        df = statcast_sprint_speed(year)
+        # Build search name: "Last, First"
+        parts = player_name.replace("Jr.", "").replace("Sr.", "").strip().split()
+        first = parts[0]
+        last = " ".join(parts[1:])
+
+        # Try exact formatted match
+        for suffix in ["", " Jr.", " Sr."]:
+            search = f"{last}{suffix}, {first}"
+            match = df[df["last_name, first_name"] == search]
+            if not match.empty:
+                return float(match.iloc[0]["sprint_speed"])
+
+        # Partial match on last name
+        match = df[df["last_name, first_name"].str.contains(last, case=False, na=False)]
+        if len(match) == 1:
+            return float(match.iloc[0]["sprint_speed"])
+        if len(match) > 1:
+            # Try to narrow with first name
+            narrow = match[match["last_name, first_name"].str.contains(first, case=False, na=False)]
+            if not narrow.empty:
+                return float(narrow.iloc[0]["sprint_speed"])
+            return float(match.iloc[0]["sprint_speed"])
+    except Exception as e:
+        print(f"    Sprint speed error: {e}")
+
+    return None
+
+
+def pull_career_fielding(player_name, year, num_years=4):
+    """Pull multi-year fielding stats (OAA) and detect primary position.
+    Aggregates across all position entries for multi-position players.
+    Starts from target year backwards. Stops if player not found."""
+    import math as _math
+    yearly_oaa = {}
+    position = None
+
+    def safe_float(val):
+        if val is None or (isinstance(val, float) and _math.isnan(val)):
+            return None
+        return float(val)
+
+    for y in range(year, year - num_years, -1):
+        try:
+            print(f"  Pulling {y} fielding stats...")
+            df = fielding_stats(y)
+            # Get ALL rows for this player (may have multiple position entries)
+            matches = df[df["Name"] == player_name]
+            if matches.empty:
+                if y == year:
+                    # Try partial match for target year
+                    row = find_player(df, player_name)
+                    if row is not None:
+                        import pandas as pd
+                        matches = pd.DataFrame([row])
+                    else:
+                        continue
+                else:
+                    break  # Player not in league yet
+
+            if matches.empty:
+                continue
+
+            # Aggregate across all position entries for this year
+            # Sum: Inn, OAA, DRS. Use innings-weighted average for rate stats.
+            total_inn = 0
+            total_oaa = 0
+            total_def = 0
+            total_rarm = 0
+            total_rngr = 0
+            total_errr = 0
+            total_rdrs = 0
+            total_rtot = 0
+            has_oaa = False
+            has_def = False
+            has_rarm = False
+            has_rngr = False
+            has_errr = False
+            has_rdrs = False
+            has_rtot = False
+            best_pos = None
+            best_inn = 0
+
+            for _, row in matches.iterrows():
+                inn = safe_float(row.get("Inn")) or 0
+                total_inn += inn
+
+                oaa = safe_float(row.get("OAA"))
+                if oaa is not None:
+                    total_oaa += oaa
+                    has_oaa = True
+
+                def_v = safe_float(row.get("Def"))
+                if def_v is not None:
+                    total_def += def_v
+                    has_def = True
+
+                rarm = safe_float(row.get("rARM"))
+                if rarm is not None:
+                    total_rarm += rarm
+                    has_rarm = True
+
+                rngr = safe_float(row.get("RngR"))
+                if rngr is not None:
+                    total_rngr += rngr
+                    has_rngr = True
+
+                errr = safe_float(row.get("ErrR"))
+                if errr is not None:
+                    total_errr += errr
+                    has_errr = True
+
+                # BBRef-specific defensive metrics (era-specific inputs).
+                # Rdrs = DRS (post-2003); Rtot = Total Zone (deeper history).
+                rdrs = safe_float(row.get("Rdrs"))
+                if rdrs is not None:
+                    total_rdrs += rdrs
+                    has_rdrs = True
+
+                rtot = safe_float(row.get("Rtot"))
+                if rtot is not None:
+                    total_rtot += rtot
+                    has_rtot = True
+
+                # Track primary position (most innings)
+                pos_val = str(row.get("Pos", ""))
+                if inn > best_inn and pos_val not in ("DH", ""):
+                    best_inn = inn
+                    best_pos = pos_val
+
+            # Store aggregated values
+            if has_oaa:
+                yearly_oaa[y] = total_oaa
+            if has_def:
+                yearly_oaa[f"def_{y}"] = total_def
+            if has_rarm:
+                yearly_oaa[f"rarm_{y}"] = total_rarm
+            if has_rngr:
+                yearly_oaa[f"rngr_{y}"] = total_rngr
+            if has_errr:
+                yearly_oaa[f"errr_{y}"] = total_errr
+            if has_rdrs:
+                yearly_oaa[f"rdrs_{y}"] = total_rdrs
+            if has_rtot:
+                yearly_oaa[f"rtot_{y}"] = total_rtot
+            if total_inn > 0:
+                yearly_oaa[f"inn_{y}"] = total_inn
+
+            if y == year and best_pos:
+                position = best_pos
+
+        except Exception:
+            break
+
+    return yearly_oaa, position
+
+
+def pull_statcast_data(mlbam_id, year):
+    """Pull Statcast pitch-by-pitch data and compute splits + exit velocity."""
+    print(f"  Pulling {year} Statcast data (this may take a moment)...")
+    start = f"{year}-03-20"
+    end = f"{year}-10-01"
+
+    try:
+        df = statcast_batter(start, end, mlbam_id)
+        if df.empty:
+            return None, None, None
+    except Exception as e:
+        print(f"    Statcast error: {e}")
+        return None, None, None
+
+    # --- Splits ---
+    splits = {}
+    for hand, label in [("R", "vs_RHP"), ("L", "vs_LHP")]:
+        subset = df[df["p_throws"] == hand]
+        ab_events = [
+            "single", "double", "triple", "home_run",
+            "strikeout", "field_out", "grounded_into_double_play",
+            "force_out", "fielders_choice", "fielders_choice_out",
+            "double_play", "strikeout_double_play", "triple_play",
+            "field_error",
+        ]
+        at_bats = subset[subset["events"].isin(ab_events)]
+        all_pa = subset[subset["events"].notna()]
+
+        if len(at_bats) == 0:
+            splits[label] = {"PA": 0, "BA": 0, "OBP": 0, "ISO": 0}
+            continue
+
+        hits = at_bats[at_bats["events"].isin(["single", "double", "triple", "home_run"])]
+        singles = len(at_bats[at_bats["events"] == "single"])
+        doubles = len(at_bats[at_bats["events"] == "double"])
+        triples = len(at_bats[at_bats["events"] == "triple"])
+        homers = len(at_bats[at_bats["events"] == "home_run"])
+        total_bases = singles + 2 * doubles + 3 * triples + 4 * homers
+
+        n_ab = len(at_bats)
+        n_pa = len(all_pa)
+        n_hits = len(hits)
+        n_bb = len(all_pa[all_pa["events"] == "walk"])
+        n_hbp = len(all_pa[all_pa["events"] == "hit_by_pitch"])
+
+        ba = n_hits / n_ab if n_ab > 0 else 0
+        slg = total_bases / n_ab if n_ab > 0 else 0
+        obp = (n_hits + n_bb + n_hbp) / n_pa if n_pa > 0 else 0
+
+        splits[label] = {
+            "PA": n_pa,
+            "BA": round(ba, 3),
+            "OBP": round(obp, 3),
+            "ISO": round(slg - ba, 3),
+        }
+
+    # --- Exit Velocity ---
+    batted = df[df["launch_speed"].notna()]
+    avg_ev = float(batted["launch_speed"].mean()) if len(batted) > 0 else None
+
+    # --- RISP BA (for clutch rating) ---
+    ab_events = [
+        "single", "double", "triple", "home_run",
+        "strikeout", "field_out", "grounded_into_double_play",
+        "force_out", "fielders_choice", "fielders_choice_out",
+        "double_play", "strikeout_double_play", "triple_play",
+        "field_error",
+    ]
+    risp = df[(df["on_2b"].notna()) | (df["on_3b"].notna())]
+    risp_ab = risp[risp["events"].isin(ab_events)]
+    risp_hits = risp_ab[risp_ab["events"].isin(["single", "double", "triple", "home_run"])]
+    risp_pa = len(risp[risp["events"].notna()])
+    risp_ba = len(risp_hits) / len(risp_ab) if len(risp_ab) > 0 else None
+    splits["risp_ba"] = round(risp_ba, 3) if risp_ba is not None else None
+    splits["risp_pa"] = risp_pa
+
+    return splits, avg_ev, len(df)
+
+
+def pull_all_data(player_name, year):
+    """Orchestrate all data pulls and return consolidated stats dict."""
+    print(f"\nPulling data for {player_name} ({year})...")
+
+    data = {"name": player_name, "year": year}
+
+    # Season batting
+    data["batting"] = pull_season_batting(player_name, year)
+    if data["batting"] is None:
+        print("ERROR: Could not find player in batting stats.")
+        return None
+
+    # Career batting
+    data["career_avg"], data["career_yearly"] = pull_career_batting(player_name, year)
+
+    # Sprint speed
+    data["sprint_speed"] = pull_sprint_speed(player_name, year)
+
+    # Career fielding
+    data["fielding_oaa"], data["position"] = pull_career_fielding(player_name, year)
+
+    # MLBAM ID for Statcast
+    print("  Looking up player ID...")
+    mlbam_id = lookup_mlbam_id(player_name, year)
+    if mlbam_id:
+        data["splits"], data["avg_ev"], _ = pull_statcast_data(mlbam_id, year)
+    else:
+        print(f"    WARNING: Could not find MLBAM ID for {player_name}")
+        data["splits"] = None
+        data["avg_ev"] = None
+
+    return data
+
+
+# ================================================================
+# PITCHER DATA PULLING
+# ================================================================
+
+PITCHER_FIELDING_DEFAULTS = {
+    "fielding": 50, "arm_str": 65, "arm_acc": 50,
+    "react_l": 50, "react_r": 50, "react_f": 50, "react_b": 50,
+}
+
+
+def find_pitcher_fg(df, name):
+    """Find pitcher in FanGraphs dataframe, sort by IP instead of PA."""
+    match = df[df["Name"] == name]
+    if not match.empty:
+        return match.iloc[0] if len(match) == 1 else match.sort_values("IP", ascending=False).iloc[0]
+    for part in name.split():
+        if len(part) > 3 and part not in ("Jr.", "Sr.", "III", "II"):
+            m = df[df["Name"].str.contains(part, case=False, na=False)]
+            if len(m) == 1:
+                return m.iloc[0]
+            if len(m) > 1:
+                return m.sort_values("IP", ascending=False).iloc[0]
+    return None
+
+
+def pull_season_pitching(player_name, year):
+    """Pull single-season pitching stats from FanGraphs."""
+    print(f"  Pulling {year} pitching stats...")
+    import math as _math
+    df = pitching_stats(year)
+    row = find_pitcher_fg(df, player_name)
+    if row is None:
+        print(f"    WARNING: {player_name} not found in {year} pitching")
+        return None
+
+    def safe_float(val, default=0):
+        if val is None or (isinstance(val, float) and _math.isnan(val)):
+            return default
+        return float(val)
+
+    fbv = safe_float(row.get("FBv"), None)
+
+    return {
+        "W": int(row.get("W", 0)),
+        "L": int(row.get("L", 0)),
+        "ERA": round(safe_float(row.get("ERA")), 2),
+        "FIP": round(safe_float(row.get("FIP")), 2),
+        "IP": round(safe_float(row.get("IP")), 1),
+        "G": int(row.get("G", 0)),
+        "GS": int(row.get("GS", 0)),
+        "SV": int(row.get("SV", 0)),
+        "K_per_9": round(safe_float(row.get("K/9")), 1),
+        "BB_per_9": round(safe_float(row.get("BB/9")), 1),
+        "HR_per_9": round(safe_float(row.get("HR/9")), 2),
+        "H_per_9": round(safe_float(row.get("H/9")), 1),
+        "K_pct": round(safe_float(row.get("K%")) * 100, 1),
+        "BB_pct": round(safe_float(row.get("BB%")) * 100, 1),
+        "WHIP": round(safe_float(row.get("WHIP")), 3),
+        "WAR": round(safe_float(row.get("WAR")), 1),
+        "LOB_pct": round(safe_float(row.get("LOB%")) * 100, 1),
+        "FB_velo": round(fbv, 1) if fbv else None,
+        "team": str(row.get("Team", "?")),
+    }
+
+
+def pull_career_pitching(player_name, year, num_years=4):
+    """Pull multi-year pitching stats for career blending.
+    Starts from target year backwards. Stops if player not found (rookie detection)."""
+    import math as _math
+    yearly = {}
+    for y in range(year, year - num_years, -1):
+        try:
+            print(f"  Pulling {y} pitching stats (career)...")
+            df = pitching_stats(y)
+            match = df[df["Name"] == player_name]
+            if match.empty:
+                if y == year:
+                    row = find_pitcher_fg(df, player_name)
+                else:
+                    print(f"    {player_name} not found in {y}, stopping career search.")
+                    break
+            else:
+                row = match.iloc[0] if len(match) == 1 else match.sort_values("IP", ascending=False).iloc[0]
+
+            if row is not None and float(row.get("IP", 0)) >= 5:
+                yearly[y] = {
+                    "IP": round(float(row.get("IP", 0)), 1),
+                    "G": int(row.get("G", 0)),
+                    "GS": int(row.get("GS", 0)),
+                    "ERA": round(float(row.get("ERA", 0)), 2),
+                    "K_per_9": round(float(row.get("K/9", 0)), 1),
+                    "BB_per_9": round(float(row.get("BB/9", 0)), 1),
+                    "HR_per_9": round(float(row.get("HR/9", 0)), 2),
+                    "H_per_9": round(float(row.get("H/9", 0)), 1),
+                    "K_pct": round(float(row.get("K%", 0)) * 100, 1),
+                    "BB_pct": round(float(row.get("BB%", 0)) * 100, 1),
+                }
+        except Exception:
+            break
+
+    if not yearly:
+        return None, {}
+
+    # IP-weighted averages
+    total_ip = sum(d["IP"] for d in yearly.values())
+    avg = {}
+    for stat in ["ERA", "K_per_9", "BB_per_9", "HR_per_9", "H_per_9", "K_pct", "BB_pct"]:
+        avg[stat] = sum(d[stat] * d["IP"] for d in yearly.values()) / total_ip
+
+    avg["total_IP"] = total_ip
+    avg["total_GS"] = sum(d["GS"] for d in yearly.values())
+    avg["total_G"] = sum(d["G"] for d in yearly.values())
+    avg["num_years"] = len(yearly)
+    avg["avg_GS_per_year"] = avg["total_GS"] / len(yearly)
+
+    return avg, yearly
+
+
+def pull_pitcher_statcast(mlbam_id, year):
+    """Pull Statcast data for pitcher: velocity, splits vs LHB/RHB."""
+    print(f"  Pulling {year} Statcast pitcher data...")
+    start = f"{year}-03-20"
+    end = f"{year}-10-01"
+
+    try:
+        df = statcast_pitcher(start, end, mlbam_id)
+        if df.empty:
+            return {}
+    except Exception as e:
+        print(f"    Statcast error: {e}")
+        return {}
+
+    result = {}
+
+    # Detect pitcher handedness from pitch data
+    if "p_throws" in df.columns:
+        throws_mode = df["p_throws"].mode()
+        if not throws_mode.empty:
+            result["throws"] = str(throws_mode.iloc[0])
+
+    # Fastball velocity
+    fb = df[df["pitch_type"].isin(["FF", "SI"])]
+    if not fb.empty and "release_speed" in fb.columns:
+        result["avg_fb_velo"] = round(float(fb["release_speed"].mean()), 1)
+        result["max_fb_velo"] = round(float(fb["release_speed"].max()), 1)
+
+    # All-pitch average velocity
+    if "release_speed" in df.columns:
+        all_velo = df[df["release_speed"].notna()]
+        if not all_velo.empty:
+            result["avg_all_velo"] = round(float(all_velo["release_speed"].mean()), 1)
+
+    # Splits vs LHB and RHB
+    for hand, label in [("L", "vs_LHB"), ("R", "vs_RHB")]:
+        subset = df[(df["stand"] == hand) & df["events"].notna()]
+        if len(subset) < 10:
+            continue
+        ab_events = ["single", "double", "triple", "home_run", "strikeout",
+                     "field_out", "grounded_into_double_play", "force_out",
+                     "fielders_choice", "fielders_choice_out", "double_play",
+                     "strikeout_double_play", "field_error"]
+        at_bats = subset[subset["events"].isin(ab_events)]
+        all_pa = subset
+        if len(at_bats) == 0:
+            continue
+        hits = len(at_bats[at_bats["events"].isin(["single", "double", "triple", "home_run"])])
+        ks = len(all_pa[all_pa["events"].str.contains("strikeout", na=False)])
+        bbs = len(all_pa[all_pa["events"] == "walk"])
+        n_pa = len(all_pa)
+        n_ab = len(at_bats)
+        result[label] = {
+            "PA": n_pa,
+            "BA": round(hits / n_ab, 3) if n_ab else 0,
+            "K_pct": round(ks / n_pa * 100, 1) if n_pa else 0,
+            "BB_pct": round(bbs / n_pa * 100, 1) if n_pa else 0,
+        }
+
+    # Pitch arsenal: per-pitch type stats
+    PITCH_NAMES = {
+        "FF": "4-Seam FB", "SI": "Sinker", "FC": "Cutter", "SL": "Slider",
+        "ST": "Sweeper", "CU": "Curveball", "CH": "Changeup", "FS": "Splitter",
+        "KC": "Knuckle Curve", "SV": "Slurve", "KN": "Knuckleball",
+        "SC": "Screwball", "EP": "Eephus", "CS": "Slow Curve",
+    }
+
+    pitch_data = df[df["pitch_type"].notna() & (df["pitch_type"] != "UN")]
+    total_pitches = len(pitch_data)
+    arsenal = []
+
+    if total_pitches > 0:
+        for pt in pitch_data["pitch_type"].unique():
+            subset = pitch_data[pitch_data["pitch_type"] == pt]
+            count = len(subset)
+            pct = count / total_pitches * 100
+            if pct < 1.0:
+                continue  # skip junk pitches
+
+            pitch_info = {
+                "code": pt,
+                "name": PITCH_NAMES.get(pt, pt),
+                "usage": round(pct, 1),
+                "count": count,
+            }
+
+            if "release_speed" in subset.columns:
+                velo = subset["release_speed"].dropna()
+                if not velo.empty:
+                    pitch_info["velo"] = round(float(velo.mean()), 1)
+
+            if "pfx_x" in subset.columns and "pfx_z" in subset.columns:
+                h_break = subset["pfx_x"].dropna()
+                v_break = subset["pfx_z"].dropna()
+                if not h_break.empty and not v_break.empty:
+                    h_avg = float(h_break.mean()) * 12  # feet to inches
+                    v_avg = float(v_break.mean()) * 12
+                    total_inches = (h_avg**2 + v_avg**2)**0.5
+                    pitch_info["h_break"] = round(h_avg, 1)
+                    pitch_info["v_break"] = round(v_avg, 1)
+                    pitch_info["total_break_inches"] = round(total_inches, 1)
+                    # Convert to 0-99 scale: ~3in = 20, ~10in = 55, ~15in = 75, ~20in = 99
+                    pitch_info["break_rating"] = max(0, min(99, round(total_inches * 4.7 + 5)))
+
+            if "release_spin_rate" in subset.columns:
+                spin = subset["release_spin_rate"].dropna()
+                if not spin.empty:
+                    pitch_info["spin"] = round(float(spin.mean()))
+
+            arsenal.append(pitch_info)
+
+        # Sort by usage descending
+        arsenal.sort(key=lambda x: x["usage"], reverse=True)
+
+    result["arsenal"] = arsenal
+
+    return result
+
+
+def pull_all_pitcher_data(player_name, year):
+    """Orchestrate all pitcher data pulls."""
+    print(f"\nPulling pitcher data for {player_name} ({year})...")
+
+    data = {"name": player_name, "year": year, "is_pitcher": True}
+
+    data["pitching"] = pull_season_pitching(player_name, year)
+    if data["pitching"] is None:
+        print("ERROR: Could not find pitcher in pitching stats.")
+        return None
+
+    data["career_avg"], data["career_yearly"] = pull_career_pitching(player_name, year)
+
+    # Detect role: SP if >50% of games are starts
+    pit = data["pitching"]
+    data["role"] = "SP" if pit["GS"] > pit["G"] * 0.4 else "RP"
+
+    # Sprint speed (pitchers have it too)
+    data["sprint_speed"] = pull_sprint_speed(player_name, year)
+
+    # MLBAM ID for Statcast
+    print("  Looking up player ID...")
+    mlbam_id = lookup_mlbam_id(player_name, year)
+    if mlbam_id:
+        data["statcast"] = pull_pitcher_statcast(mlbam_id, year)
+    else:
+        print(f"    WARNING: Could not find MLBAM ID for {player_name}")
+        data["statcast"] = {}
+
+    # Pre-pitch-tracking era (or any year with no Statcast arsenal): try manual override.
+    sc = data["statcast"]
+    if not sc.get("arsenal") and year < 2008:
+        override = get_arsenal_override(player_name, year)
+        if override:
+            print(f"  Using manual arsenal override for {player_name} (estimated)")
+            sc["arsenal"] = override["arsenal"]
+            sc["arsenal_estimated"] = True
+            if not sc.get("throws"):
+                sc["throws"] = override["throws"]
+
+    return data
+
+
+# ================================================================
+# RATING CALCULATIONS
+# ================================================================
+
+def calculate_ratings(data, position_override=None, mode="season"):
+    """Calculate all MLB The Show ratings from real stats.
+    mode: 'season' = single season only, 'career' = career blended."""
+    bat = data["batting"]
+    career = data.get("career_avg") or bat  # fallback to single season
+    use_career = (mode == "career" and isinstance(career, dict) and career != bat)
+    splits = data.get("splits") or {}
+    pos = position_override or data.get("position") or "OF"
+
+    # Normalize position
+    pos_map = {"RF": "RF", "LF": "LF", "CF": "CF", "1B": "1B", "2B": "2B",
+               "SS": "SS", "3B": "3B", "C": "C", "DH": "DH"}
+    pos = pos_map.get(pos, "OF")
+    defaults = POSITION_DEFAULTS.get(pos, POSITION_DEFAULTS["OF"])
+
+    ratings = {"position": pos}
+
+    # --- VISION: -2.55 * K% + 121.3 ---
+    ratings["vision"] = clamp(-2.55 * bat["K_pct"] + 121.3)
+
+    # --- SPEED: Statcast sprint speed > FG Spd > SB estimate ---
+    sprint = data.get("sprint_speed")
+    if sprint:
+        ratings["speed"] = clamp(max(15.01 * sprint - 353.5, 15))
+    elif bat.get("fg_spd"):
+        # FanGraphs Spd metric (available back to ~2002)
+        # Formula: Speed = 9.42 * FG_Spd + 19.1 (r=0.879)
+        ratings["speed"] = clamp(9.42 * bat["fg_spd"] + 19.1)
+        sprint = None
+    else:
+        # Last resort: SB-based estimate
+        sb = bat["SB"]
+        if sb >= 50:
+            ratings["speed"] = 99
+        elif sb >= 30:
+            ratings["speed"] = clamp(55 + sb * 1.2)
+        elif sb >= 10:
+            ratings["speed"] = clamp(40 + sb * 1.5)
+        else:
+            ratings["speed"] = clamp(25 + sb * 2)
+        sprint = None
+
+    # --- DISCIPLINE: 4.86 * BB% + 17.2 ---
+    ratings["discipline"] = clamp(4.86 * bat["BB_pct"] + 17.2)
+
+    # --- CONTACT R: 374.6 * BA + 2.30 * EV - 217.4 ---
+    avg_ev = data.get("avg_ev")
+    if avg_ev:
+        ratings["contact_right"] = clamp(374.6 * bat["BA"] + 2.30 * avg_ev - 217.4)
+    elif use_career:
+        career_ba = career.get("BA", bat["BA"])
+        blended_ba = 0.55 * bat["BA"] + 0.45 * career_ba
+        ratings["contact_right"] = clamp(551.97 * blended_ba - 69.7)
+    else:
+        # Season only: use BA from splits vs RHP if available, else overall
+        ba_vr = splits.get("vs_RHP", {}).get("BA", bat["BA"])
+        ratings["contact_right"] = clamp(551.97 * ba_vr - 69.7)
+
+    # --- CONTACT L: BA-based (not OBP — keeps contact/vision/discipline cleanly separated) ---
+    ba_vs_lhp = splits.get("vs_LHP", {}).get("BA", bat["BA"])
+    pa_vs_lhp = splits.get("vs_LHP", {}).get("PA", 0)
+    # Trust-based blend: more AB vs LHP = trust split BA more
+    # 120+ PA = full trust in split, ramps linearly from 0
+    trust_l = min(pa_vs_lhp / 120, 1.0) if pa_vs_lhp > 0 else 0
+    if use_career:
+        fallback_ba = career.get("BA", bat["BA"]) if isinstance(career, dict) else bat["BA"]
+    else:
+        fallback_ba = bat["BA"]
+    contact_l_ba = trust_l * ba_vs_lhp + (1 - trust_l) * fallback_ba
+    # Recalibrated for BA-based input (r=0.878, RMSE=8.1)
+    ratings["contact_left"] = clamp(347.6 * contact_l_ba - 13.7)
+
+    # --- POWER R ---
+    if use_career:
+        career_iso = career.get("ISO", bat["ISO"])
+        career_yearly = data.get("career_yearly", {})
+        if career_yearly and len(career_yearly) > 1:
+            yr_weights = {0: 0.45, -1: 0.30, -2: 0.15, -3: 0.10}
+            tw, tiso = 0, 0
+            for offset, w in yr_weights.items():
+                y = data["year"] + offset
+                if y in career_yearly:
+                    tiso += career_yearly[y]["ISO"] * w
+                    tw += w
+            iso_blend = tiso / tw if tw > 0 else bat["ISO"]
+        else:
+            iso_blend = bat["ISO"]
+    else:
+        # Season only: use split ISO if available, else overall
+        iso_vr = splits.get("vs_RHP", {}).get("ISO")
+        iso_blend = iso_vr if iso_vr is not None else bat["ISO"]
+    ratings["power_right"] = clamp(336.17 * iso_blend + 3.9)
+
+    # --- POWER L ---
+    if use_career:
+        ratings["power_left"] = clamp(244.42 * iso_blend + 17.4)
+    else:
+        iso_vl = splits.get("vs_LHP", {}).get("ISO")
+        iso_l = iso_vl if (iso_vl is not None and pa_vs_lhp >= 30) else bat["ISO"]
+        ratings["power_left"] = clamp(244.42 * iso_l + 17.4)
+
+    # --- FIELDING: 2.09 * OAA + 68.6 ---
+    # Minimum 200 innings for full trust in defensive metrics
+    # Below that, blend with position baseline weighted by innings
+    oaa_data = data.get("fielding_oaa", {})
+    target_year = data["year"]
+    pos_fielding_base = {
+        "C": 70, "1B": 50, "2B": 75, "SS": 85, "3B": 65,
+        "LF": 50, "CF": 75, "RF": 60, "DH": 35, "OF": 55,
+    }
+
+    # Adjust baseline down for players who barely play the field
+    # Only apply DH-blend when we actually HAVE innings data — otherwise
+    # we'd penalize every pre-2003 player as a DH just because FG didn't track innings
+    inn_key = f"inn_{target_year}"
+    has_innings_data = bool(oaa_data) and inn_key in oaa_data
+    innings = oaa_data.get(inn_key, 0) if has_innings_data else 0
+    games = bat["G"]
+    expected_inn = games * 8.5
+
+    if has_innings_data and games > 0:
+        field_pct = innings / expected_inn if expected_inn > 0 else 0
+        if field_pct < 0.3 and pos not in ("C", "DH"):
+            # Player barely plays the field — blend baseline toward DH level
+            dh_base = pos_fielding_base["DH"]
+            pos_base = pos_fielding_base.get(pos, 55)
+            pos_baseline = round(field_pct / 0.3 * pos_base + (1 - field_pct / 0.3) * dh_base)
+        else:
+            pos_baseline = pos_fielding_base.get(pos, 55)
+    else:
+        # No innings data (pre-2003 or data gap) — use straight position baseline
+        pos_baseline = pos_fielding_base.get(pos, 55)
+
+    # Trust factor: 0 at <50 inn, ramps to 1.0 at 500+ inn
+    def_trust = max(0, min((innings - 50) / 450, 1.0)) if innings > 50 else 0
+
+    # Check if we have actual OAA data (integer year keys) vs only string fallback keys
+    has_oaa = any(isinstance(k, int) for k in oaa_data.keys()) if oaa_data else False
+
+    if has_oaa:
+        if use_career:
+            total_w, total_oaa = 0, 0
+            for offset, weight in FIELDING_YEAR_WEIGHTS.items():
+                y = target_year + offset
+                if y in oaa_data:
+                    total_oaa += oaa_data[y] * weight
+                    total_w += weight
+            weighted_oaa = total_oaa / total_w if total_w > 0 else 0
+            raw_fld = clamp(2.09 * weighted_oaa + 68.6)
+        else:
+            target_oaa = oaa_data.get(target_year)
+            if target_oaa is not None:
+                raw_fld = clamp(2.09 * target_oaa + 68.6)
+            else:
+                raw_fld = pos_baseline
+        ratings["fielding"] = clamp(def_trust * raw_fld + (1 - def_trust) * pos_baseline)
+    else:
+        # Fall through chain: FG Def -> BBRef DRS (Rdrs) -> BBRef Total Zone (Rtot) -> baseline
+        # Rdrs is essentially DRS (~-15..+20). Rtot is Total Zone (~-15..+15).
+        # Treat each as a NEW era-specific input (not a drop-in for RngR/UZR);
+        # use the most reliable available source for the target year.
+        fg_def_val = oaa_data.get(f"def_{target_year}") if oaa_data else None
+        rdrs_val   = oaa_data.get(f"rdrs_{target_year}") if oaa_data else None
+        rtot_val   = oaa_data.get(f"rtot_{target_year}") if oaa_data else None
+
+        if fg_def_val is not None:
+            raw_fld = clamp(1.38 * fg_def_val + 67.3)
+        elif rdrs_val is not None:
+            # DRS-based: similar magnitude to OAA, mapped against position baseline.
+            raw_fld = clamp(2.0 * rdrs_val + 68)
+        elif rtot_val is not None:
+            # Total Zone — pre-2003 era. Conservative slope, lower confidence.
+            raw_fld = clamp(1.6 * rtot_val + 68)
+        else:
+            raw_fld = None
+
+        if raw_fld is not None:
+            ratings["fielding"] = clamp(def_trust * raw_fld + (1 - def_trust) * pos_baseline)
+        else:
+            ratings["fielding"] = pos_baseline
+
+    # --- STEALING: SB-driven but governed by sprint speed ---
+    # Pure SB formula overrates non-speedsters who run a lot
+    # Blend SB count with speed to better match SDS logic
+    sb_component = 1.88 * bat["SB"] + 18.5
+    speed_component = ratings["speed"]  # already calculated
+    # 60% SB count, 40% speed as governor
+    ratings["stealing"] = clamp(0.6 * sb_component + 0.4 * speed_component)
+
+    # --- BR AGGRESSIVENESS: 1.54*SB + 4.4*Sprint - 98.3 ---
+    if sprint:
+        ratings["br_aggressiveness"] = clamp(1.54 * bat["SB"] + 4.4 * sprint - 98.3)
+    else:
+        # Pre-Statcast: base off speed rating and SB
+        ratings["br_aggressiveness"] = clamp(0.5 * ratings["speed"] + 0.8 * bat["SB"])
+
+    # --- DURABILITY ---
+    if use_career:
+        # Career mode: flatter curve, blended with career avg
+        career_avg_gp = career.get("avg_G_per_year", bat["G"])
+        gp = 0.55 * bat["G"] + 0.45 * career_avg_gp
+        ratings["durability"] = clamp(0.16 * gp + 69.9)
+    else:
+        # Season mode: steeper curve reflecting actual games played that year
+        # 162 GP = 99, 140 GP = 88, 100 GP = 67, 50 GP = 41
+        ratings["durability"] = clamp(0.52 * bat["G"] + 15)
+
+    # --- ARM STRENGTH & ACCURACY ---
+    # Outfielders: use rARM (runs saved by arm, range ~-6 to +8)
+    # Infielders: use RngR for reactions, ErrR for accuracy
+    oaa_data = data.get("fielding_oaa", {})
+    target_year = data["year"]
+    rarm = oaa_data.get(f"rarm_{target_year}")
+    rngr = oaa_data.get(f"rngr_{target_year}")
+    errr = oaa_data.get(f"errr_{target_year}")
+
+    if pos in ("LF", "CF", "RF", "OF") and rarm is not None:
+        # OF arm strength: rARM maps ~-6=50, 0=68, +8=99
+        # Formula: 3.9 * rARM + 68 (position baseline adjusts from there)
+        ratings["arm_strength"] = clamp(3.9 * rarm + defaults["arm_str"])
+    else:
+        ratings["arm_strength"] = defaults["arm_str"]
+
+    if errr is not None:
+        # ErrR: fewer errors = better accuracy. Range ~-5 to +5
+        # Positive ErrR = fewer errors than average = good
+        ratings["arm_accuracy"] = clamp(3.0 * errr + defaults["arm_acc"])
+    else:
+        ratings["arm_accuracy"] = defaults["arm_acc"]
+
+    # --- REACTIONS: position-specific directional mapping ---
+    # Use RngR (range) + OOZ to estimate overall reaction quality,
+    # then distribute across directions based on position archetype
+    # Determine base reaction from best available metric:
+    # Priority: RngR (pre-2020 UZR component) > OAA (Statcast) > position default
+    base_react = None
+
+    if rngr is not None:
+        # RngR: range runs, ~-10 to +15 -> 45 to 99
+        base_react = clamp(2.0 * rngr + 65)
+    elif oaa_data:
+        if use_career:
+            # Career mode: use recency-weighted OAA (same as fielding)
+            total_w, total_oaa = 0, 0
+            for offset, weight in FIELDING_YEAR_WEIGHTS.items():
+                y = target_year + offset
+                if y in oaa_data:
+                    total_oaa += oaa_data[y] * weight
+                    total_w += weight
+            if total_w > 0:
+                react_oaa = total_oaa / total_w
+                base_react = clamp(1.5 * react_oaa + 65)
+        else:
+            # Season mode: target year OAA only
+            target_oaa = oaa_data.get(target_year)
+            if target_oaa is not None:
+                base_react = clamp(1.5 * target_oaa + 65)
+
+    if base_react is not None and def_trust > 0:
+        # Blend data-driven reactions with position defaults by innings confidence
+        dir_weights = {
+            "SS":  {"l": 0.85, "r": 1.15, "f": 1.05, "b": 0.90},
+            "2B":  {"l": 0.95, "r": 1.05, "f": 1.10, "b": 0.85},
+            "3B":  {"l": 0.90, "r": 0.95, "f": 1.15, "b": 0.90},
+            "1B":  {"l": 1.05, "r": 0.95, "f": 0.85, "b": 0.95},
+            "CF":  {"l": 1.00, "r": 0.95, "f": 0.90, "b": 0.90},
+            "RF":  {"l": 0.95, "r": 0.95, "f": 0.85, "b": 0.95},
+            "LF":  {"l": 0.95, "r": 0.90, "f": 0.85, "b": 0.95},
+            "OF":  {"l": 0.95, "r": 0.93, "f": 0.87, "b": 0.93},
+        }
+        weights = dir_weights.get(pos, {"l": 1.0, "r": 1.0, "f": 1.0, "b": 0.9})
+
+        for direction, key, default_key in [
+            ("l", "reaction_left", "react_l"),
+            ("r", "reaction_right", "react_r"),
+            ("f", "reaction_forward", "react_f"),
+            ("b", "reaction_back", "react_b"),
+        ]:
+            data_val = clamp(base_react * weights[direction])
+            ratings[key] = clamp(def_trust * data_val + (1 - def_trust) * defaults[default_key])
+    else:
+        ratings["reaction_left"] = defaults["react_l"]
+        ratings["reaction_right"] = defaults["react_r"]
+        ratings["reaction_forward"] = defaults["react_f"]
+        ratings["reaction_back"] = defaults["react_b"]
+
+    # --- BATTING CLUTCH: RISP-based ---
+    # Career RISP BA is the strongest predictor (BWJ .333->99, Shaw .169->25)
+    # Single-season is noisy, so use RISP premium (RISP BA - overall BA) as adjustment
+    # Base from overall BA, then adjust by how much better/worse with RISP
+    # Formula: 520*BA + 135*RISP_premium - 67 (from BA + premium regression, RMSE=15.1)
+    risp_ba = splits.get("risp_ba")
+    risp_pa = splits.get("risp_pa", 0)
+    if risp_ba is not None and risp_pa >= 50:
+        risp_premium = risp_ba - bat["BA"]
+        ratings["batting_clutch"] = clamp(520 * bat["BA"] + 135 * risp_premium - 67)
+    else:
+        # No reliable RISP data — use overall BA as base
+        ratings["batting_clutch"] = clamp(520 * bat["BA"] - 67)
+    ratings["bunting"] = defaults["bunt"]
+    ratings["drag_bunt"] = defaults["drag"]
+
+    return ratings
+
+
+def calculate_overalls(ratings):
+    """Calculate category overalls as simple averages (matching The Show's formula)."""
+    hitting = [
+        ratings["contact_right"], ratings["contact_left"],
+        ratings["power_right"], ratings["power_left"],
+        ratings["vision"], ratings["discipline"],
+        ratings["batting_clutch"], ratings["bunting"], ratings["drag_bunt"],
+    ]
+    fielding = [
+        ratings["fielding"], ratings["arm_strength"], ratings["arm_accuracy"],
+        ratings["reaction_left"], ratings["reaction_right"],
+        ratings["reaction_forward"], ratings["reaction_back"],
+    ]
+    baserunning = [
+        ratings["speed"], ratings["stealing"], ratings["br_aggressiveness"],
+    ]
+
+    return {
+        "hitting": round(np.mean(hitting)),
+        "fielding": round(np.mean(fielding)),
+        "baserunning": round(np.mean(baserunning)),
+        "durability": ratings["durability"],
+    }
+
+
+def calculate_pitcher_ratings(data, mode="season"):
+    """Calculate all pitcher ratings from real stats.
+    mode: 'season' = single season only, 'career' = career blended."""
+    pit = data["pitching"]
+    career = data.get("career_avg") or {}
+    use_career = (mode == "career" and isinstance(career, dict) and career)
+    sc = data.get("statcast") or {}
+    role = data.get("role", "SP")
+
+    ratings = {"position": "SP" if role == "SP" else "RP", "role": role}
+
+    # --- SAMPLE SIZE DAMPENER ---
+    if use_career:
+        career_ip = career.get("total_IP", pit["IP"]) if isinstance(career, dict) else pit["IP"]
+    else:
+        career_ip = pit["IP"]
+    trust = min(career_ip / 200, 1.0)
+    LEAGUE_AVG = 65  # default rating for an average pitcher attribute
+
+    def dampen(raw_rating):
+        """Blend raw formula output toward league average based on sample size."""
+        return clamp(trust * raw_rating + (1 - trust) * LEAGUE_AVG)
+
+    # --- VELOCITY (not dampened — velo is velo regardless of IP) ---
+    fb_velo = sc.get("avg_fb_velo") or pit.get("FB_velo") or 93.0
+    ratings["velocity"] = clamp(3.14 * fb_velo - 208.2)
+
+    # --- CONTROL: -4.44 * BB% + 104.9 ---
+    if use_career:
+        career_bb = career.get("BB_pct", pit["BB_pct"])
+        bb_val = 0.5 * pit["BB_pct"] + 0.5 * career_bb
+    else:
+        bb_val = pit["BB_pct"]
+    ratings["control"] = dampen(-4.44 * bb_val + 104.9)
+
+    # --- HR/9: -13.87 * HR/9 + 82.7 ---
+    if use_career:
+        career_hr9 = career.get("HR_per_9", pit["HR_per_9"])
+        hr9_val = 0.5 * pit["HR_per_9"] + 0.5 * career_hr9
+    else:
+        hr9_val = pit["HR_per_9"]
+    ratings["hr_per_9"] = dampen(-13.87 * hr9_val + 82.7)
+
+    # --- H/9 and K/9: compute per-split from Statcast BA/K% against ---
+    vs_lhb = sc.get("vs_LHB", {})
+    vs_rhb = sc.get("vs_RHB", {})
+    has_splits = vs_lhb.get("PA", 0) >= 50 and vs_rhb.get("PA", 0) >= 50
+
+    # Overall H/9 baseline
+    if use_career:
+        career_h9 = career.get("H_per_9", pit["H_per_9"])
+        h9_blend = 0.5 * pit["H_per_9"] + 0.5 * career_h9
+    else:
+        h9_blend = pit["H_per_9"]
+
+    # Overall K/9 baseline
+    if use_career:
+        career_kpct = career.get("K_pct", pit["K_pct"])
+        kpct_blend = 0.5 * pit["K_pct"] + 0.5 * career_kpct
+    else:
+        kpct_blend = pit["K_pct"]
+
+    if has_splits:
+        # H/9 per split: lower BA against = higher H/9 rating
+        ratings["h_per_9_left"] = dampen(-250 * vs_lhb["BA"] + 130)
+        ratings["h_per_9_right"] = dampen(-250 * vs_rhb["BA"] + 130)
+
+        # K/9 per split: higher K% = higher K/9 rating
+        ratings["k_per_9_left"] = dampen(2.2 * vs_lhb["K_pct"] + 15)
+        ratings["k_per_9_right"] = dampen(2.2 * vs_rhb["K_pct"] + 15)
+    else:
+        # No reliable splits — use overall and apply default platoon gap
+        h9_avg = dampen(-7.86 * h9_blend + 131.1)
+        k9_avg = dampen(2.5 * kpct_blend + 15)
+
+        # Apply ~10% platoon split based on handedness
+        throws = sc.get("throws", "R")
+        if throws == "L":
+            ratings["h_per_9_left"] = clamp(h9_avg * 1.08)
+            ratings["h_per_9_right"] = clamp(h9_avg * 0.92)
+            ratings["k_per_9_left"] = clamp(k9_avg * 0.90)
+            ratings["k_per_9_right"] = clamp(k9_avg * 1.10)
+        else:
+            ratings["h_per_9_left"] = clamp(h9_avg * 0.92)
+            ratings["h_per_9_right"] = clamp(h9_avg * 1.08)
+            ratings["k_per_9_left"] = clamp(k9_avg * 1.10)
+            ratings["k_per_9_right"] = clamp(k9_avg * 0.90)
+
+    # --- STAMINA ---
+    if role == "RP":
+        ratings["stamina"] = 25
+    elif use_career:
+        # Career mode: blend current GS with career avg
+        career_gs = career.get("avg_GS_per_year", pit["GS"]) if isinstance(career, dict) else pit["GS"]
+        gs_blend = 0.4 * pit["GS"] + 0.6 * career_gs
+        ratings["stamina"] = clamp(1.47 * gs_blend + 46.1)
+    else:
+        # Season mode: use only this year's GS
+        ratings["stamina"] = clamp(1.47 * pit["GS"] + 46.1)
+
+    # --- BREAK: not reliably stat-derivable (r<0.4 with all metrics tested) ---
+    # SDS Break is a scouting/visual attribute, not correlated with Stuff+, SwStr%,
+    # CSW%, O-Swing%, Contact%, FB%, or even raw Statcast pitch movement.
+    # Best heuristic: base 80, adjust by pitch diversity and offspeed reliance.
+    arsenal = sc.get("arsenal", [])
+    if arsenal:
+        # Count distinct pitch types with >5% usage
+        pitch_types = [p for p in arsenal if p["usage"] > 5]
+        num_pitches = len(pitch_types)
+
+        # Calculate offspeed/breaking usage % (everything except FF)
+        offspeed_usage = sum(p["usage"] for p in arsenal if p["code"] not in ("FF",))
+
+        # More pitch types and more offspeed = higher break
+        # Base 75, +3 per pitch type beyond 2, +0.2 per % of offspeed usage
+        base_break = 75 + max(0, (num_pitches - 2)) * 3 + offspeed_usage * 0.2
+        ratings["break_"] = dampen(clamp(base_break))
+    else:
+        ratings["break_"] = 80  # default when no arsenal data
+
+    # --- PITCHING CLUTCH: WAR-based estimate ---
+    # WAR captures overall value; better than flat default
+    # 3.52 * WAR + 60.8 (from regression, r=0.495)
+    war = pit.get("WAR", 0)
+    if career_ip > 100:
+        ratings["pitching_clutch"] = clamp(3.52 * war + 60.8)
+    else:
+        # Low IP: regress heavily toward 65
+        ratings["pitching_clutch"] = clamp(trust * (3.52 * war + 60.8) + (1 - trust) * 65)
+
+    # --- PITCHER FIELDING (mostly defaults) ---
+    ratings["fielding"] = PITCHER_FIELDING_DEFAULTS["fielding"]
+    ratings["arm_strength"] = PITCHER_FIELDING_DEFAULTS["arm_str"]
+    ratings["arm_accuracy"] = PITCHER_FIELDING_DEFAULTS["arm_acc"]
+    ratings["reaction_left"] = PITCHER_FIELDING_DEFAULTS["react_l"]
+    ratings["reaction_right"] = PITCHER_FIELDING_DEFAULTS["react_r"]
+    ratings["reaction_forward"] = PITCHER_FIELDING_DEFAULTS["react_f"]
+    ratings["reaction_back"] = PITCHER_FIELDING_DEFAULTS["react_b"]
+
+    # --- PITCHER HITTING (mostly 0) ---
+    ratings["contact_right"] = 0
+    ratings["contact_left"] = 0
+    ratings["power_right"] = 0
+    ratings["power_left"] = 0
+    ratings["vision"] = 0
+    ratings["discipline"] = 0
+    ratings["batting_clutch"] = 0
+    ratings["bunting"] = 35
+    ratings["drag_bunt"] = 8
+
+    # --- PITCHER BASERUNNING ---
+    sprint = data.get("sprint_speed") or 27.0
+    ratings["speed"] = clamp(max(15.01 * sprint - 353.5, 15))
+    ratings["stealing"] = 8
+    ratings["br_aggressiveness"] = 7
+
+    # --- DURABILITY ---
+    ratings["durability"] = clamp(0.13 * pit["G"] + 68)
+
+    return ratings
+
+
+def calculate_pitcher_overalls(ratings):
+    """Calculate pitcher category overalls."""
+    pitching = [
+        ratings["h_per_9_left"], ratings["h_per_9_right"],
+        ratings["k_per_9_left"], ratings["k_per_9_right"],
+        ratings["hr_per_9"], ratings["pitching_clutch"],
+        ratings["control"], ratings["velocity"],
+        ratings["break_"], ratings["stamina"],
+    ]
+    fielding = [
+        ratings["fielding"], ratings["arm_strength"], ratings["arm_accuracy"],
+        ratings["reaction_left"], ratings["reaction_right"],
+        ratings["reaction_forward"], ratings["reaction_back"],
+    ]
+    hitting = [
+        ratings["contact_right"], ratings["contact_left"],
+        ratings["power_right"], ratings["power_left"],
+        ratings["vision"], ratings["discipline"],
+        ratings["batting_clutch"], ratings["bunting"], ratings["drag_bunt"],
+    ]
+    baserunning = [
+        ratings["speed"], ratings["stealing"], ratings["br_aggressiveness"],
+    ]
+
+    return {
+        "pitching": round(np.mean(pitching)),
+        "fielding": round(np.mean(fielding)),
+        "hitting": round(np.mean(hitting)),
+        "baserunning": round(np.mean(baserunning)),
+        "durability": ratings["durability"],
+    }
+
+
+def display_pitcher_card(player_name, year, ratings, overalls, team=""):
+    """Print a formatted pitcher card."""
+    pos = ratings["position"]
+    role = ratings.get("role", pos)
+    W = 50
+
+    def row(left_label, left_val, right_label=None, right_val=None):
+        left = f"  {left_label:<20} {left_val:>2}"
+        if right_label:
+            right = f"  {right_label:<20} {right_val:>2}"
+            line = f"|{left}{right}"
+        else:
+            line = f"|{left}"
+        return f"{line:<{W}}|"
+
+    def section_header(label, ovr):
+        text = f"  {label}"
+        ovr_text = f"OVR {ovr:>2}"
+        pad = W - len(text) - len(ovr_text)
+        return f"|{text}{' ' * pad}{ovr_text}|"
+
+    print()
+    print("+" + "=" * W + "+")
+    title = f"  {player_name.upper()}"
+    print(f"|{title:<{W}}|")
+    subtitle = f"  {year}   {role}   {team}"
+    print(f"|{subtitle:<{W}}|")
+    print("+" + "-" * W + "+")
+
+    # Pitching
+    print(section_header("PITCHING", overalls["pitching"]))
+    print(row("H/9 vs L", ratings["h_per_9_left"], "H/9 vs R", ratings["h_per_9_right"]))
+    print(row("K/9 vs L", ratings["k_per_9_left"], "K/9 vs R", ratings["k_per_9_right"]))
+    print(row("HR/9", ratings["hr_per_9"], "Pit Clutch", ratings["pitching_clutch"]))
+    print(row("Control", ratings["control"], "Velocity", ratings["velocity"]))
+    print(row("Break", ratings["break_"], "Stamina", ratings["stamina"]))
+    print("+" + "-" * W + "+")
+
+    # Fielding
+    print(section_header("FIELDING", overalls["fielding"]))
+    print(row("Fielding", ratings["fielding"], "Arm Strength", ratings["arm_strength"]))
+    print(row("Arm Accuracy", ratings["arm_accuracy"], "Reaction L", ratings["reaction_left"]))
+    print(row("Reaction R", ratings["reaction_right"], "Reaction F", ratings["reaction_forward"]))
+    print(row("Reaction B", ratings["reaction_back"]))
+    print("+" + "-" * W + "+")
+
+    # Baserunning
+    print(section_header("BASERUNNING", overalls["baserunning"]))
+    print(row("Speed", ratings["speed"], "Stealing", ratings["stealing"]))
+    print(row("BR Aggressiveness", ratings["br_aggressiveness"]))
+    print("+" + "-" * W + "+")
+
+    # Durability
+    dur_text = f"  DURABILITY"
+    dur_val = f"{overalls['durability']:>3}"
+    pad = W - len(dur_text) - len(dur_val)
+    print(f"|{dur_text}{' ' * pad}{dur_val}|")
+    print("+" + "=" * W + "+")
+
+
+def display_pitcher_verbose(data, ratings):
+    """Show raw pitcher inputs."""
+    pit = data["pitching"]
+    print("\n  RAW INPUTS:")
+    print(f"    ERA={pit['ERA']:.2f}  FIP={pit['FIP']:.2f}  IP={pit['IP']:.1f}  G={pit['G']}  GS={pit['GS']}")
+    print(f"    K/9={pit['K_per_9']:.1f}  BB/9={pit['BB_per_9']:.1f}  HR/9={pit['HR_per_9']:.2f}  H/9={pit['H_per_9']:.1f}")
+    print(f"    K%={pit['K_pct']:.1f}  BB%={pit['BB_pct']:.1f}  WHIP={pit['WHIP']:.3f}")
+    print(f"    Role: {data.get('role', '?')}")
+    sc = data.get("statcast", {})
+    if sc.get("avg_fb_velo"):
+        print(f"    FB Velo: avg={sc['avg_fb_velo']}, max={sc.get('max_fb_velo', '?')}")
+    if sc.get("vs_LHB"):
+        s = sc["vs_LHB"]
+        print(f"    vs LHB: PA={s['PA']}, BA={s['BA']:.3f}, K%={s['K_pct']:.1f}")
+    if sc.get("vs_RHB"):
+        s = sc["vs_RHB"]
+        print(f"    vs RHB: PA={s['PA']}, BA={s['BA']:.3f}, K%={s['K_pct']:.1f}")
+    if data.get("career_avg"):
+        ca = data["career_avg"]
+        print(f"    Career: {ca.get('num_years', '?')} yrs, {ca.get('total_IP', '?'):.0f} IP")
+
+
+# ================================================================
+# DISPLAY
+# ================================================================
+
+def display_card(player_name, year, ratings, overalls, team=""):
+    """Print a formatted MLB The Show-style rating card."""
+    pos = ratings["position"]
+    W = 50  # inner width
+
+    def row(left_label, left_val, right_label=None, right_val=None):
+        left = f"  {left_label:<20} {left_val:>2}"
+        if right_label:
+            right = f"  {right_label:<20} {right_val:>2}"
+            line = f"|{left}{right}"
+        else:
+            line = f"|{left}"
+        return f"{line:<{W}}|"
+
+    def section_header(label, ovr):
+        text = f"  {label}"
+        ovr_text = f"OVR {ovr:>2}"
+        pad = W - len(text) - len(ovr_text)
+        return f"|{text}{' ' * pad}{ovr_text}|"
+
+    print()
+    print("+" + "=" * W + "+")
+    title = f"  {player_name.upper()}"
+    print(f"|{title:<{W}}|")
+    subtitle = f"  {year}   {pos}   {team}"
+    print(f"|{subtitle:<{W}}|")
+    print("+" + "-" * W + "+")
+
+    # Hitting
+    print(section_header("HITTING", overalls["hitting"]))
+    print(row("Contact vs Right", ratings["contact_right"], "Contact vs Left", ratings["contact_left"]))
+    print(row("Power vs Right", ratings["power_right"], "Power vs Left", ratings["power_left"]))
+    print(row("Vision", ratings["vision"], "Discipline", ratings["discipline"]))
+    print(row("Batting Clutch", ratings["batting_clutch"], "Bunting", ratings["bunting"]))
+    print(row("Drag Bunt", ratings["drag_bunt"]))
+    print("+" + "-" * W + "+")
+
+    # Fielding
+    print(section_header("FIELDING", overalls["fielding"]))
+    print(row("Fielding", ratings["fielding"], "Arm Strength", ratings["arm_strength"]))
+    print(row("Arm Accuracy", ratings["arm_accuracy"], "Reaction L", ratings["reaction_left"]))
+    print(row("Reaction R", ratings["reaction_right"], "Reaction F", ratings["reaction_forward"]))
+    print(row("Reaction B", ratings["reaction_back"]))
+    print("+" + "-" * W + "+")
+
+    # Baserunning
+    print(section_header("BASERUNNING", overalls["baserunning"]))
+    print(row("Speed", ratings["speed"], "Stealing", ratings["stealing"]))
+    print(row("BR Aggressiveness", ratings["br_aggressiveness"]))
+    print("+" + "-" * W + "+")
+
+    # Durability
+    dur_text = f"  DURABILITY"
+    dur_val = f"{overalls['durability']:>3}"
+    pad = W - len(dur_text) - len(dur_val)
+    print(f"|{dur_text}{' ' * pad}{dur_val}|")
+    print("+" + "=" * W + "+")
+
+
+def display_verbose(data, ratings):
+    """Show the raw inputs used for each rating calculation."""
+    bat = data["batting"]
+    print("\n  RAW INPUTS:")
+    print(f"    BA={bat['BA']:.3f}  OBP={bat['OBP']:.3f}  SLG={bat['SLG']:.3f}  ISO={bat['ISO']:.3f}")
+    print(f"    BB%={bat['BB_pct']:.1f}  K%={bat['K_pct']:.1f}  HR={bat['HR']}  SB={bat['SB']}  G={bat['G']}")
+    if data.get("sprint_speed"):
+        print(f"    Sprint Speed: {data['sprint_speed']:.1f}")
+    if data.get("avg_ev"):
+        print(f"    Avg Exit Velo: {data['avg_ev']:.1f}")
+    if data.get("career_avg"):
+        ca = data["career_avg"]
+        print(f"    Career ISO: {ca.get('ISO', '?'):.3f}  Career BA: {ca.get('BA', '?'):.3f}  ({ca.get('num_years', '?')} yrs, {ca.get('total_PA', '?')} PA)")
+    if data.get("fielding_oaa"):
+        oaa_str = ", ".join(f"{y}:{v}" for y, v in sorted(data["fielding_oaa"].items()))
+        print(f"    OAA by year: {oaa_str}")
+    if data.get("splits"):
+        for label in ["vs_RHP", "vs_LHP"]:
+            s = data["splits"].get(label, {})
+            if s:
+                print(f"    {label}: PA={s.get('PA', 0)}, BA={s.get('BA', 0):.3f}, OBP={s.get('OBP', 0):.3f}")
+
+
+# ================================================================
+# MAIN
+# ================================================================
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generate MLB The Show-style player card from real stats")
+    parser.add_argument("player_name", help="Player full name (e.g. 'Juan Soto')")
+    parser.add_argument("year", type=int, help="Season year (e.g. 2025)")
+    parser.add_argument("--position", "-p", help="Override position (C, 1B, 2B, SS, 3B, LF, CF, RF, DH)")
+    parser.add_argument("--pitcher", action="store_true", help="Generate pitcher card")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Show raw stat inputs")
+    args = parser.parse_args()
+
+    try:
+        if args.pitcher:
+            data = pull_all_pitcher_data(args.player_name, args.year)
+            if data is None:
+                sys.exit(1)
+
+            ratings = calculate_pitcher_ratings(data)
+            overalls = calculate_pitcher_overalls(ratings)
+            team = data["pitching"].get("team", "")
+
+            display_pitcher_card(args.player_name, args.year, ratings, overalls, team)
+
+            if args.verbose:
+                display_pitcher_verbose(data, ratings)
+        else:
+            data = pull_all_data(args.player_name, args.year)
+            if data is None:
+                sys.exit(1)
+
+            ratings = calculate_ratings(data, args.position)
+            overalls = calculate_overalls(ratings)
+            team = data["batting"].get("team", "")
+
+            display_card(args.player_name, args.year, ratings, overalls, team)
+
+            if args.verbose:
+                display_verbose(data, ratings)
+
+    except KeyboardInterrupt:
+        print("\nCancelled.")
+    except Exception as e:
+        print(f"\nERROR: {e}")
+        raise

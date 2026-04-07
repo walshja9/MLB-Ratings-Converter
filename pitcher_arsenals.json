@@ -1,0 +1,61 @@
+{
+  "_comment": "Manual pre-2008 pitcher arsenal overrides. Used when Statcast returns no pitch data (pre-pitch-tracking era). Sources: Neyer/James Guide to Pitchers, contemporary scouting reports. Usage% values are rough estimates — mark as estimated in UI. Schema: { 'Player Name': { 'throws': 'L|R', 'arsenal': [{code, name, usage, velo?}], 'years'?: { '1995': {...override for that year...} } } }",
+  "Greg Maddux": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 35, "velo": 87},
+      {"code": "SI", "name": "Sinker",    "usage": 25, "velo": 86},
+      {"code": "FC", "name": "Cutter",    "usage": 20, "velo": 85},
+      {"code": "CH", "name": "Changeup",  "usage": 15, "velo": 80},
+      {"code": "SL", "name": "Slider",    "usage":  5, "velo": 82}
+    ]
+  },
+  "Sandy Koufax": {
+    "throws": "L",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB",  "usage": 60, "velo": 95},
+      {"code": "CU", "name": "Curveball",  "usage": 35, "velo": 78},
+      {"code": "CH", "name": "Changeup",   "usage":  5, "velo": 82}
+    ]
+  },
+  "Pedro Martinez": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 45, "velo": 95},
+      {"code": "CH", "name": "Changeup",  "usage": 25, "velo": 83},
+      {"code": "CU", "name": "Curveball", "usage": 20, "velo": 78},
+      {"code": "FC", "name": "Cutter",    "usage": 10, "velo": 88}
+    ]
+  },
+  "Randy Johnson": {
+    "throws": "L",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 60, "velo": 97},
+      {"code": "SL", "name": "Slider",    "usage": 35, "velo": 88},
+      {"code": "SP", "name": "Splitter",  "usage":  5, "velo": 86}
+    ]
+  },
+  "Roger Clemens": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FF", "name": "4-Seam FB", "usage": 55, "velo": 95},
+      {"code": "FS", "name": "Splitter",  "usage": 25, "velo": 87},
+      {"code": "SL", "name": "Slider",    "usage": 15, "velo": 86},
+      {"code": "CU", "name": "Curveball", "usage":  5, "velo": 78}
+    ]
+  },
+  "Phil Niekro": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "KN", "name": "Knuckleball", "usage": 85, "velo": 68},
+      {"code": "FF", "name": "4-Seam FB",   "usage": 15, "velo": 82}
+    ]
+  },
+  "Mariano Rivera": {
+    "throws": "R",
+    "arsenal": [
+      {"code": "FC", "name": "Cutter",    "usage": 85, "velo": 93},
+      {"code": "FF", "name": "4-Seam FB", "usage": 15, "velo": 93}
+    ]
+  }
+}

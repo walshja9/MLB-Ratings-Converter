@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLB The Show 26 - Card Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #1c2333;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text2: #8b949e;
+            --accent: #e94560;
+            --accent2: #c73852;
+            --gold: #ffd700;
+            --diamond: #00bfff;
+            --green: #3fb950;
+            --orange: #f0883e;
+            --red: #f85149;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ==================== HEADER ==================== */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            padding: 24px 20px 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .header h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--text);
+        }
+
+        .header h1 span { color: var(--accent); }
+
+        .header p {
+            font-size: 0.8rem;
+            color: var(--text2);
+            margin-top: 4px;
+        }
+
+        /* ==================== MAIN LAYOUT ==================== */
+        .main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ==================== SEARCH ==================== */
+        .search-panel {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .search-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .search-row input, .search-row select {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-row input:focus, .search-row select:focus {
+            border-color: var(--accent);
+        }
+
+        .search-row input[type="number"] { width: 85px; }
+
+        .autocomplete-wrapper { position: relative; flex: 1; }
+        .autocomplete-wrapper input { width: 100%; }
+
+        .autocomplete-list {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+        .autocomplete-list.active { display: block; }
+
+        .ac-item {
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            transition: background 0.15s;
+        }
+        .ac-item:hover, .ac-item.selected { background: var(--bg); color: var(--accent); }
+
+        .options-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .options-row select {
+            padding: 7px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.82rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .options-row label {
+            font-size: 0.8rem;
+            color: var(--text2);
+        }
+
+        .btn-row { display: flex; gap: 8px; }
+
+        .btn {
+            flex: 1;
+            padding: 11px 16px;
+            border-radius: 8px;
+            border: none;
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+        .btn-primary:disabled { background: #444; cursor: not-allowed; transform: none; }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text2);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+        .hint { font-size: 0.72rem; color: #444; margin-top: 8px; text-align: center; }
+
+        /* ==================== COMPARE ==================== */
+        .compare-panel {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            display: none;
+        }
+        .compare-panel.active { display: block; }
+        .compare-panel h3 { font-family: 'Oswald'; font-size: 0.9rem; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+
+        .cmp-row {
+            display: flex; gap: 8px; margin-bottom: 8px; align-items: center;
+        }
+        .cmp-row span { color: var(--text2); font-size: 0.8rem; width: 18px; }
+        .cmp-row input {
+            flex: 1; padding: 8px 12px; border-radius: 6px;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--text); font-size: 0.85rem; font-family: 'Inter', sans-serif;
+        }
+        .cmp-row input[type="number"] { width: 75px; flex: none; }
+
+        /* ==================== STATUS ==================== */
+        .status {
+            text-align: center; padding: 40px 20px; display: none;
+        }
+        .status.active { display: block; }
+
+        .spinner {
+            width: 36px; height: 36px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .status p { font-size: 0.85rem; color: var(--text2); }
+        .status .sub { font-size: 0.75rem; color: #444; margin-top: 4px; }
+
+        .error-msg {
+            background: rgba(248,81,73,0.1);
+            border: 1px solid var(--red);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            color: var(--red);
+            font-size: 0.85rem;
+            display: none;
+        }
+        .error-msg.active { display: block; }
+
+        /* ==================== CARDS ==================== */
+        .cards-wrap {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            min-width: 320px;
+            max-width: 420px;
+            flex: 1;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        /* Card Header */
+        .card-top {
+            position: relative;
+            padding: 16px 20px 14px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+        }
+
+        .card-top .name {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .card-top .meta {
+            font-size: 0.78rem;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        /* OVR Diamond */
+        .ovr-diamond {
+            position: absolute;
+            top: 8px;
+            right: 16px;
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .ovr-diamond::before {
+            content: '';
+            position: absolute;
+            width: 42px;
+            height: 42px;
+            transform: rotate(45deg);
+            border-radius: 4px;
+            z-index: 0;
+        }
+
+        .ovr-diamond span { position: relative; z-index: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+
+        .ovr-diamond.tier-diamond::before { background: linear-gradient(135deg, #00bfff, #0080ff); }
+        .ovr-diamond.tier-gold::before { background: linear-gradient(135deg, #ffd700, #daa520); }
+        .ovr-diamond.tier-silver::before { background: linear-gradient(135deg, #c0c0c0, #888); }
+        .ovr-diamond.tier-bronze::before { background: linear-gradient(135deg, #cd7f32, #8b5e3c); }
+        .ovr-diamond.tier-common::before { background: linear-gradient(135deg, #555, #333); }
+
+        /* Card Sections */
+        .card-section {
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .sec-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .sec-head h3 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .sec-head .cat-ovr {
+            font-family: 'Oswald';
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text);
+            background: rgba(233,69,96,0.15);
+            padding: 1px 8px;
+            border-radius: 4px;
+        }
+
+        /* Attribute Rows */
+        .attr-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px 14px;
+        }
+
+        .attr {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 0;
+        }
+
+        .attr-label {
+            font-size: 0.72rem;
+            color: var(--text2);
+            min-width: 65px;
+        }
+
+        .attr-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .attr-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.6s ease;
+        }
+
+        .attr-val {
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            min-width: 22px;
+            text-align: right;
+        }
+
+        /* Rating colors */
+        .c-elite { color: var(--gold); }
+        .c-good { color: var(--green); }
+        .c-avg { color: var(--text); }
+        .c-low { color: var(--orange); }
+        .c-bad { color: var(--red); }
+
+        .fill-elite { background: linear-gradient(90deg, var(--gold), #ffaa00); }
+        .fill-good { background: linear-gradient(90deg, var(--green), #2ea043); }
+        .fill-avg { background: linear-gradient(90deg, #555, #666); }
+        .fill-low { background: linear-gradient(90deg, var(--orange), #d47600); }
+        .fill-bad { background: linear-gradient(90deg, var(--red), #c02020); }
+
+        /* Durability footer */
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .card-footer h3 {
+            font-family: 'Oswald'; font-size: 0.72rem; font-weight: 600;
+            letter-spacing: 2px; text-transform: uppercase; color: var(--accent);
+        }
+
+        .card-footer .val {
+            font-family: 'Oswald'; font-size: 1.1rem; font-weight: 700;
+        }
+
+        /* Save button */
+        .card-save {
+            text-align: center; padding: 6px 16px 12px;
+        }
+
+        .card-save button {
+            padding: 5px 14px; font-size: 0.72rem;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text2); border-radius: 6px; cursor: pointer;
+            font-family: 'Inter', sans-serif; transition: all 0.2s;
+        }
+        .card-save button:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Pitch Arsenal */
+        .arsenal-section {
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .arsenal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .arsenal-head h3 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .arsenal-head .throws-badge {
+            font-family: 'Oswald';
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text2);
+            background: rgba(255,255,255,0.06);
+            padding: 1px 8px;
+            border-radius: 4px;
+        }
+
+        .arsenal-head .est-badge {
+            font-family: 'Oswald';
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #1a1a1a;
+            background: #d4a017;
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-left: 6px;
+        }
+
+        .arsenal-est-note {
+            font-size: 0.62rem;
+            color: var(--text2);
+            font-style: italic;
+            margin-top: 6px;
+            opacity: 0.8;
+        }
+
+        .pitch-row {
+            display: grid;
+            grid-template-columns: 90px 1fr 42px 42px 42px 42px;
+            gap: 6px;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .pitch-row:last-child { border-bottom: none; }
+
+        .pitch-row .pitch-name {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .pitch-usage-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .pitch-usage-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+        }
+
+        .pitch-stat {
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.75rem;
+            text-align: center;
+            color: var(--text2);
+        }
+
+        .pitch-stat strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .pitch-labels {
+            display: grid;
+            grid-template-columns: 90px 1fr 42px 42px 42px 42px;
+            gap: 6px;
+            padding: 0 0 3px;
+            margin-bottom: 2px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .pitch-labels span {
+            font-size: 0.65rem;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+        }
+
+        .pitch-labels span:first-child { text-align: left; }
+        .pitch-labels span:nth-child(2) { text-align: center; }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 600px) {
+            .main { padding: 12px; }
+            .search-row { flex-direction: column; }
+            .search-row input[type="number"] { width: 100%; }
+            .cards-wrap { flex-direction: column; }
+            .card { min-width: unset; max-width: unset; }
+            .attr-grid { grid-template-columns: 1fr; }
+            .btn-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MLB <span>The Show</span> 26</h1>
+        <p>Historical Player Card Generator</p>
+    </div>
+
+    <div class="main">
+        <!-- Search -->
+        <div class="search-panel">
+            <div class="search-row">
+                <input type="number" id="year" value="2025" min="1900" max="2026" title="Season year">
+                <div class="autocomplete-wrapper">
+                    <input type="text" id="player_name" placeholder="Type a player name..." autocomplete="off" autofocus>
+                    <div class="autocomplete-list" id="ac-list"></div>
+                </div>
+            </div>
+            <div class="options-row">
+                <label>Type:
+                    <select id="player_type">
+                        <option value="auto">Auto</option>
+                        <option value="hitter">Hitter</option>
+                        <option value="pitcher">Pitcher</option>
+                    </select>
+                </label>
+                <label>Pos:
+                    <select id="position">
+                        <option value="">Auto</option>
+                        <option>C</option><option>1B</option><option>2B</option><option>SS</option>
+                        <option>3B</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option>
+                    </select>
+                </label>
+                <label>Mode:
+                    <select id="card_mode">
+                        <option value="season">Season</option>
+                        <option value="career">Career</option>
+                    </select>
+                </label>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" id="gen-btn" onclick="gen()">Generate</button>
+                <button class="btn btn-ghost" onclick="toggleCmp()">Compare</button>
+            </div>
+            <p class="hint">Set the year first — autocomplete loads that season's players</p>
+        </div>
+
+        <!-- Compare -->
+        <div class="compare-panel" id="cmp-panel">
+            <h3>Compare Two Players</h3>
+            <div class="cmp-row">
+                <span>1</span>
+                <input type="number" id="cy1" value="2025" min="1900" max="2026">
+                <input type="text" id="cn1" placeholder="Player 1">
+            </div>
+            <div class="cmp-row">
+                <span>2</span>
+                <input type="number" id="cy2" value="2025" min="1900" max="2026">
+                <input type="text" id="cn2" placeholder="Player 2">
+            </div>
+            <button class="btn btn-primary" onclick="cmp()" style="margin-top:10px;width:100%">Compare</button>
+        </div>
+
+        <div class="error-msg" id="err"></div>
+
+        <div class="status" id="loading">
+            <div class="spinner"></div>
+            <p>Pulling stats...</p>
+            <p class="sub">This takes 15-30 seconds</p>
+        </div>
+
+        <div class="cards-wrap" id="cards"></div>
+    </div>
+
+<script>
+// ========== RATING HELPERS ==========
+function rc(v) {
+    if (v >= 90) return 'elite';
+    if (v >= 75) return 'good';
+    if (v >= 50) return 'avg';
+    if (v >= 30) return 'low';
+    return 'bad';
+}
+
+function tier(v) {
+    if (v >= 90) return 'diamond';
+    if (v >= 80) return 'gold';
+    if (v >= 70) return 'silver';
+    if (v >= 60) return 'bronze';
+    return 'common';
+}
+
+function attrHTML(label, val) {
+    const cls = rc(val);
+    return `<div class="attr">
+        <span class="attr-label">${label}</span>
+        <div class="attr-bar"><div class="attr-bar-fill fill-${cls}" style="width:${val}%"></div></div>
+        <span class="attr-val c-${cls}">${val}</span>
+    </div>`;
+}
+
+function secHTML(title, ovr, attrs) {
+    return `<div class="card-section">
+        <div class="sec-head"><h3>${title}</h3><span class="cat-ovr">${ovr}</span></div>
+        <div class="attr-grid">${attrs}</div>
+    </div>`;
+}
+
+// HTML escape helper to prevent XSS via player name/team
+function esc(s) {
+    if (s == null) return '';
+    const div = document.createElement('div');
+    div.textContent = String(s);
+    return div.innerHTML;
+}
+
+// ========== CARD RENDERERS ==========
+function hitterCard(d) {
+    const r = d.ratings, o = d.overalls;
+    const t = tier(d.ovr);
+    const modeLabel = d.mode === 'career' ? ' &bull; CAREER' : '';
+    return `
+        <div class="card-top">
+            <div class="name">${esc(d.name)}</div>
+            <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}</div>
+            <div class="ovr-diamond tier-${t}"><span>${esc(d.ovr)}</span></div>
+        </div>
+        ${secHTML('Hitting', o.hitting,
+            attrHTML('CON R', r.contact_right) + attrHTML('CON L', r.contact_left) +
+            attrHTML('PWR R', r.power_right) + attrHTML('PWR L', r.power_left) +
+            attrHTML('VISION', r.vision) + attrHTML('DISC', r.discipline) +
+            attrHTML('CLUTCH', r.batting_clutch) + attrHTML('BUNT', r.bunting) +
+            attrHTML('DRG BNT', r.drag_bunt)
+        )}
+        ${secHTML('Fielding', o.fielding,
+            attrHTML('FIELD', r.fielding) + attrHTML('ARM STR', r.arm_strength) +
+            attrHTML('ARM ACC', r.arm_accuracy) + attrHTML('REAC L', r.reaction_left) +
+            attrHTML('REAC R', r.reaction_right) + attrHTML('REAC F', r.reaction_forward) +
+            attrHTML('REAC B', r.reaction_back)
+        )}
+        ${secHTML('Baserunning', o.baserunning,
+            attrHTML('SPEED', r.speed) + attrHTML('STEAL', r.stealing) +
+            attrHTML('BR AGG', r.br_aggressiveness)
+        )}
+        <div class="card-footer">
+            <h3>Durability</h3>
+            <span class="val c-${rc(o.durability)}">${o.durability}</span>
+        </div>
+        <div class="card-save"><button onclick="saveCard(this)">Copy Card</button></div>`;
+}
+
+function arsenalHTML(arsenal, throws, estimated) {
+    if (!arsenal || !arsenal.length) return '';
+
+    const throwLabel = throws === 'L' ? 'LHP' : 'RHP';
+    const estBadge = estimated ? `<span class="est-badge" title="Estimated arsenal — pre-pitch-tracking era. Manual reference, not measured.">EST.</span>` : '';
+    const estNote = estimated ? `<div class="arsenal-est-note">Estimated arsenal — pre-2008 (no Statcast). Usage % and velo are approximate.</div>` : '';
+    let rows = '';
+
+    // Column headers
+    rows += `<div class="pitch-labels">
+        <span>Pitch</span><span></span><span>Use%</span><span>Velo</span><span>Break</span><span>Spin</span>
+    </div>`;
+
+    for (const p of arsenal) {
+        const velo = p.velo ? `<strong>${p.velo}</strong>` : '-';
+        const brk = p.break_rating != null ? `<strong class="c-${rc(p.break_rating)}">${p.break_rating}</strong>` : '-';
+        const spin = p.spin ? `<strong>${p.spin}</strong>` : '-';
+        const maxUsage = 45; // scale bar relative to ~45% max
+        const barWidth = Math.min(p.usage / maxUsage * 100, 100);
+
+        rows += `<div class="pitch-row">
+            <span class="pitch-name">${esc(p.name)}</span>
+            <div class="pitch-usage-bar"><div class="pitch-usage-fill" style="width:${barWidth}%"></div></div>
+            <div class="pitch-stat"><strong>${p.usage}%</strong></div>
+            <div class="pitch-stat">${velo}</div>
+            <div class="pitch-stat">${brk}</div>
+            <div class="pitch-stat">${spin}</div>
+        </div>`;
+    }
+
+    return `<div class="arsenal-section">
+        <div class="arsenal-head">
+            <h3>Pitch Arsenal${estBadge}</h3>
+            <span class="throws-badge">${throwLabel}</span>
+        </div>
+        ${rows}
+        ${estNote}
+    </div>`;
+}
+
+function pitcherCard(d) {
+    const r = d.ratings, o = d.overalls;
+    const t = tier(d.ovr);
+    const modeLabel = d.mode === 'career' ? ' &bull; CAREER' : '';
+    return `
+        <div class="card-top">
+            <div class="name">${esc(d.name)}</div>
+            <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}</div>
+            <div class="ovr-diamond tier-${t}"><span>${esc(d.ovr)}</span></div>
+        </div>
+        ${secHTML('Pitching', o.pitching,
+            attrHTML('H/9 L', r.h_per_9_left) + attrHTML('H/9 R', r.h_per_9_right) +
+            attrHTML('K/9 L', r.k_per_9_left) + attrHTML('K/9 R', r.k_per_9_right) +
+            attrHTML('HR/9', r.hr_per_9) + attrHTML('CLUTCH', r.pitching_clutch) +
+            attrHTML('CTRL', r.control) + attrHTML('VELO', r.velocity) +
+            attrHTML('BREAK', r['break_']) + attrHTML('STAM', r.stamina)
+        )}
+        ${arsenalHTML(d.arsenal, d.throws, d.arsenal_estimated)}
+        ${secHTML('Fielding', o.fielding,
+            attrHTML('FIELD', r.fielding) + attrHTML('ARM STR', r.arm_strength) +
+            attrHTML('ARM ACC', r.arm_accuracy) + attrHTML('REAC L', r.reaction_left) +
+            attrHTML('REAC R', r.reaction_right) + attrHTML('REAC F', r.reaction_forward) +
+            attrHTML('REAC B', r.reaction_back)
+        )}
+        ${secHTML('Baserunning', o.baserunning,
+            attrHTML('SPEED', r.speed) + attrHTML('STEAL', r.stealing) +
+            attrHTML('BR AGG', r.br_aggressiveness)
+        )}
+        <div class="card-footer">
+            <h3>Durability</h3>
+            <span class="val c-${rc(o.durability)}">${o.durability}</span>
+        </div>
+        <div class="card-save"><button onclick="saveCard(this)">Copy Card</button></div>`;
+}
+
+function renderCard(d) {
+    if (d.error) {
+        const safeErr = document.createElement('span');
+        safeErr.textContent = d.error;
+        return `<div class="card-top"><div class="name">Error</div><div class="meta">${safeErr.innerHTML}</div></div>`;
+    }
+    return d.type === 'pitcher' ? pitcherCard(d) : hitterCard(d);
+}
+
+function showCards(list) {
+    document.getElementById('cards').innerHTML = list.map(c => `<div class="card">${renderCard(c)}</div>`).join('');
+}
+
+// ========== GENERATE ==========
+async function gen() {
+    const name = document.getElementById('player_name').value.trim();
+    const year = document.getElementById('year').value.trim();
+    const type = document.getElementById('player_type').value;
+    const pos = document.getElementById('position').value;
+    const mode = document.getElementById('card_mode').value;
+    if (!name || !year) { showErr('Enter a player name and year.'); return; }
+
+    setLoading(true);
+    try {
+        const fd = new FormData();
+        fd.append('player_name', name);
+        fd.append('year', year);
+        fd.append('is_pitcher', type === 'auto' ? 'auto' : type === 'pitcher' ? 'on' : '');
+        fd.append('mode', mode);
+        if (pos) fd.append('position', pos);
+
+        const r = await fetch('/generate', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.error) { showErr(d.error); return; }
+        showCards([d]);
+    } catch (e) { showErr(e.message); }
+    finally { setLoading(false); }
+}
+
+// ========== COMPARE ==========
+function toggleCmp() { document.getElementById('cmp-panel').classList.toggle('active'); }
+
+async function cmp() {
+    const n1 = document.getElementById('cn1').value.trim();
+    const y1 = document.getElementById('cy1').value;
+    const n2 = document.getElementById('cn2').value.trim();
+    const y2 = document.getElementById('cy2').value;
+    if (!n1 || !n2) { showErr('Enter both player names.'); return; }
+
+    setLoading(true);
+    try {
+        const r = await fetch('/compare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ players: [{ name: n1, year: +y1 }, { name: n2, year: +y2 }] })
+        });
+        const d = await r.json();
+        if (d.error) { showErr(d.error); return; }
+        showCards(d.cards || []);
+    } catch (e) { showErr(e.message); }
+    finally { setLoading(false); }
+}
+
+// ========== SAVE ==========
+function saveCard(btn) {
+    const card = btn.closest('.card');
+    const actions = card.querySelector('.card-save');
+    actions.style.display = 'none';
+    try {
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNode(card);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        document.execCommand('copy');
+        sel.removeAllRanges();
+        btn.textContent = 'Copied!';
+    } catch (e) {
+        btn.textContent = 'Failed';
+    }
+    actions.style.display = '';
+    setTimeout(() => { btn.textContent = 'Copy Card'; }, 2000);
+}
+
+// ========== UTILS ==========
+function showErr(msg) {
+    const el = document.getElementById('err');
+    el.textContent = msg; el.classList.add('active');
+    setTimeout(() => el.classList.remove('active'), 8000);
+}
+
+function setLoading(on) {
+    document.getElementById('loading').classList.toggle('active', on);
+    document.getElementById('gen-btn').disabled = on;
+    if (on) { document.getElementById('err').classList.remove('active'); document.getElementById('cards').innerHTML = ''; }
+}
+
+// ========== AUTOCOMPLETE ==========
+let acTimer, acIdx = -1, acItems = [], acCache = {};
+const acIn = document.getElementById('player_name');
+const acList = document.getElementById('ac-list');
+
+acIn.addEventListener('input', () => {
+    clearTimeout(acTimer);
+    if (acIn.value.trim().length < 2) { acList.classList.remove('active'); return; }
+    acTimer = setTimeout(() => fetchAC(acIn.value.trim()), 150);
+});
+
+acIn.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx + 1, acItems.length - 1); hlAC(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx - 1, 0); hlAC(); }
+    else if (e.key === 'Enter') {
+        if (acIdx >= 0 && acItems.length) { e.preventDefault(); pickAC(acItems[acIdx]); }
+        else { acList.classList.remove('active'); gen(); }
+    }
+    else if (e.key === 'Escape') acList.classList.remove('active');
+});
+
+document.addEventListener('click', e => { if (!e.target.closest('.autocomplete-wrapper')) acList.classList.remove('active'); });
+
+async function fetchAC(q) {
+    const yr = document.getElementById('year').value || 2025;
+    const key = yr + ':' + q.toLowerCase();
+    if (acCache[key]) { showAC(acCache[key]); return; }
+    try {
+        const r = await fetch(`/players?year=${yr}&q=${encodeURIComponent(q)}`);
+        const names = await r.json();
+        acCache[key] = names;
+        showAC(names);
+    } catch(e) {}
+}
+
+function showAC(names) {
+    acItems = names; acIdx = -1;
+    if (!names.length) { acList.classList.remove('active'); return; }
+    acList.innerHTML = '';
+    names.forEach((n, i) => {
+        const div = document.createElement('div');
+        div.className = 'ac-item';
+        div.textContent = n;
+        div.addEventListener('click', () => pickAC(n));
+        acList.appendChild(div);
+    });
+    acList.classList.add('active');
+}
+
+function hlAC() {
+    acList.querySelectorAll('.ac-item').forEach((el,i) => el.classList.toggle('selected', i === acIdx));
+    if (acIdx >= 0) acList.children[acIdx]?.scrollIntoView({ block: 'nearest' });
+}
+
+function pickAC(name) { acIn.value = name; acList.classList.remove('active'); acIdx = -1; }
+
+document.getElementById('year').addEventListener('change', () => { acCache = {}; });
+document.getElementById('year').addEventListener('keydown', e => { if (e.key === 'Enter') gen(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+{
+  "Juan Soto": {
+    "position": "OF",
+    "batting": {
+      "name": "Juan Soto",
+      "team": "NYM",
+      "G": 160,
+      "PA": 715,
+      "AB": 577,
+      "H": 152,
+      "HR": 43,
+      "SB": 38,
+      "BA": 0.263,
+      "OBP": 0.396,
+      "SLG": 0.525,
+      "OPS": 0.921,
+      "ISO": 0.262,
+      "BB_pct": 0.2,
+      "K_pct": 0.2,
+      "wOBA": 0.39,
+      "wRC_plus": 156.0,
+      "WAR": 5.8
+    },
+    "sprint": {
+      "hp_to_1b": 4.58,
+      "sprint_speed": 25.8
+    },
+    "fielding": {
+      "DRS": -7,
+      "UZR": NaN,
+      "OAA": -12.0,
+      "Pos": "RF"
+    }
+  },
+  "Byron Buxton": {
+    "position": "OF",
+    "batting": {
+      "name": "Byron Buxton",
+      "team": "MIN",
+      "G": 126,
+      "PA": 542,
+      "AB": 488,
+      "H": 129,
+      "HR": 35,
+      "SB": 24,
+      "BA": 0.264,
+      "OBP": 0.327,
+      "SLG": 0.551,
+      "OPS": 0.878,
+      "ISO": 0.287,
+      "BB_pct": 0.1,
+      "K_pct": 0.3,
+      "wOBA": 0.367,
+      "wRC_plus": 136.0,
+      "WAR": 5.0
+    },
+    "sprint": {
+      "hp_to_1b": 4.13,
+      "sprint_speed": 30.2
+    },
+    "fielding": {
+      "DRS": -5,
+      "UZR": NaN,
+      "OAA": 3.0,
+      "Pos": "CF"
+    }
+  },
+  "Vladimir Guerrero Jr.": {
+    "position": "1B",
+    "batting": {
+      "name": "Vladimir Guerrero Jr.",
+      "team": "TOR",
+      "G": 156,
+      "PA": 680,
+      "AB": 589,
+      "H": 172,
+      "HR": 23,
+      "SB": 6,
+      "BA": 0.292,
+      "OBP": 0.381,
+      "SLG": 0.467,
+      "OPS": 0.848,
+      "ISO": 0.175,
+      "BB_pct": 0.1,
+      "K_pct": 0.1,
+      "wOBA": 0.366,
+      "wRC_plus": 137.0,
+      "WAR": 3.9
+    },
+    "sprint": {
+      "hp_to_1b": 4.15,
+      "sprint_speed": 30.2
+    },
+    "fielding": {
+      "DRS": 8,
+      "UZR": NaN,
+      "OAA": -2.0,
+      "Pos": "1B"
+    }
+  },
+  "Yordan Alvarez": {
+    "position": "LF",
+    "batting": {
+      "name": "Yordan Alvarez",
+      "team": "HOU",
+      "G": 48,
+      "PA": 199,
+      "AB": 165,
+      "H": 45,
+      "HR": 6,
+      "SB": 1,
+      "BA": 0.273,
+      "OBP": 0.367,
+      "SLG": 0.43,
+      "OPS": 0.797,
+      "ISO": 0.158,
+      "BB_pct": 0.1,
+      "K_pct": 0.2,
+      "wOBA": 0.338,
+      "wRC_plus": 118.0,
+      "WAR": 0.5
+    },
+    "sprint": {
+      "hp_to_1b": 4.64,
+      "sprint_speed": 26.8
+    },
+    "fielding": {
+      "DRS": -1,
+      "UZR": NaN,
+      "OAA": -1.0,
+      "Pos": "LF"
+    }
+  },
+  "Pete Crow-Armstrong": {
+    "position": "OF",
+    "batting": {
+      "name": "Pete Crow-Armstrong",
+      "team": "CHC",
+      "G": 157,
+      "PA": 647,
+      "AB": 591,
+      "H": 146,
+      "HR": 31,
+      "SB": 35,
+      "BA": 0.247,
+      "OBP": 0.287,
+      "SLG": 0.481,
+      "OPS": 0.768,
+      "ISO": 0.234,
+      "BB_pct": 0.0,
+      "K_pct": 0.2,
+      "wOBA": 0.323,
+      "wRC_plus": 109.0,
+      "WAR": 5.4
+    },
+    "sprint": {
+      "hp_to_1b": 4.21,
+      "sprint_speed": 29.5
+    },
+    "fielding": {
+      "DRS": 15,
+      "UZR": NaN,
+      "OAA": 21.0,
+      "Pos": "CF"
+    }
+  },
+  "Bobby Witt Jr.": {
+    "position": "SS",
+    "batting": {
+      "name": "Bobby Witt Jr.",
+      "team": "KCR",
+      "G": 157,
+      "PA": 687,
+      "AB": 623,
+      "H": 184,
+      "HR": 23,
+      "SB": 38,
+      "BA": 0.295,
+      "OBP": 0.351,
+      "SLG": 0.501,
+      "OPS": 0.852,
+      "ISO": 0.205,
+      "BB_pct": 0.1,
+      "K_pct": 0.2,
+      "wOBA": 0.36,
+      "wRC_plus": 130.0,
+      "WAR": 8.0
+    },
+    "sprint": {
+      "hp_to_1b": 4.15,
+      "sprint_speed": 30.2
+    },
+    "fielding": {
+      "DRS": 3,
+      "UZR": NaN,
+      "OAA": 24.0,
+      "Pos": "SS"
+    }
+  },
+  "Xander Bogaerts": {
+    "position": "SS",
+    "batting": {
+      "name": "Xander Bogaerts",
+      "team": "SDP",
+      "G": 136,
+      "PA": 552,
+      "AB": 491,
+      "H": 129,
+      "HR": 11,
+      "SB": 20,
+      "BA": 0.263,
+      "OBP": 0.328,
+      "SLG": 0.391,
+      "OPS": 0.719,
+      "ISO": 0.128,
+      "BB_pct": 0.1,
+      "K_pct": 0.2,
+      "wOBA": 0.313,
+      "wRC_plus": 104.0,
+      "WAR": 3.2
+    },
+    "sprint": {
+      "hp_to_1b": 4.37,
+      "sprint_speed": 27.6
+    },
+    "fielding": {
+      "DRS": -4,
+      "UZR": NaN,
+      "OAA": 7.0,
+      "Pos": "SS"
+    }
+  },
+  "Matt Shaw": {
+    "position": "3B",
+    "batting": {
+      "name": "Matt Shaw",
+      "team": "CHC",
+      "G": 126,
+      "PA": 437,
+      "AB": 393,
+      "H": 89,
+      "HR": 13,
+      "SB": 17,
+      "BA": 0.226,
+      "OBP": 0.295,
+      "SLG": 0.394,
+      "OPS": 0.689,
+      "ISO": 0.168,
+      "BB_pct": 0.1,
+      "K_pct": 0.2,
+      "wOBA": 0.3,
+      "wRC_plus": 93.0,
+      "WAR": 1.5
+    },
+    "sprint": {
+      "hp_to_1b": 4.29,
+      "sprint_speed": 29.0
+    },
+    "fielding": {
+      "DRS": 12,
+      "UZR": NaN,
+      "OAA": -1.0,
+      "Pos": "3B"
+    }
+  },
+  "Hyeseong Kim": {
+    "position": "2B",
+    "batting": {
+      "name": "Hyeseong Kim",
+      "team": "LAD",
+      "G": 71,
+      "PA": 170,
+      "AB": 161,
+      "H": 45,
+      "HR": 3,
+      "SB": 13,
+      "BA": 0.28,
+      "OBP": 0.314,
+      "SLG": 0.385,
+      "OPS": 0.699,
+      "ISO": 0.106,
+      "BB_pct": 0.0,
+      "K_pct": 0.3,
+      "wOBA": 0.306,
+      "wRC_plus": 95.0,
+      "WAR": 0.8
+    },
+    "sprint": {
+      "hp_to_1b": 4.08,
+      "sprint_speed": 28.7
+    },
+    "fielding": {
+      "DRS": 9,
+      "UZR": NaN,
+      "OAA": 4.0,
+      "Pos": "2B"
+    }
+  },
+  "Adley Rutschman": {
+    "position": "C",
+    "batting": {
+      "name": "Adley Rutschman",
+      "team": "BAL",
+      "G": 90,
+      "PA": 365,
+      "AB": 322,
+      "H": 71,
+      "HR": 9,
+      "SB": 0,
+      "BA": 0.22,
+      "OBP": 0.307,
+      "SLG": 0.366,
+      "OPS": 0.673,
+      "ISO": 0.146,
+      "BB_pct": 0.1,
+      "K_pct": 0.2,
+      "wOBA": 0.298,
+      "wRC_plus": 91.0,
+      "WAR": 1.2
+    },
+    "sprint": {
+      "hp_to_1b": 4.45,
+      "sprint_speed": 26.7
+    },
+    "fielding": {
+      "DRS": 10,
+      "UZR": NaN,
+      "OAA": NaN,
+      "Pos": "C"
+    }
+  }
+}
