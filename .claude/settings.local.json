@@ -3,7 +3,8 @@
     "allow": [
       "Bash(powershell.exe -Command \"Get-Process python -ErrorAction SilentlyContinue | Where-Object {$_.Path -like '*Robert Stock*'} | Stop-Process -Force\")",
       "Bash(powershell.exe -Command \"Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 1; 'killed'\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5000)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5000)",
+      "Bash(\"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe\" \"C:/Users/Alex/Claude Context/MLB The Show 26 - Reverse Engineer Player Ratings/app.py\")"
     ]
   }
 }

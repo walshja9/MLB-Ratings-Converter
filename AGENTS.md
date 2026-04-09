@@ -4,13 +4,13 @@
 Build a tool that generates MLB The Show-style player rating cards from any historical MLB season stats. Users input a player name + year, and the tool outputs a full attribute card with ratings 0-99.
 
 ## Project Location
-`C:\Users\Alex\Codex Context\MLB The Show 26 - Reverse Engineer Player Ratings\`
+`C:\Users\Alex\Claude Context\MLB The Show 26 - Reverse Engineer Player Ratings\`
 
 ## How to Run
 
 ### Web App (recommended)
 ```bash
-"C:/Users/Alex/Codex Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" "C:/Users/Alex/Codex Context/MLB The Show 26 - Reverse Engineer Player Ratings/app.py"
+"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" "C:/Users/Alex/Claude Context/MLB The Show 26 - Reverse Engineer Player Ratings/app.py"
 ```
 Then open **http://localhost:5000** in your browser.
 
@@ -26,9 +26,9 @@ Then open **http://localhost:5000** in your browser.
 
 ### CLI
 ```bash
-"C:/Users/Alex/Codex Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" generate_card.py "Juan Soto" 2025
-"C:/Users/Alex/Codex Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" generate_card.py "Garrett Crochet" 2025 --pitcher
-"C:/Users/Alex/Codex Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" generate_card.py "Barry Bonds" 2001 --position LF -v
+"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" generate_card.py "Juan Soto" 2025
+"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" generate_card.py "Garrett Crochet" 2025 --pitcher
+"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" generate_card.py "Barry Bonds" 2001 --position LF -v
 ```
 
 ## Dependencies

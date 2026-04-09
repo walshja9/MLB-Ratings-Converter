@@ -465,6 +465,30 @@ def pull_sprint_speed(player_name, year):
     return None
 
 
+CANONICAL_POSITIONS = {"RF", "LF", "CF", "1B", "2B", "SS", "3B", "C", "DH"}
+
+def normalize_position(raw):
+    """Map a raw BBRef Pos string to a canonical position token.
+    Handles: leading asterisks (*1B), slash composites (1B/OF),
+    hyphen composites (1B-2B), and outfield aliases (OF, LF-RF).
+    """
+    if not raw:
+        return "OF"
+    s = raw.strip()
+    if s.startswith("*"):
+        s = s[1:]
+    if "/" in s:
+        s = s.split("/")[0]
+    if "-" in s:
+        s = s.split("-")[0]
+    s = s.strip()
+    if s in CANONICAL_POSITIONS:
+        return s
+    if s == "OF":
+        return "CF"
+    return "OF"
+
+
 def pull_career_fielding(player_name, year, num_years=4):
     """Pull multi-year fielding stats (OAA) and detect primary position.
     Aggregates across all position entries for multi-position players.
@@ -564,7 +588,7 @@ def pull_career_fielding(player_name, year, num_years=4):
                 pos_val = str(row.get("Pos", ""))
                 if inn > best_inn and pos_val not in ("DH", ""):
                     best_inn = inn
-                    best_pos = pos_val
+                    best_pos = normalize_position(pos_val)
 
             # Store aggregated values
             if has_oaa:
