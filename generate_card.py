@@ -92,6 +92,7 @@ def get_arsenal_override(player_name, year):
 warnings.filterwarnings("ignore")
 
 import numpy as np
+import pandas as pd
 from pybaseball import (
     statcast_sprint_speed,
     statcast_batter,
@@ -99,15 +100,84 @@ from pybaseball import (
     playerid_lookup,
 )
 
-# FanGraphs is dead behind a Cloudflare interactive challenge as of 2026-04.
-# We replace pybaseball's batting/pitching/fielding leaderboards with direct
-# Baseball-Reference scraping (see bbref_scraper.py). Statcast paths are
-# untouched — they still hit Baseball Savant.
+# FanGraphs may be behind a Cloudflare interactive challenge.
+# We use BBRef scraping as a fallback when FG is unreachable.
+# Batting/pitching always use BBRef; fielding tries FG first (for rARM,
+# RngR, ErrR, Def) and falls back to BBRef (DRS + Total Zone only).
 from bbref_scraper import (
     bbref_batting_df  as batting_stats,
     bbref_pitching_df as pitching_stats,
-    bbref_fielding_df as fielding_stats,
+    bbref_fielding_df as fielding_stats_bbref,
 )
+
+# Track whether FG fielding is reachable this session (avoid retrying on every call).
+_fg_fielding_ok: bool | None = None  # None = untested, True/False = tested
+
+# FG API column IDs for fielding (maps to the ?type= parameter).
+# c = common header cols; the numbers select specific stat columns.
+_FG_FIELD_COLS = "c,-1,4,5,6,7,8,9,10,11,12,25,28,35,37,38,39,40,43,60"
+#  4=G  5=GS  6=Inn  7=PO  8=A  9=E  25=rARM  28=DRS  35=ARM
+# 37=RngR  38=ErrR  39=UZR  40=UZR/150  43=Def  60=OAA
+
+
+def _fg_fielding_via_cloudscraper(year: int):
+    """Hit the FanGraphs JSON API with cloudscraper to bypass Cloudflare.
+    Returns a DataFrame with columns matching FG naming (Name, Pos, Inn,
+    rARM, RngR, ErrR, Def, OAA, etc.) or None on failure."""
+    import io
+    import cloudscraper
+    scraper = cloudscraper.create_scraper(
+        browser={"browser": "chrome", "platform": "windows", "desktop": True}
+    )
+    url = (
+        f"https://www.fangraphs.com/api/leaders"
+        f"?pos=all&stats=fld&lg=all&qual=0&type={_FG_FIELD_COLS}"
+        f"&season={year}&month=0&season1={year}&ind=1&team=0"
+        f"&rost=0&age=0&filter=&players=0&startdate=&enddate="
+        f"&page=1_5000"
+    )
+    r = scraper.get(url, timeout=30)
+    if r.status_code != 200:
+        return None
+    try:
+        payload = r.json()
+        # FG API wraps rows in {"data": [...]} or returns a bare list
+        rows = payload.get("data", payload) if isinstance(payload, dict) else payload
+        if not rows:
+            return None
+        df = pd.DataFrame(rows)
+        # Normalize key column names to match what pull_career_fielding expects
+        rename = {
+            "PlayerName": "Name", "TeamName": "Team",
+            "Pos": "Pos", "Inn": "Inn", "OAA": "OAA",
+            "Def": "Def", "rARM": "rARM", "RngR": "RngR",
+            "ErrR": "ErrR", "DRS": "DRS", "UZR": "UZR",
+            "G": "G", "GS": "GS", "A": "A", "E": "E",
+        }
+        for old, new in rename.items():
+            if old in df.columns and new not in df.columns:
+                df.rename(columns={old: new}, inplace=True)
+        return df
+    except Exception:
+        return None
+
+
+def fielding_stats(year: int):
+    """Try FanGraphs fielding first (has rARM, RngR, ErrR, Def).
+    Fall back to BBRef (DRS + TZ only) on failure."""
+    global _fg_fielding_ok
+    if _fg_fielding_ok is not False:
+        try:
+            df = _fg_fielding_via_cloudscraper(year)
+            if df is not None and not df.empty:
+                _fg_fielding_ok = True
+                print(f"    (fielding source: FanGraphs)")
+                return df
+        except Exception:
+            pass
+        _fg_fielding_ok = False
+        print(f"    (FanGraphs fielding unavailable — using BBRef)")
+    return fielding_stats_bbref(year)
 
 # ================================================================
 # CONSTANTS
@@ -1302,21 +1372,26 @@ def calculate_ratings(data, position_override=None, mode="season"):
                 raw_fld = pos_baseline
         ratings["fielding"] = clamp(def_trust * raw_fld + (1 - def_trust) * pos_baseline)
     else:
-        # Fall through chain: FG Def -> BBRef DRS (Rdrs) -> BBRef Total Zone (Rtot) -> baseline
+        # Fall through chain: FG Def -> BBRef DRS+TZ blend -> BBRef DRS -> BBRef TZ -> baseline
         # Rdrs is essentially DRS (~-15..+20). Rtot is Total Zone (~-15..+15).
-        # Treat each as a NEW era-specific input (not a drop-in for RngR/UZR);
-        # use the most reliable available source for the target year.
+        # When both are available (2003-2019), blend them to smooth out
+        # player-specific disagreements between the two systems.
         fg_def_val = oaa_data.get(f"def_{target_year}") if oaa_data else None
         rdrs_val   = oaa_data.get(f"rdrs_{target_year}") if oaa_data else None
         rtot_val   = oaa_data.get(f"rtot_{target_year}") if oaa_data else None
 
         if fg_def_val is not None:
             raw_fld = clamp(1.38 * fg_def_val + 67.3)
+        elif rdrs_val is not None and rtot_val is not None:
+            # Both DRS and TZ available — blend their outputs to reduce
+            # single-metric noise (e.g. DRS and UZR can disagree by 15+ runs).
+            raw_from_rdrs = RDRS_FIELD_SLOPE * rdrs_val + RDRS_FIELD_INTERCEPT
+            raw_from_rtot = RTOT_FIELD_SLOPE * rtot_val + RTOT_FIELD_INTERCEPT
+            raw_fld = clamp(0.5 * raw_from_rdrs + 0.5 * raw_from_rtot)
         elif rdrs_val is not None:
-            # DRS-based: recalibrated slope so +15 Rdrs maps to FIELD ~85-88.
             raw_fld = clamp(RDRS_FIELD_SLOPE * rdrs_val + RDRS_FIELD_INTERCEPT)
         elif rtot_val is not None:
-            # Total Zone — pre-2003 era. Slope weaker than Rdrs (coarser metric).
+            # Total Zone only — pre-2003 era or missing DRS.
             raw_fld = clamp(RTOT_FIELD_SLOPE * rtot_val + RTOT_FIELD_INTERCEPT)
         else:
             raw_fld = None
@@ -1408,11 +1483,16 @@ def calculate_ratings(data, position_override=None, mode="season"):
 
     # Bug 3 fix: use Rdrs/Rtot as range proxy when RngR/OAA are unavailable.
     # These branches are intentionally AFTER the RngR branch (RngR stays primary).
+    # When both Rdrs and Rtot are available, blend them (same rationale as fielding).
     rdrs_react = oaa_data.get(f"rdrs_{target_year}") if oaa_data else None
     rtot_react = oaa_data.get(f"rtot_{target_year}") if oaa_data else None
     has_oaa_react = any(isinstance(k, int) for k in oaa_data.keys()) if oaa_data else False
     if base_react is None and not has_oaa_react:
-        if rdrs_react is not None:
+        if rdrs_react is not None and rtot_react is not None:
+            react_from_rdrs = RDRS_REACT_SLOPE * rdrs_react + 65
+            react_from_rtot = RTOT_REACT_SLOPE * rtot_react + 65
+            base_react = clamp(0.5 * react_from_rdrs + 0.5 * react_from_rtot)
+        elif rdrs_react is not None:
             base_react = clamp(RDRS_REACT_SLOPE * rdrs_react + 65)
         elif rtot_react is not None:
             base_react = clamp(RTOT_REACT_SLOPE * rtot_react + 65)
