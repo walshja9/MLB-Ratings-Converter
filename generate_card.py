@@ -99,15 +99,41 @@ from pybaseball import (
     playerid_lookup,
 )
 
-# FanGraphs is dead behind a Cloudflare interactive challenge as of 2026-04.
-# We replace pybaseball's batting/pitching/fielding leaderboards with direct
-# Baseball-Reference scraping (see bbref_scraper.py). Statcast paths are
-# untouched — they still hit Baseball Savant.
+# FanGraphs may be behind a Cloudflare interactive challenge.
+# We use BBRef scraping as a fallback when FG is unreachable.
+# Batting/pitching always use BBRef; fielding tries FG first (for rARM,
+# RngR, ErrR, Def) and falls back to BBRef (DRS + Total Zone only).
 from bbref_scraper import (
     bbref_batting_df  as batting_stats,
     bbref_pitching_df as pitching_stats,
-    bbref_fielding_df as fielding_stats,
+    bbref_fielding_df as fielding_stats_bbref,
 )
+
+# Try to import pybaseball's FG-backed fielding stats for the richer UZR data.
+try:
+    from pybaseball import fielding_stats as _fg_fielding_stats
+except ImportError:
+    _fg_fielding_stats = None
+
+# Track whether FG fielding is reachable this session (avoid retrying on every call).
+_fg_fielding_ok: bool | None = None  # None = untested, True/False = tested
+
+
+def fielding_stats(year: int):
+    """Try FanGraphs fielding first (has rARM, RngR, ErrR, Def).
+    Fall back to BBRef (DRS + TZ only) on failure."""
+    global _fg_fielding_ok
+    if _fg_fielding_ok is not False and _fg_fielding_stats is not None:
+        try:
+            df = _fg_fielding_stats(year, qual=0)
+            if not df.empty:
+                _fg_fielding_ok = True
+                print(f"    (fielding source: FanGraphs)")
+                return df
+        except Exception:
+            _fg_fielding_ok = False
+            print(f"    (FanGraphs fielding unavailable — using BBRef)")
+    return fielding_stats_bbref(year)
 
 # ================================================================
 # CONSTANTS
