@@ -998,6 +998,20 @@ def pull_all_pitcher_data(player_name, year):
 def calculate_ratings(data, position_override=None, mode="season"):
     """Calculate all MLB The Show ratings from real stats.
     mode: 'season' = single season only, 'career' = career blended."""
+
+    # --- Pre-OAA fielding slopes (tune here after spot-checks) ---
+    RDRS_FIELD_SLOPE     = 2.5   # recalibrated — adjust after calibration
+    RDRS_FIELD_INTERCEPT = 68    # intercept
+    RTOT_FIELD_SLOPE     = 2.0   # recalibrated from 1.6; stays < RDRS slope
+    RTOT_FIELD_INTERCEPT = 68
+
+    # --- Pre-OAA reaction proxy slopes (tune here after spot-checks) ---
+    RDRS_REACT_SLOPE = 1.2   # Rdrs as range proxy; weaker than RngR (2.0)
+    RTOT_REACT_SLOPE = 1.0   # Rtot as range proxy; weakest signal
+
+    # --- Pre-OAA trust constants ---
+    RTOT_PARTIAL_TRUST = 0.4  # fixed trust when innings data absent (Bug 4)
+
     bat = data["batting"]
     career = data.get("career_avg") or bat  # fallback to single season
     use_career = (mode == "career" and isinstance(career, dict) and career != bat)
@@ -1117,7 +1131,12 @@ def calculate_ratings(data, position_override=None, mode="season"):
 
     if has_innings_data and games > 0:
         field_pct = innings / expected_inn if expected_inn > 0 else 0
-        if field_pct < 0.3 and pos not in ("C", "DH"):
+        # Skip DH-blend when a fielding metric (Rdrs/Rtot) is present — the metric
+        # itself is evidence the player is a real fielder, not a DH.
+        has_rdrs_or_rtot = bool(oaa_data) and (
+            f"rdrs_{target_year}" in oaa_data or f"rtot_{target_year}" in oaa_data
+        )
+        if field_pct < 0.3 and pos not in ("C", "DH") and not has_rdrs_or_rtot:
             # Player barely plays the field — blend baseline toward DH level
             dh_base = pos_fielding_base["DH"]
             pos_base = pos_fielding_base.get(pos, 55)
@@ -1130,6 +1149,13 @@ def calculate_ratings(data, position_override=None, mode="season"):
 
     # Trust factor: 0 at <50 inn, ramps to 1.0 at 500+ inn
     def_trust = max(0, min((innings - 50) / 450, 1.0)) if innings > 50 else 0
+
+    # Bug 4 fix: when innings data is absent but Rtot is available, apply a
+    # fixed partial trust so Rtot meaningfully influences the fielding rating.
+    if not has_innings_data and oaa_data:
+        rtot_check = oaa_data.get(f"rtot_{target_year}")
+        if rtot_check is not None:
+            def_trust = RTOT_PARTIAL_TRUST
 
     # Check if we have actual OAA data (integer year keys) vs only string fallback keys
     has_oaa = any(isinstance(k, int) for k in oaa_data.keys()) if oaa_data else False
@@ -1163,11 +1189,11 @@ def calculate_ratings(data, position_override=None, mode="season"):
         if fg_def_val is not None:
             raw_fld = clamp(1.38 * fg_def_val + 67.3)
         elif rdrs_val is not None:
-            # DRS-based: similar magnitude to OAA, mapped against position baseline.
-            raw_fld = clamp(2.0 * rdrs_val + 68)
+            # DRS-based: recalibrated slope so +15 Rdrs maps to FIELD ~85-88.
+            raw_fld = clamp(RDRS_FIELD_SLOPE * rdrs_val + RDRS_FIELD_INTERCEPT)
         elif rtot_val is not None:
-            # Total Zone — pre-2003 era. Conservative slope, lower confidence.
-            raw_fld = clamp(1.6 * rtot_val + 68)
+            # Total Zone — pre-2003 era. Slope weaker than Rdrs (coarser metric).
+            raw_fld = clamp(RTOT_FIELD_SLOPE * rtot_val + RTOT_FIELD_INTERCEPT)
         else:
             raw_fld = None
 
@@ -1252,6 +1278,17 @@ def calculate_ratings(data, position_override=None, mode="season"):
             target_oaa = oaa_data.get(target_year)
             if target_oaa is not None:
                 base_react = clamp(1.5 * target_oaa + 65)
+
+    # Bug 3 fix: use Rdrs/Rtot as range proxy when RngR/OAA are unavailable.
+    # These branches are intentionally AFTER the RngR branch (RngR stays primary).
+    rdrs_react = oaa_data.get(f"rdrs_{target_year}") if oaa_data else None
+    rtot_react = oaa_data.get(f"rtot_{target_year}") if oaa_data else None
+    has_oaa_react = any(isinstance(k, int) for k in oaa_data.keys()) if oaa_data else False
+    if base_react is None and not has_oaa_react:
+        if rdrs_react is not None:
+            base_react = clamp(RDRS_REACT_SLOPE * rdrs_react + 65)
+        elif rtot_react is not None:
+            base_react = clamp(RTOT_REACT_SLOPE * rtot_react + 65)
 
     if base_react is not None and def_trust > 0:
         # Blend data-driven reactions with position defaults by innings confidence

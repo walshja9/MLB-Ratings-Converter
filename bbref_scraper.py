@@ -70,22 +70,36 @@ def _safe_numeric(df: pd.DataFrame, cols: list) -> pd.DataFrame:
     return df
 
 
-def _dedupe_traded(df: pd.DataFrame, sort_col: str) -> pd.DataFrame:
+def _dedupe_traded(df: pd.DataFrame, sort_col: str, group_cols=None) -> pd.DataFrame:
     """For multi-team players, BBRef shows individual stint rows AND a 'XTM'
-    aggregate row (e.g. '2TM'). Prefer the aggregate; otherwise keep the row
-    with the highest PA / IP / Inn for that player."""
+    aggregate row (e.g. '2TM'). Collapse a group ONLY when an XTM row exists
+    (i.e. the rows are provably the same player split across teams). Groups
+    with multiple non-XTM rows are left intact, because they're almost always
+    distinct players who happen to share a name in the same season — those
+    must reach downstream disambiguation logic untouched.
+    """
     if "Player" not in df.columns or "Team" not in df.columns:
         return df
 
-    def _pick(group: pd.DataFrame) -> pd.Series:
-        agg = group[group["Team"].astype(str).str.match(r"^\d+TM$", na=False)]
-        if not agg.empty:
-            return agg.iloc[0]
-        if sort_col in group.columns:
-            return group.sort_values(sort_col, ascending=False).iloc[0]
-        return group.iloc[0]
+    if group_cols is None:
+        group_cols = ["Player"]
 
-    return df.groupby("Player", as_index=False, sort=False).apply(_pick).reset_index(drop=True)
+    xtm_re = r"^\d+TM$"
+    out_rows = []
+
+    for _, group in df.groupby(group_cols, as_index=False, sort=False):
+        agg = group[group["Team"].astype(str).str.match(xtm_re, na=False)]
+        if not agg.empty:
+            # Traded player: keep only the XTM aggregate row(s).
+            out_rows.append(agg.iloc[[0]])
+        else:
+            # No XTM row → either 1 row, or genuinely distinct same-name
+            # players. Keep everything; let downstream disambiguate.
+            out_rows.append(group)
+
+    if not out_rows:
+        return df.iloc[0:0]
+    return pd.concat(out_rows, ignore_index=True)
 
 
 # ----------------------------------------------------------------------
@@ -204,6 +218,12 @@ def bbref_fielding_df(year: int) -> pd.DataFrame:
                             "Standard DP","Standard Fld%",
                             "Total Zone Rtot","Total Zone Rtot/yr",
                             "DRS Rdrs","DRS Rdrs/yr"])
+
+    # Drop traded-player double counting: BBRef emits per-team-per-position
+    # rows AND an XTM aggregate row for the same position. Collapse per
+    # (Player, Pos) so multi-position players still sum across positions.
+    if "Pos" in df.columns and "Team" in df.columns:
+        df = _dedupe_traded(df, sort_col="Standard Inn", group_cols=["Player", "Pos"])
 
     df["Name"] = df["Player"].astype(str).str.replace(r"[*#]+$", "", regex=True).str.strip()
 

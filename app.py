@@ -33,24 +33,24 @@ _player_cache = {}  # {year: [names]}
 
 
 def load_player_names(year=2025):
-    """Load all player names from FanGraphs for autocomplete."""
+    """Load all player names from BBRef for autocomplete."""
     if _player_cache.get(year):
         return _player_cache[year]
 
     print(f"  Loading player names for {year}...")
-    from pybaseball import batting_stats as _bat, pitching_stats as _pit
+    from bbref_scraper import bbref_batting_df, bbref_pitching_df
 
     names = set()
     try:
-        bat = _bat(year, qual=0)
-        names.update(bat["Name"].tolist())
-    except Exception:
-        pass
+        bat = bbref_batting_df(year)
+        names.update(bat["Name"].dropna().tolist())
+    except Exception as e:
+        print(f"    bat load failed: {e}")
     try:
-        pit = _pit(year, qual=0)
-        names.update(pit["Name"].tolist())
-    except Exception:
-        pass
+        pit = bbref_pitching_df(year)
+        names.update(pit["Name"].dropna().tolist())
+    except Exception as e:
+        print(f"    pit load failed: {e}")
 
     sorted_names = sorted(names)
     _player_cache[year] = sorted_names
