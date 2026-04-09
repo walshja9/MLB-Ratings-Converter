@@ -92,6 +92,7 @@ def get_arsenal_override(player_name, year):
 warnings.filterwarnings("ignore")
 
 import numpy as np
+import pandas as pd
 from pybaseball import (
     statcast_sprint_speed,
     statcast_batter,
@@ -109,30 +110,73 @@ from bbref_scraper import (
     bbref_fielding_df as fielding_stats_bbref,
 )
 
-# Try to import pybaseball's FG-backed fielding stats for the richer UZR data.
-try:
-    from pybaseball import fielding_stats as _fg_fielding_stats
-except ImportError:
-    _fg_fielding_stats = None
-
 # Track whether FG fielding is reachable this session (avoid retrying on every call).
 _fg_fielding_ok: bool | None = None  # None = untested, True/False = tested
+
+# FG API column IDs for fielding (maps to the ?type= parameter).
+# c = common header cols; the numbers select specific stat columns.
+_FG_FIELD_COLS = "c,-1,4,5,6,7,8,9,10,11,12,25,28,35,37,38,39,40,43,60"
+#  4=G  5=GS  6=Inn  7=PO  8=A  9=E  25=rARM  28=DRS  35=ARM
+# 37=RngR  38=ErrR  39=UZR  40=UZR/150  43=Def  60=OAA
+
+
+def _fg_fielding_via_cloudscraper(year: int):
+    """Hit the FanGraphs JSON API with cloudscraper to bypass Cloudflare.
+    Returns a DataFrame with columns matching FG naming (Name, Pos, Inn,
+    rARM, RngR, ErrR, Def, OAA, etc.) or None on failure."""
+    import io
+    import cloudscraper
+    scraper = cloudscraper.create_scraper(
+        browser={"browser": "chrome", "platform": "windows", "desktop": True}
+    )
+    url = (
+        f"https://www.fangraphs.com/api/leaders"
+        f"?pos=all&stats=fld&lg=all&qual=0&type={_FG_FIELD_COLS}"
+        f"&season={year}&month=0&season1={year}&ind=1&team=0"
+        f"&rost=0&age=0&filter=&players=0&startdate=&enddate="
+        f"&page=1_5000"
+    )
+    r = scraper.get(url, timeout=30)
+    if r.status_code != 200:
+        return None
+    try:
+        payload = r.json()
+        # FG API wraps rows in {"data": [...]} or returns a bare list
+        rows = payload.get("data", payload) if isinstance(payload, dict) else payload
+        if not rows:
+            return None
+        df = pd.DataFrame(rows)
+        # Normalize key column names to match what pull_career_fielding expects
+        rename = {
+            "PlayerName": "Name", "TeamName": "Team",
+            "Pos": "Pos", "Inn": "Inn", "OAA": "OAA",
+            "Def": "Def", "rARM": "rARM", "RngR": "RngR",
+            "ErrR": "ErrR", "DRS": "DRS", "UZR": "UZR",
+            "G": "G", "GS": "GS", "A": "A", "E": "E",
+        }
+        for old, new in rename.items():
+            if old in df.columns and new not in df.columns:
+                df.rename(columns={old: new}, inplace=True)
+        return df
+    except Exception:
+        return None
 
 
 def fielding_stats(year: int):
     """Try FanGraphs fielding first (has rARM, RngR, ErrR, Def).
     Fall back to BBRef (DRS + TZ only) on failure."""
     global _fg_fielding_ok
-    if _fg_fielding_ok is not False and _fg_fielding_stats is not None:
+    if _fg_fielding_ok is not False:
         try:
-            df = _fg_fielding_stats(year, qual=0)
-            if not df.empty:
+            df = _fg_fielding_via_cloudscraper(year)
+            if df is not None and not df.empty:
                 _fg_fielding_ok = True
                 print(f"    (fielding source: FanGraphs)")
                 return df
         except Exception:
-            _fg_fielding_ok = False
-            print(f"    (FanGraphs fielding unavailable — using BBRef)")
+            pass
+        _fg_fielding_ok = False
+        print(f"    (FanGraphs fielding unavailable — using BBRef)")
     return fielding_stats_bbref(year)
 
 # ================================================================
