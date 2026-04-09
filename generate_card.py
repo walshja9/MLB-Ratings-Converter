@@ -110,15 +110,50 @@ from bbref_scraper import (
     bbref_fielding_df as fielding_stats_bbref,
 )
 
-# Track whether FG fielding is reachable this session (avoid retrying on every call).
+# ---------- FG fielding disk cache + Playwright fetch ----------
+# Cache dir lives next to this file; one JSON per year.
+_FG_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fg_fielding_cache")
+os.makedirs(_FG_CACHE_DIR, exist_ok=True)
+
+# Track whether FG fielding (live) is reachable this session.
 _fg_fielding_ok: bool | None = None  # None = untested, True/False = tested
+
+
+def _fg_cache_path(year: int) -> str:
+    return os.path.join(_FG_CACHE_DIR, f"{year}.json")
+
+
+def _fg_load_cache(year: int):
+    """Load cached FG fielding data from disk. Returns DataFrame or None."""
+    import json as _json
+    path = _fg_cache_path(year)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r") as f:
+            rows = _json.load(f)
+        if not rows:
+            return None
+        return pd.DataFrame(rows)
+    except Exception:
+        return None
+
+
+def _fg_save_cache(year: int, df):
+    """Persist FG fielding DataFrame to disk cache."""
+    import json as _json
+    path = _fg_cache_path(year)
+    try:
+        df.to_json(path, orient="records", indent=1)
+    except Exception:
+        pass
 
 
 def _fg_fielding_via_playwright(year: int):
     """Hit the FanGraphs JSON API using Playwright (real browser) to bypass
     Cloudflare's JS challenge.  Returns a DataFrame with columns matching
     FG naming (Name, Pos, Inn, rARM, RngR, ErrR, Def, OAA, etc.) or None
-    on failure."""
+    on failure.  Only works when a visible browser can be spawned (CLI use)."""
     import re as _re
     try:
         from playwright.sync_api import sync_playwright
@@ -158,15 +193,25 @@ def _fg_fielding_via_playwright(year: int):
         for old, new in rename.items():
             if old in df.columns and new not in df.columns:
                 df.rename(columns={old: new}, inplace=True)
+        # Persist to cache so the web app can use it without Playwright
+        _fg_save_cache(year, df)
         return df
     except Exception:
         return None
 
 
 def fielding_stats(year: int):
-    """Try FanGraphs fielding first (has rARM, RngR, ErrR, Def).
-    Fall back to BBRef (DRS + TZ only) on failure."""
+    """FG fielding with disk cache + Playwright live fetch + BBRef fallback.
+    Priority: 1) disk cache  2) Playwright (CLI only)  3) BBRef."""
     global _fg_fielding_ok
+
+    # 1) Check disk cache first (works from Flask and CLI)
+    cached = _fg_load_cache(year)
+    if cached is not None:
+        print(f"    (fielding source: FanGraphs [cached])")
+        return cached
+
+    # 2) Try live Playwright fetch (only works with visible browser)
     if _fg_fielding_ok is not False:
         try:
             df = _fg_fielding_via_playwright(year)
@@ -177,7 +222,9 @@ def fielding_stats(year: int):
         except Exception:
             pass
         _fg_fielding_ok = False
-        print(f"    (FanGraphs fielding unavailable — using BBRef)")
+
+    # 3) Fall back to BBRef (DRS + TZ only)
+    print(f"    (FanGraphs fielding unavailable — using BBRef)")
     return fielding_stats_bbref(year)
 
 # ================================================================

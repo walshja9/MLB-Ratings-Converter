@@ -22,3 +22,4 @@ Thumbs.db
 # Project-local caches
 .cache/
 *.parquet
+fg_fielding_cache/
