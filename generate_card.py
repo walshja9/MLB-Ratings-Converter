@@ -1381,8 +1381,14 @@ def calculate_ratings(data, position_override=None, mode="season"):
         rdrs_val   = oaa_data.get(f"rdrs_{target_year}") if oaa_data else None
         rtot_val   = oaa_data.get(f"rtot_{target_year}") if oaa_data else None
 
+        rngr_val = oaa_data.get(f"rngr_{target_year}") if oaa_data else None
+
         if fg_def_val is not None:
             raw_fld = clamp(1.38 * fg_def_val + 67.3)
+        elif rngr_val is not None:
+            # RngR is the range-only UZR component (FG).  Calibrated against
+            # Pedroia 2007 (RngR=0.56→73) and Sizemore 2008 (RngR=12.2→90).
+            raw_fld = clamp(1.46 * rngr_val + 72.2)
         elif rdrs_val is not None and rtot_val is not None:
             # Both DRS and TZ available — blend their outputs to reduce
             # single-metric noise (e.g. DRS and UZR can disagree by 15+ runs).
@@ -1505,7 +1511,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
             "2B":  {"l": 0.95, "r": 1.05, "f": 1.10, "b": 0.85},
             "3B":  {"l": 0.90, "r": 0.95, "f": 1.15, "b": 0.90},
             "1B":  {"l": 1.05, "r": 0.95, "f": 0.85, "b": 0.95},
-            "CF":  {"l": 1.00, "r": 0.95, "f": 0.90, "b": 0.90},
+            "CF":  {"l": 1.00, "r": 1.00, "f": 0.95, "b": 0.95},
             "RF":  {"l": 0.95, "r": 0.95, "f": 0.85, "b": 0.95},
             "LF":  {"l": 0.95, "r": 0.90, "f": 0.85, "b": 0.95},
             "OF":  {"l": 0.95, "r": 0.93, "f": 0.87, "b": 0.93},
