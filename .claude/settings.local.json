@@ -4,7 +4,9 @@
       "Bash(powershell.exe -Command \"Get-Process python -ErrorAction SilentlyContinue | Where-Object {$_.Path -like '*Robert Stock*'} | Stop-Process -Force\")",
       "Bash(powershell.exe -Command \"Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 1; 'killed'\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5000)",
-      "Bash(\"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe\" \"C:/Users/Alex/Claude Context/MLB The Show 26 - Reverse Engineer Player Ratings/app.py\")"
+      "Bash(\"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe\" \"C:/Users/Alex/Claude Context/MLB The Show 26 - Reverse Engineer Player Ratings/app.py\")",
+      "Bash(powershell.exe -Command \"Get-Process python -ErrorAction SilentlyContinue | Select-Object Id,StartTime\")",
+      "Bash(\"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe\" -c \"\nimport sys\nsys.path.insert\\(0, 'C:/Users/Alex/Claude Context/MLB The Show 26 - Reverse Engineer Player Ratings'\\)\nfrom bbref_scraper import bbref_fielding_df\ndf = bbref_fielding_df\\(1897\\)\nprint\\('COLUMNS:', list\\(df.columns\\)\\)\nprint\\('SHAPE:', df.shape\\)\nlaj = df[df['Name'].astype\\(str\\).str.contains\\('Lajoie', na=False\\)]\nprint\\('LAJOIE ROWS:', len\\(laj\\)\\)\nprint\\(laj.to_string\\(\\)\\)\n\")"
     ]
   }
 }

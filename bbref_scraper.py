@@ -122,7 +122,7 @@ def bbref_batting_df(year: int) -> pd.DataFrame:
         raise RuntimeError(f"No player batting table at {url}")
 
     df = _drop_header_repeats(df)
-    df = _safe_numeric(df, ["G","PA","AB","H","2B","3B","HR","SB","BB","SO","HBP","SF","WAR"])
+    df = _safe_numeric(df, ["G","PA","AB","H","2B","3B","HR","SB","CS","BB","SO","HBP","SF","WAR"])
     df = _safe_numeric(df, ["BA","OBP","SLG"])
     df = _dedupe_traded(df, sort_col="PA")
 
@@ -231,6 +231,8 @@ def bbref_fielding_df(year: int) -> pd.DataFrame:
     df["G"]      = df.get("Standard G")
     df["GS"]     = df.get("Standard GS")
     df["Inn"]    = df.get("Standard Inn")
+    df["Ch"]     = df.get("Standard Ch")
+    df["A"]      = df.get("Standard A")
     df["E"]      = df.get("Standard E")
     df["Fld_pct"]= df.get("Standard Fld%")
     df["Pos"]    = df.get("Pos")

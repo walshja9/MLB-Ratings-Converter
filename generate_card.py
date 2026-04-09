@@ -128,9 +128,75 @@ POSITION_DEFAULTS = {
     "OF": {"arm_str": 68, "arm_acc": 68, "react_l": 63, "react_r": 60, "react_f": 57, "react_b": 60, "clutch": 65, "bunt": 38, "drag": 30},
 }
 
+TRACKING_SPEED_BASELINES = {
+    "C": 18, "1B": 28, "2B": 48, "SS": 50, "3B": 40,
+    "LF": 38, "CF": 52, "RF": 40, "DH": 15, "OF": 44,
+}
+
+ARM_ASSIST_BASELINES = {
+    "C": 1.0, "1B": 2.0, "2B": 4.5, "SS": 4.0, "3B": 2.5,
+    "LF": 4.0, "CF": 6.0, "RF": 8.0, "OF": 5.5,
+}
+
+ARM_STRENGTH_SLOPES = {
+    "C": 0.8, "1B": 0.8, "2B": 0.6, "SS": 0.7, "3B": 1.0,
+    "LF": 2.2, "CF": 1.8, "RF": 1.9, "OF": 2.0,
+}
+
+ARM_ERROR_BASELINES = {
+    "C": 0.020, "1B": 0.018, "2B": 0.040, "SS": 0.045, "3B": 0.040,
+    "LF": 0.015, "CF": 0.012, "RF": 0.015, "OF": 0.015,
+}
+
 
 def clamp(val):
     return max(0, min(99, round(val)))
+
+
+def estimate_speed_no_tracking(bat, pos):
+    """Fallback speed model for eras without Statcast sprint speed or FG Spd.
+    Uses steal attempts, efficiency, triples, and position archetype so
+    athletic non-runners don't collapse to the old SB-only floor."""
+    sb = float(bat.get("SB", 0) or 0)
+    cs = float(bat.get("CS", 0) or 0)
+    pa = max(float(bat.get("PA", 0) or 0), 1.0)
+    triples = float(bat.get("3B", 0) or 0)
+    attempts = sb + cs
+    baseline = TRACKING_SPEED_BASELINES.get(pos, TRACKING_SPEED_BASELINES["OF"])
+    triples_per_600 = 600.0 * triples / pa
+
+    speed = baseline
+    speed += 1.2 * attempts
+    speed += 1.5 * min(triples_per_600, 8.0)
+    if attempts >= 5:
+        speed += 10.0 * ((sb / attempts) - 0.67)
+
+    return clamp(speed)
+
+
+def estimate_arm_strength_from_bbref(pos, defaults, assists, innings):
+    """Fallback arm-strength proxy for BBRef-era players without rARM."""
+    if assists is None or innings is None or innings <= 0:
+        return defaults["arm_str"]
+
+    assist_rate = 1200.0 * assists / innings
+    baseline = ARM_ASSIST_BASELINES.get(pos, ARM_ASSIST_BASELINES["OF"])
+    slope = ARM_STRENGTH_SLOPES.get(pos, ARM_STRENGTH_SLOPES["OF"])
+    raw = defaults["arm_str"] + slope * (assist_rate - baseline)
+    trust = min(innings / 900.0, 1.0)
+    return clamp(defaults["arm_str"] * (1 - trust) + raw * trust)
+
+
+def estimate_arm_accuracy_from_bbref(pos, defaults, errors, chances):
+    """Fallback arm-accuracy proxy from BBRef fielding chances/errors."""
+    if errors is None or chances is None or chances <= 0:
+        return defaults["arm_acc"]
+
+    err_rate = errors / chances
+    baseline = ARM_ERROR_BASELINES.get(pos, ARM_ERROR_BASELINES["OF"])
+    raw = defaults["arm_acc"] + (baseline - err_rate) * 350.0
+    trust = min(chances / 250.0, 1.0)
+    return clamp(defaults["arm_acc"] * (1 - trust) + raw * trust)
 
 
 def detect_player_type(player_name, year):
@@ -357,7 +423,9 @@ def pull_season_batting(player_name, year):
         "SLG": round(safe_float(row.get("SLG")), 3),
         "ISO": round(safe_float(row.get("ISO")), 3),
         "HR": safe_int(row.get("HR")),
+        "3B": safe_int(row.get("3B")),
         "SB": safe_int(row.get("SB")),
+        "CS": safe_int(row.get("CS")),
         "BB_pct": round(safe_float(row.get("BB%")) * 100, 1),
         "K_pct": round(safe_float(row.get("K%")) * 100, 1),
         "wOBA": round(safe_float(row.get("wOBA")), 3),
@@ -467,14 +535,23 @@ def pull_sprint_speed(player_name, year):
 
 CANONICAL_POSITIONS = {"RF", "LF", "CF", "1B", "2B", "SS", "3B", "C", "DH"}
 
+_BBREF_POS_CODE = {
+    "1": "P",  "2": "C",  "3": "1B", "4": "2B", "5": "3B",
+    "6": "SS", "7": "LF", "8": "CF", "9": "RF",
+    "O": "CF", "D": "DH", "H": "DH",
+}
+
+
 def normalize_position(raw):
     """Map a raw BBRef Pos string to a canonical position token.
     Handles: leading asterisks (*1B), slash composites (1B/OF),
-    hyphen composites (1B-2B), and outfield aliases (OF, LF-RF).
+    hyphen composites (1B-2B), outfield aliases (OF, LF-RF), and
+    pre-1900 BBRef compact codes like '*3O/5' where positions are
+    single-character digits (1=P..9=RF, O=OF, D/H=DH) concatenated.
     """
     if not raw:
         return "OF"
-    s = raw.strip()
+    s = str(raw).strip()
     if s.startswith("*"):
         s = s[1:]
     if "/" in s:
@@ -486,6 +563,9 @@ def normalize_position(raw):
         return s
     if s == "OF":
         return "CF"
+    # Pre-1900 compact format: first char is the primary position code.
+    if s and s[0] in _BBREF_POS_CODE:
+        return _BBREF_POS_CODE[s[0]]
     return "OF"
 
 
@@ -533,6 +613,9 @@ def pull_career_fielding(player_name, year, num_years=4):
             total_errr = 0
             total_rdrs = 0
             total_rtot = 0
+            total_assists = 0
+            total_errors = 0
+            total_chances = 0
             has_oaa = False
             has_def = False
             has_rarm = False
@@ -540,6 +623,9 @@ def pull_career_fielding(player_name, year, num_years=4):
             has_errr = False
             has_rdrs = False
             has_rtot = False
+            has_assists = False
+            has_errors = False
+            has_chances = False
             best_pos = None
             best_inn = 0
 
@@ -571,6 +657,21 @@ def pull_career_fielding(player_name, year, num_years=4):
                 if errr is not None:
                     total_errr += errr
                     has_errr = True
+
+                assists = safe_float(row.get("A"))
+                if assists is not None:
+                    total_assists += assists
+                    has_assists = True
+
+                errors = safe_float(row.get("E"))
+                if errors is not None:
+                    total_errors += errors
+                    has_errors = True
+
+                chances = safe_float(row.get("Ch"))
+                if chances is not None:
+                    total_chances += chances
+                    has_chances = True
 
                 # BBRef-specific defensive metrics (era-specific inputs).
                 # Rdrs = DRS (post-2003); Rtot = Total Zone (deeper history).
@@ -605,6 +706,12 @@ def pull_career_fielding(player_name, year, num_years=4):
                 yearly_oaa[f"rdrs_{y}"] = total_rdrs
             if has_rtot:
                 yearly_oaa[f"rtot_{y}"] = total_rtot
+            if has_assists:
+                yearly_oaa[f"ass_{y}"] = total_assists
+            if has_errors:
+                yearly_oaa[f"err_{y}"] = total_errors
+            if has_chances:
+                yearly_oaa[f"ch_{y}"] = total_chances
             if total_inn > 0:
                 yearly_oaa[f"inn_{y}"] = total_inn
 
@@ -1053,7 +1160,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
     # --- VISION: -2.55 * K% + 121.3 ---
     ratings["vision"] = clamp(-2.55 * bat["K_pct"] + 121.3)
 
-    # --- SPEED: Statcast sprint speed > FG Spd > SB estimate ---
+    # --- SPEED: Statcast sprint speed > FG Spd > BBRef running proxy ---
     sprint = data.get("sprint_speed")
     if sprint:
         ratings["speed"] = clamp(max(15.01 * sprint - 353.5, 15))
@@ -1063,16 +1170,9 @@ def calculate_ratings(data, position_override=None, mode="season"):
         ratings["speed"] = clamp(9.42 * bat["fg_spd"] + 19.1)
         sprint = None
     else:
-        # Last resort: SB-based estimate
-        sb = bat["SB"]
-        if sb >= 50:
-            ratings["speed"] = 99
-        elif sb >= 30:
-            ratings["speed"] = clamp(55 + sb * 1.2)
-        elif sb >= 10:
-            ratings["speed"] = clamp(40 + sb * 1.5)
-        else:
-            ratings["speed"] = clamp(25 + sb * 2)
+        # BBRef-era fallback: use attempts + triples + position archetype.
+        # This avoids collapsing athletic pre-2015 players to the old SB-only floor.
+        ratings["speed"] = estimate_speed_no_tracking(bat, pos)
         sprint = None
 
     # --- DISCIPLINE: 4.86 * BB% + 17.2 ---
@@ -1253,27 +1353,30 @@ def calculate_ratings(data, position_override=None, mode="season"):
         ratings["durability"] = clamp(0.52 * bat["G"] + 15)
 
     # --- ARM STRENGTH & ACCURACY ---
-    # Outfielders: use rARM (runs saved by arm, range ~-6 to +8)
-    # Infielders: use RngR for reactions, ErrR for accuracy
+    # Priority: FG-era arm metrics > BBRef assists/errors/chances proxies > defaults
     oaa_data = data.get("fielding_oaa", {})
     target_year = data["year"]
     rarm = oaa_data.get(f"rarm_{target_year}")
     rngr = oaa_data.get(f"rngr_{target_year}")
     errr = oaa_data.get(f"errr_{target_year}")
+    assists = oaa_data.get(f"ass_{target_year}")
+    errors = oaa_data.get(f"err_{target_year}")
+    chances = oaa_data.get(f"ch_{target_year}")
+    arm_innings = oaa_data.get(f"inn_{target_year}")
 
     if pos in ("LF", "CF", "RF", "OF") and rarm is not None:
         # OF arm strength: rARM maps ~-6=50, 0=68, +8=99
         # Formula: 3.9 * rARM + 68 (position baseline adjusts from there)
         ratings["arm_strength"] = clamp(3.9 * rarm + defaults["arm_str"])
     else:
-        ratings["arm_strength"] = defaults["arm_str"]
+        ratings["arm_strength"] = estimate_arm_strength_from_bbref(pos, defaults, assists, arm_innings)
 
     if errr is not None:
         # ErrR: fewer errors = better accuracy. Range ~-5 to +5
         # Positive ErrR = fewer errors than average = good
         ratings["arm_accuracy"] = clamp(3.0 * errr + defaults["arm_acc"])
     else:
-        ratings["arm_accuracy"] = defaults["arm_acc"]
+        ratings["arm_accuracy"] = estimate_arm_accuracy_from_bbref(pos, defaults, errors, chances)
 
     # --- REACTIONS: position-specific directional mapping ---
     # Use RngR (range) + OOZ to estimate overall reaction quality,
