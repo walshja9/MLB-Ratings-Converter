@@ -31,7 +31,7 @@ from generate_card import (
 
 YEAR = 2025
 
-# Targets from CLAUDE.md. Duran excluded — no listed target.
+# Targets: Show 26 OVR ratings. Duran excluded — no listed target.
 HITTERS = [
     ("Juan Soto",            None, 98),
     ("Bobby Witt Jr.",       None, 99),
@@ -44,6 +44,15 @@ HITTERS = [
     ("Matt Shaw",            None, 74),
     ("Hyeseong Kim",         None, 74),
     ("Chandler Simpson",     None, 72),
+    # New calibration players (April 2026)
+    ("Trea Turner",          None, 91),
+    ("Elly De La Cruz",      None, 87),
+    ("Esteury Ruiz",         None, 64),
+    ("Aaron Judge",          None, 99),
+    ("Dillon Dingler",       None, 83),
+    ("Steward Berroa",       None, 63),
+    ("Steven Kwan",          None, 82),
+    ("George Valera",        None, 68),
 ]
 
 # Pitchers — some surnames in CLAUDE.md are ambiguous; my best guesses noted.
@@ -58,7 +67,10 @@ PITCHERS = [
     ("Will Smith",      81),
     ("Jeff Hoffman",    80),
     ("Connolly Early",  76),
-    # "Tolle" — still unidentified; skipping
+    ("Payton Tolle",    69),
+    # New calibration pitchers (April 2026)
+    ("Parker Messick",       77),
+    ("Yoshinobu Yamamoto",   95),
 ]
 
 

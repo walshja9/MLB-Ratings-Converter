@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MLB The Show 26 - Card Generator</title>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --bg: #0d1117;
@@ -408,6 +409,7 @@
         /* Save button */
         .card-save {
             text-align: center; padding: 6px 16px 12px;
+            display: flex; gap: 8px; justify-content: center;
         }
 
         .card-save button {
@@ -417,6 +419,7 @@
             font-family: 'Inter', sans-serif; transition: all 0.2s;
         }
         .card-save button:hover { border-color: var(--accent); color: var(--accent); }
+        .card-save button:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* Pitch Arsenal */
         .arsenal-section {
@@ -690,7 +693,7 @@ function hitterCard(d) {
             <h3>Durability</h3>
             <span class="val c-${rc(o.durability)}">${o.durability}</span>
         </div>
-        <div class="card-save"><button onclick="saveCard(this)">Copy Card</button></div>`;
+        <div class="card-save"><button onclick="saveCard(this)">Copy Card</button> <button onclick="downloadCard(this)">Download PNG</button></div>`;
 }
 
 function arsenalHTML(arsenal, throws, estimated) {
@@ -765,7 +768,7 @@ function pitcherCard(d) {
             <h3>Durability</h3>
             <span class="val c-${rc(o.durability)}">${o.durability}</span>
         </div>
-        <div class="card-save"><button onclick="saveCard(this)">Copy Card</button></div>`;
+        <div class="card-save"><button onclick="saveCard(this)">Copy Card</button> <button onclick="downloadCard(this)">Download PNG</button></div>`;
 }
 
 function renderCard(d) {
@@ -778,7 +781,10 @@ function renderCard(d) {
 }
 
 function showCards(list) {
-    document.getElementById('cards').innerHTML = list.map(c => `<div class="card">${renderCard(c)}</div>`).join('');
+    document.getElementById('cards').innerHTML = list.map(c => {
+        const safeName = (c.name || 'card').replace(/[^a-zA-Z0-9]/g, '_');
+        return `<div class="card" data-player="${esc(c.name)}" data-year="${esc(c.year)}">${renderCard(c)}</div>`;
+    }).join('');
 }
 
 // ========== GENERATE ==========
@@ -850,6 +856,55 @@ function saveCard(btn) {
     }
     actions.style.display = '';
     setTimeout(() => { btn.textContent = 'Copy Card'; }, 2000);
+}
+
+// ========== DOWNLOAD PNG ==========
+async function downloadCard(btn) {
+    const card = btn.closest('.card');
+    const actions = card.querySelector('.card-save');
+    const origText = btn.textContent;
+    btn.textContent = 'Rendering...';
+    btn.disabled = true;
+    actions.style.visibility = 'hidden';
+    actions.style.height = '0';
+    actions.style.padding = '0';
+    actions.style.overflow = 'hidden';
+
+    try {
+        const canvas = await html2canvas(card, {
+            scale: 2,
+            backgroundColor: '#161b22',
+            useCORS: true,
+            logging: false
+        });
+
+        const playerName = (card.dataset.player || 'card').replace(/\s+/g, '_');
+        const year = card.dataset.year || '';
+        const filename = `${playerName}_${year}.png`;
+
+        canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+
+        btn.textContent = 'Saved!';
+    } catch (e) {
+        console.error('Card export failed:', e);
+        btn.textContent = 'Failed';
+    }
+
+    actions.style.visibility = '';
+    actions.style.height = '';
+    actions.style.padding = '';
+    actions.style.overflow = '';
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = origText; }, 2000);
 }
 
 // ========== UTILS ==========

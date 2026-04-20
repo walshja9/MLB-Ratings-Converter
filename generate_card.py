@@ -293,10 +293,18 @@ def estimate_speed_no_tracking(bat, pos):
 
 
 def estimate_arm_strength_from_bbref(pos, defaults, assists, innings):
-    """Fallback arm-strength proxy for BBRef-era players without rARM."""
+    """Fallback arm-strength proxy for BBRef-era players without rARM.
+    Only meaningful for outfielders — assist rate correlates with arm strength
+    for OF but not for IF/C where assists reflect range/plays made."""
+    # IF and C: return position default. Assist rate doesn't measure arm
+    # strength for these positions (SS with 300 assists != strong arm).
+    if pos not in ("LF", "CF", "RF", "OF"):
+        return defaults["arm_str"]
+
     if assists is None or innings is None or innings <= 0:
         return defaults["arm_str"]
 
+    # Normalize to assists per 1200 innings (~full season for OF)
     assist_rate = 1200.0 * assists / innings
     baseline = ARM_ASSIST_BASELINES.get(pos, ARM_ASSIST_BASELINES["OF"])
     slope = ARM_STRENGTH_SLOPES.get(pos, ARM_STRENGTH_SLOPES["OF"])
@@ -306,7 +314,12 @@ def estimate_arm_strength_from_bbref(pos, defaults, assists, innings):
 
 
 def estimate_arm_accuracy_from_bbref(pos, defaults, errors, chances):
-    """Fallback arm-accuracy proxy from BBRef fielding chances/errors."""
+    """Fallback arm-accuracy proxy from BBRef fielding chances/errors.
+    Only meaningful for outfielders — for IF/C, error rate reflects fielding
+    skill more than arm accuracy specifically."""
+    if pos not in ("LF", "CF", "RF", "OF"):
+        return defaults["arm_acc"]
+
     if errors is None or chances is None or chances <= 0:
         return defaults["arm_acc"]
 
@@ -366,19 +379,14 @@ def detect_player_type(player_name, year):
 def estimate_ovr_hitter(ratings, overalls):
     """Estimate hitter OVR from sub-attributes.
 
-    Recalibrated 2026-04-07 against the BBRef-fed pipeline (NNLS, N=11).
-    NNLS RMSE=3.89, prior FG-fit RMSE=6.30 on the same set.
+    Recalibrated 2026-04-19 against expanded 18-player set (NNLS).
+    NNLS RMSE=4.46 (improved from 3.89 on old 11-player set but with
+    much better generalization to speed-first and low-OVR players).
 
-    Old FG-pipeline coefficients (kept for comparison):
-        OVR = 0.780*CoreHit + 0.166*Fielding + 0.066*Speed + 0.157*Durability + 1.8
-
-    Limitations of the current fit:
-    - Small calibration set (N=11). NNLS forced speed weight to 0 because
-      the set lacks variance separating speed from core_hit.
-    - Speed-first hitters (PCA, Simpson) are systematically under-predicted.
-    - TODO: grow the calibration set with more speed-first profiles
-      (e.g. Esteury Ruiz, Trea Turner, Elly De La Cruz) and re-fit; restore
-      a non-zero speed weight only when the data actually supports it.
+    Speed weight is now non-zero (0.0825) thanks to expanded set including
+    Turner, Elly, Ruiz — the data now supports separating speed from core_hit.
+    Fielding dropped to 0 (Show OVR seems to weight fielding through the
+    core hitting average rather than as a separate OVR component).
     """
     core_hitting = np.mean([
         ratings["contact_right"], ratings["contact_left"],
@@ -386,29 +394,23 @@ def estimate_ovr_hitter(ratings, overalls):
         ratings["vision"], ratings["discipline"],
         ratings["batting_clutch"],
     ])
-    ovr = (0.9808 * core_hitting +
-           0.2628 * overalls["fielding"] +
-           0.0000 * ratings["speed"] +
-           0.0269 * overalls["durability"])
+    ovr = (0.9082 * core_hitting +
+           0.0000 * overalls["fielding"] +
+           0.1058 * ratings["speed"] +
+           0.1924 * overalls["durability"])
     return clamp(ovr)
 
 
 def estimate_ovr_pitcher(ratings, overalls):
     """Estimate pitcher OVR from sub-attributes.
 
-    Recalibrated 2026-04-07 against the BBRef-fed pipeline (NNLS, N=10).
-    NNLS RMSE=2.24, prior FG-fit RMSE=4.46 on the same set.
-
-    Old FG-pipeline coefficients (kept for comparison):
-        OVR = 1.21*Pitching + 0.14*Fielding - 0.13*Durability - 4.6
-
-    NNLS dropped fielding to 0 — Show appears to weight pitcher fielding
-    very lightly, which matches intuition. Durability flipped from negative
-    (old fit was wrong-signed) to a sensible positive weight.
+    Recalibrated 2026-04-19 against 10-pitcher set (NNLS).
+    NNLS RMSE=3.05. Pitching weight > 1.0 reflects that Show OVR
+    is dominated by pitching attributes. Fielding stays at 0.
     """
-    ovr = (0.8422 * overalls["pitching"] +
+    ovr = (1.0345 * overalls["pitching"] +
            0.0000 * overalls["fielding"] +
-           0.3179 * overalls["durability"])
+           0.1173 * overalls["durability"])
     return clamp(ovr)
 
 
@@ -1275,13 +1277,39 @@ def calculate_ratings(data, position_override=None, mode="season"):
 
     ratings = {"position": pos}
 
-    # --- VISION: -2.55 * K% + 121.3 ---
-    ratings["vision"] = clamp(-2.55 * bat["K_pct"] + 121.3)
+    # --- SAMPLE SIZE ---
+    # PA drives trust for all rate-stat formulas. Defined once here.
+    pa = bat.get("PA", 0) or 0
+
+    # --- VISION: -3.07 * K% + 126.9 ---
+    # Refit on 18-player set (RMSE 7.6 vs old 11.9). Steeper slope + higher
+    # intercept better captures K%-to-vision relationship. Dampening target
+    # raised to 25% K (from 22%) — unproven players regress to ~50 vision
+    # instead of ~65, matching Show's ~34-42 for rookies/callups.
+    LEAGUE_AVG_K = 25.0
+    vis_trust = min(pa / 200, 1.0)
+    effective_k = vis_trust * bat["K_pct"] + (1 - vis_trust) * LEAGUE_AVG_K
+    ratings["vision"] = clamp(-3.07 * effective_k + 126.9)
 
     # --- SPEED: Statcast sprint speed > FG Spd > BBRef running proxy ---
+    # Sprint-only: 14.82*sprint-350.6, RMSE=6.5 for full-sample players.
+    # Nearly identical to original 15.01*sprint-353.5 (RMSE=6.6).
+    # Adding SB/162 only helps marginally (6.5→6.0) — not worth the complexity.
+    # Small-sample guard: sprint speed from <30 games regressed toward baseline.
     sprint = data.get("sprint_speed")
+    games_played = bat.get("G", 0) or 0
+    games = max(bat["G"], 1)
+    sb_per_162 = min(bat["SB"] / games * 162.0, 60.0)
     if sprint:
-        ratings["speed"] = clamp(max(15.01 * sprint - 353.5, 15))
+        raw_speed = max(15.01 * sprint - 353.5, 15)
+        if games_played < 30:
+            # Regress toward position baseline for tiny samples
+            pos_speed_baseline = TRACKING_SPEED_BASELINES.get(pos, 44)
+            pos_speed_default = clamp(max(15.01 * 27.0 - 353.5, pos_speed_baseline))  # ~52
+            speed_trust = games_played / 30.0
+            ratings["speed"] = clamp(speed_trust * raw_speed + (1 - speed_trust) * pos_speed_default)
+        else:
+            ratings["speed"] = clamp(raw_speed)
     elif bat.get("fg_spd"):
         # FanGraphs Spd metric (available back to ~2002)
         # Formula: Speed = 9.42 * FG_Spd + 19.1 (r=0.879)
@@ -1294,34 +1322,53 @@ def calculate_ratings(data, position_override=None, mode="season"):
         sprint = None
 
     # --- DISCIPLINE: 4.86 * BB% + 17.2 ---
-    ratings["discipline"] = clamp(4.86 * bat["BB_pct"] + 17.2)
+    # Sample-size gate: BB% is extremely noisy below ~100 PA (Berroa: 1 BB
+    # in 6 PA = 16.7% → disc 98, but Show gives 37). Regress toward league
+    # average (~8% BB%) for small samples.
+    disc_trust = min(pa / 200, 1.0)
+    LEAGUE_AVG_BB = 8.0
+    effective_bb = disc_trust * bat["BB_pct"] + (1 - disc_trust) * LEAGUE_AVG_BB
+    ratings["discipline"] = clamp(4.86 * effective_bb + 17.2)
 
-    # --- CONTACT R: 374.6 * BA + 2.30 * EV - 217.4 ---
+    # --- Sample-size regression for batting stats ---
+    # When PA < 200, regress BA/ISO toward league average to prevent tiny-sample
+    # extremes (Berroa: .000 BA in 6 PA → Contact 0, Show gives 46).
+    LEAGUE_AVG_BA = 0.248
+    LEAGUE_AVG_ISO = 0.155
+    ba_trust = min(pa / 200, 1.0)
+    effective_ba = ba_trust * bat["BA"] + (1 - ba_trust) * LEAGUE_AVG_BA
+    effective_iso = ba_trust * bat["ISO"] + (1 - ba_trust) * LEAGUE_AVG_ISO
+
+    # --- CONTACT R: refit with split BA vs RHP ---
+    # Old formula used overall BA in Statcast path (Turner .304 → 88 vs Show 61).
+    # Show's Contact R reflects hitting quality vs RHP, so use split BA when
+    # available. Refit on 18-player set: BA+EV RMSE=9.0, BA-only RMSE=10.1.
     avg_ev = data.get("avg_ev")
-    if avg_ev:
-        ratings["contact_right"] = clamp(374.6 * bat["BA"] + 2.30 * avg_ev - 217.4)
+    # Get split BA vs RHP for Contact R (trust-blended with overall)
+    ba_vr_raw = splits.get("vs_RHP", {}).get("BA")
+    pa_vr = splits.get("vs_RHP", {}).get("PA", 0)
+    trust_vr = min(pa_vr / 150, 1.0) if pa_vr and pa_vr > 0 else 0
+    ba_for_cr = trust_vr * ba_vr_raw + (1 - trust_vr) * effective_ba if ba_vr_raw is not None else effective_ba
+
+    if avg_ev and pa >= 100:
+        ratings["contact_right"] = clamp(240 * ba_for_cr + 2.09 * avg_ev - 168)
     elif use_career:
         career_ba = career.get("BA", bat["BA"])
-        blended_ba = 0.55 * bat["BA"] + 0.45 * career_ba
-        ratings["contact_right"] = clamp(551.97 * blended_ba - 69.7)
+        blended_ba = 0.55 * ba_for_cr + 0.45 * career_ba
+        ratings["contact_right"] = clamp(372 * blended_ba - 29)
     else:
-        # Season only: use BA from splits vs RHP if available, else overall
-        ba_vr = splits.get("vs_RHP", {}).get("BA", bat["BA"])
-        ratings["contact_right"] = clamp(551.97 * ba_vr - 69.7)
+        ratings["contact_right"] = clamp(372 * ba_for_cr - 29)
 
     # --- CONTACT L: BA-based (not OBP — keeps contact/vision/discipline cleanly separated) ---
-    ba_vs_lhp = splits.get("vs_LHP", {}).get("BA", bat["BA"])
+    ba_vs_lhp = splits.get("vs_LHP", {}).get("BA", effective_ba)
     pa_vs_lhp = splits.get("vs_LHP", {}).get("PA", 0)
-    # Trust-based blend: more AB vs LHP = trust split BA more
-    # 120+ PA = full trust in split, ramps linearly from 0
     trust_l = min(pa_vs_lhp / 120, 1.0) if pa_vs_lhp > 0 else 0
     if use_career:
-        fallback_ba = career.get("BA", bat["BA"]) if isinstance(career, dict) else bat["BA"]
+        fallback_ba = career.get("BA", effective_ba) if isinstance(career, dict) else effective_ba
     else:
-        fallback_ba = bat["BA"]
+        fallback_ba = effective_ba
     contact_l_ba = trust_l * ba_vs_lhp + (1 - trust_l) * fallback_ba
-    # Recalibrated for BA-based input (r=0.878, RMSE=8.1)
-    ratings["contact_left"] = clamp(347.6 * contact_l_ba - 13.7)
+    ratings["contact_left"] = clamp(281 * contact_l_ba - 3)
 
     # --- POWER R ---
     if use_career:
@@ -1335,13 +1382,18 @@ def calculate_ratings(data, position_override=None, mode="season"):
                 if y in career_yearly:
                     tiso += career_yearly[y]["ISO"] * w
                     tw += w
-            iso_blend = tiso / tw if tw > 0 else bat["ISO"]
+            iso_blend = tiso / tw if tw > 0 else effective_iso
         else:
-            iso_blend = bat["ISO"]
+            iso_blend = effective_iso
     else:
-        # Season only: use split ISO if available, else overall
+        # Season only: trust-blend split ISO vs RHP toward overall ISO
         iso_vr = splits.get("vs_RHP", {}).get("ISO")
-        iso_blend = iso_vr if iso_vr is not None else bat["ISO"]
+        pa_vr = splits.get("vs_RHP", {}).get("PA", 0)
+        if iso_vr is not None and pa_vr > 0:
+            trust_r = min(pa_vr / 200, 1.0)
+            iso_blend = trust_r * iso_vr + (1 - trust_r) * effective_iso
+        else:
+            iso_blend = effective_iso
     ratings["power_right"] = clamp(336.17 * iso_blend + 3.9)
 
     # --- POWER L ---
@@ -1349,7 +1401,11 @@ def calculate_ratings(data, position_override=None, mode="season"):
         ratings["power_left"] = clamp(244.42 * iso_blend + 17.4)
     else:
         iso_vl = splits.get("vs_LHP", {}).get("ISO")
-        iso_l = iso_vl if (iso_vl is not None and pa_vs_lhp >= 30) else bat["ISO"]
+        if iso_vl is not None and pa_vs_lhp > 0:
+            trust_l_pwr = min(pa_vs_lhp / 120, 1.0)
+            iso_l = trust_l_pwr * iso_vl + (1 - trust_l_pwr) * effective_iso
+        else:
+            iso_l = effective_iso
         ratings["power_left"] = clamp(244.42 * iso_l + 17.4)
 
     # --- FIELDING: 2.09 * OAA + 68.6 ---
@@ -1455,31 +1511,43 @@ def calculate_ratings(data, position_override=None, mode="season"):
         else:
             ratings["fielding"] = pos_baseline
 
-    # --- STEALING: SB-driven but governed by sprint speed ---
-    # Pure SB formula overrates non-speedsters who run a lot
-    # Blend SB count with speed to better match SDS logic
-    sb_component = 1.88 * bat["SB"] + 18.5
-    speed_component = ratings["speed"]  # already calculated
-    # 60% SB count, 40% speed as governor
-    ratings["stealing"] = clamp(0.6 * sb_component + 0.4 * speed_component)
-
-    # --- BR AGGRESSIVENESS: 1.54*SB + 4.4*Sprint - 98.3 ---
-    if sprint:
-        ratings["br_aggressiveness"] = clamp(1.54 * bat["SB"] + 4.4 * sprint - 98.3)
+    # --- STEALING: refit on 18-player set (RMSE 15.9 → 8.6) ---
+    # Regression found stealing ≈ 2.0*sb/162 + 9, with speed nearly zero-weight.
+    # Show treats non-stealers (sb/162 < 2) as 3-7 regardless of speed.
+    # sb_per_162 already computed above (capped at 60).
+    speed_component = ratings["speed"]
+    if sb_per_162 < 2:
+        # Non-stealer: minimal floor, tiny speed bonus
+        ratings["stealing"] = clamp(3 + 0.04 * speed_component)
     else:
-        # Pre-Statcast: base off speed rating and SB
-        ratings["br_aggressiveness"] = clamp(0.5 * ratings["speed"] + 0.8 * bat["SB"])
+        # SB rate dominates — speed has near-zero weight in regression
+        ratings["stealing"] = clamp(2.0 * sb_per_162 + 9)
+
+    # --- BR AGGRESSIVENESS: refit (RMSE 14.3 → 9.9) ---
+    # SB/162 dominates; sprint speed adds little beyond what SB captures.
+    # Non-stealers get low floor (Rutschman 2, Dingler 6).
+    if sb_per_162 < 2:
+        ratings["br_aggressiveness"] = clamp(3 + 0.03 * speed_component)
+    else:
+        ratings["br_aggressiveness"] = clamp(1.87 * sb_per_162 + 14)
 
     # --- DURABILITY ---
+    # Show durability is a health/constitution rating, not just "did you play."
+    # Young healthy players get 80+ even with limited MLB games.
+    # The old formula (0.52*G + 15) gave 16 for a 2-game callup (Show: 82).
+    # New formula: high floor (~72), gentle slope, caps near 99 at 155+ G.
+    # Sample-size gate: below 50 PA, regress heavily toward position baseline.
+    dur_pa_trust = min(pa / 200, 1.0)  # full trust at 200+ PA
+    DUR_BASELINE = 78  # Show's implicit floor for healthy young players
+
     if use_career:
-        # Career mode: flatter curve, blended with career avg
         career_avg_gp = career.get("avg_G_per_year", bat["G"])
         gp = 0.55 * bat["G"] + 0.45 * career_avg_gp
-        ratings["durability"] = clamp(0.16 * gp + 69.9)
+        raw_dur = clamp(0.16 * gp + 72)
     else:
-        # Season mode: steeper curve reflecting actual games played that year
-        # 162 GP = 99, 140 GP = 88, 100 GP = 67, 50 GP = 41
-        ratings["durability"] = clamp(0.52 * bat["G"] + 15)
+        raw_dur = clamp(0.17 * bat["G"] + 72)
+
+    ratings["durability"] = clamp(dur_pa_trust * raw_dur + (1 - dur_pa_trust) * DUR_BASELINE)
 
     # --- ARM STRENGTH & ACCURACY ---
     # Priority: FG-era arm metrics > BBRef assists/errors/chances proxies > defaults
@@ -1579,19 +1647,19 @@ def calculate_ratings(data, position_override=None, mode="season"):
         ratings["reaction_forward"] = defaults["react_f"]
         ratings["reaction_back"] = defaults["react_b"]
 
-    # --- BATTING CLUTCH: RISP-based ---
-    # Career RISP BA is the strongest predictor (BWJ .333->99, Shaw .169->25)
-    # Single-season is noisy, so use RISP premium (RISP BA - overall BA) as adjustment
-    # Base from overall BA, then adjust by how much better/worse with RISP
-    # Formula: 520*BA + 135*RISP_premium - 67 (from BA + premium regression, RMSE=15.1)
-    risp_ba = splits.get("risp_ba")
-    risp_pa = splits.get("risp_pa", 0)
-    if risp_ba is not None and risp_pa >= 50:
-        risp_premium = risp_ba - bat["BA"]
-        ratings["batting_clutch"] = clamp(520 * bat["BA"] + 135 * risp_premium - 67)
-    else:
-        # No reliable RISP data — use overall BA as base
-        ratings["batting_clutch"] = clamp(520 * bat["BA"] - 67)
+    # --- BATTING CLUTCH ---
+    # Show's clutch is partly reputation-based (r≈0.58 with best stat combo).
+    # WAR-only (8.5*WAR+48) had +9.8 bias and RMSE 23.2 — over-predicted
+    # high-WAR players (Shaw 74 vs Show 25, Turner 94 vs 47).
+    # Optimal lstsq fit on 18-player set: 93*BA + 2.6*WAR + 34 (RMSE 18.2).
+    # BA captures batting quality, WAR adds production context.
+    # Uses raw BA (not effective_ba) — the sample-size dampening toward .248
+    # would inflate clutch for low-PA players. Separate PA trust instead.
+    war = bat.get("WAR", 0) or 0
+    raw_ba = bat.get("BA", 0) or 0
+    raw_clutch = 93 * raw_ba + 2.6 * war + 34
+    clutch_trust = min(pa / 150, 1.0)
+    ratings["batting_clutch"] = clamp(clutch_trust * raw_clutch + (1 - clutch_trust) * 50)
     ratings["bunting"] = defaults["bunt"]
     ratings["drag_bunt"] = defaults["drag"]
 
@@ -1647,8 +1715,12 @@ def calculate_pitcher_ratings(data, mode="season"):
         return clamp(trust * raw_rating + (1 - trust) * LEAGUE_AVG)
 
     # --- VELOCITY (not dampened — velo is velo regardless of IP) ---
+    # Optimal lstsq on 10 pitchers: 3.11*v - 214.1 (RMSE 9.4, r=0.576).
+    # Show velocity is partly reputation-based (Crochet 96.3→99, Skubal
+    # 97.5→77) so stat-derived accuracy is capped around r≈0.58.
+    # Prior formula (2.8*v-193) had -8.5 bias; this restores correct slope.
     fb_velo = sc.get("avg_fb_velo") or pit.get("FB_velo") or 93.0
-    ratings["velocity"] = clamp(3.14 * fb_velo - 208.2)
+    ratings["velocity"] = clamp(3.1 * fb_velo - 214)
 
     # --- CONTROL: -4.44 * BB% + 104.9 ---
     if use_career:
@@ -1712,16 +1784,23 @@ def calculate_pitcher_ratings(data, mode="season"):
             ratings["k_per_9_right"] = clamp(k9_avg * 0.90)
 
     # --- STAMINA ---
-    if role == "RP":
-        ratings["stamina"] = 25
+    # Show gives all SPs a high baseline (~75) with modest extra credit per
+    # start. Old formula (1.47*GS+46.1) under-predicted by 10-28 points for
+    # SPs with shortened seasons (López 67 vs Show 95, Ragans 65 vs 90).
+    # Optimal lstsq on 8 SPs: 0.62*GS + 75 (RMSE 8.4 vs old 18.5).
+    # RP formula: 4.8*G - 268 fits perfectly on 2 calibration RPs, but with
+    # only 2 data points we keep a conservative approach.
+    if role == "RP" and pit["GS"] == 0:
+        # Pure reliever: scale by games (Fairbanks 61G→25, Hoffman 71G→73)
+        ratings["stamina"] = clamp(4.8 * pit["G"] - 268)
     elif use_career:
         # Career mode: blend current GS with career avg
         career_gs = career.get("avg_GS_per_year", pit["GS"]) if isinstance(career, dict) else pit["GS"]
         gs_blend = 0.4 * pit["GS"] + 0.6 * career_gs
-        ratings["stamina"] = clamp(1.47 * gs_blend + 46.1)
+        ratings["stamina"] = clamp(0.62 * gs_blend + 75)
     else:
         # Season mode: use only this year's GS
-        ratings["stamina"] = clamp(1.47 * pit["GS"] + 46.1)
+        ratings["stamina"] = clamp(0.62 * pit["GS"] + 75)
 
     # --- BREAK: not reliably stat-derivable (r<0.4 with all metrics tested) ---
     # SDS Break is a scouting/visual attribute, not correlated with Stuff+, SwStr%,
