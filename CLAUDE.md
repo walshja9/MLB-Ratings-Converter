@@ -83,7 +83,7 @@ Multi-position players are aggregated across all position entries per year (e.g.
 
 | Attribute | Formula | RMSE |
 |-----------|---------|------|
-| HR/9 | `-0.9 * HR/9 + 90.8` (dampen-aware refit, shallow slope) | 6.0 |
+| HR/9 | `-7.0 * HR/9 + 96.3` (dampen-aware refit, 1pt HR/9 = 7pts rating) | 6.1 |
 | H/9 splits | L: `-215.5 * BA_vL + 128.8`, R: `-49.6 * BA_vR + 98.3` (dampen-aware refit) | L: 6.9, R: 6.1 |
 | K/9 splits | `2.2 * K%_split + 15` per split (dampened) | L: 11.3, R: 7.9 |
 | Control | `-0.7 * BB/9 - 71.2 * WHIP + 149.9` (WHIP dominates) | 9.5 |

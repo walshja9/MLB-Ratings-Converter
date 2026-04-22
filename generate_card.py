@@ -1754,15 +1754,16 @@ def calculate_pitcher_ratings(data, mode="season"):
         whip_val = pit["WHIP"]
     ratings["control"] = dampen(-0.7 * bb9_val + -71.2 * whip_val + 149.9)
 
-    # --- HR/9: -0.9 * HR/9 + 90.8 ---
-    # Dampen-aware refit: shallow slope because dampening already compresses range.
-    # Old formula (-13.87) was way too steep after dampening. RMSE 6.0 (was 11.7).
+    # --- HR/9: -7.0 * HR/9 + 96.3 ---
+    # Dampen-aware refit: 1 pt HR/9 = 7 pts rating (meaningful but not too steep).
+    # Old -13.87 was too steep after dampening (RMSE 13.8). Slopes -4 to -7 all
+    # give RMSE ~6.1 on calibration set, so we pick -7 for conceptual soundness.
     if use_career:
         career_hr9 = career.get("HR_per_9", pit["HR_per_9"])
         hr9_val = 0.5 * pit["HR_per_9"] + 0.5 * career_hr9
     else:
         hr9_val = pit["HR_per_9"]
-    ratings["hr_per_9"] = dampen(-0.9 * hr9_val + 90.8)
+    ratings["hr_per_9"] = dampen(-7.0 * hr9_val + 96.3)
 
     # --- H/9 and K/9: compute per-split from Statcast BA/K% against ---
     vs_lhb = sc.get("vs_LHB", {})
