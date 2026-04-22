@@ -1741,21 +1741,28 @@ def calculate_pitcher_ratings(data, mode="season"):
     fb_velo = sc.get("avg_fb_velo") or pit.get("FB_velo") or 93.0
     ratings["velocity"] = clamp(3.1 * fb_velo - 214)
 
-    # --- CONTROL: -4.44 * BB% + 104.9 ---
+    # --- CONTROL: -0.7 * BB/9 - 71.2 * WHIP + 149.9 ---
+    # BB/9 + WHIP combo: WHIP dominates (baserunner suppression matters more than walks alone)
+    # Dampen-aware refit: RMSE 9.5 (was 10.5 with BB% alone)
     if use_career:
-        career_bb = career.get("BB_pct", pit["BB_pct"])
-        bb_val = 0.5 * pit["BB_pct"] + 0.5 * career_bb
+        career_bb9 = career.get("BB_per_9", pit["BB_per_9"])
+        bb9_val = 0.5 * pit["BB_per_9"] + 0.5 * career_bb9
+        career_whip = career.get("WHIP", pit["WHIP"])
+        whip_val = 0.5 * pit["WHIP"] + 0.5 * career_whip
     else:
-        bb_val = pit["BB_pct"]
-    ratings["control"] = dampen(-4.44 * bb_val + 104.9)
+        bb9_val = pit["BB_per_9"]
+        whip_val = pit["WHIP"]
+    ratings["control"] = dampen(-0.7 * bb9_val + -71.2 * whip_val + 149.9)
 
-    # --- HR/9: -13.87 * HR/9 + 82.7 ---
+    # --- HR/9: -0.9 * HR/9 + 90.8 ---
+    # Dampen-aware refit: shallow slope because dampening already compresses range.
+    # Old formula (-13.87) was way too steep after dampening. RMSE 6.0 (was 11.7).
     if use_career:
         career_hr9 = career.get("HR_per_9", pit["HR_per_9"])
         hr9_val = 0.5 * pit["HR_per_9"] + 0.5 * career_hr9
     else:
         hr9_val = pit["HR_per_9"]
-    ratings["hr_per_9"] = dampen(-13.87 * hr9_val + 82.7)
+    ratings["hr_per_9"] = dampen(-0.9 * hr9_val + 90.8)
 
     # --- H/9 and K/9: compute per-split from Statcast BA/K% against ---
     vs_lhb = sc.get("vs_LHB", {})
@@ -1777,11 +1784,12 @@ def calculate_pitcher_ratings(data, mode="season"):
         kpct_blend = pit["K_pct"]
 
     if has_splits:
-        # H/9 per split: lower BA against = higher H/9 rating
-        ratings["h_per_9_left"] = dampen(-250 * vs_lhb["BA"] + 130)
-        ratings["h_per_9_right"] = dampen(-250 * vs_rhb["BA"] + 130)
+        # H/9 per split: dampen-aware refit of BA coefficients
+        # Old -250 was too steep after dampening. RMSE L: 6.9 (was 9.7), R: 6.1 (was 10.3)
+        ratings["h_per_9_left"] = dampen(-215.5 * vs_lhb["BA"] + 128.8)
+        ratings["h_per_9_right"] = dampen(-49.6 * vs_rhb["BA"] + 98.3)
 
-        # K/9 per split: higher K% = higher K/9 rating
+        # K/9 per split: unchanged (adding K/9 or refitting made things worse)
         ratings["k_per_9_left"] = dampen(2.2 * vs_lhb["K_pct"] + 15)
         ratings["k_per_9_right"] = dampen(2.2 * vs_rhb["K_pct"] + 15)
     else:
@@ -1841,15 +1849,16 @@ def calculate_pitcher_ratings(data, mode="season"):
     else:
         ratings["break_"] = 80  # default when no arsenal data
 
-    # --- PITCHING CLUTCH: WAR-based estimate ---
-    # WAR captures overall value; better than flat default
-    # 3.52 * WAR + 60.8 (from regression, r=0.495)
+    # --- PITCHING CLUTCH: 2.7 * WAR + 59.3 ---
+    # Dampen-aware refit: RMSE 4.1 (was 8.6). Old coefficients (3.52/60.8) were
+    # too steep after dampening compressed the range. Adding K/9 or BB/9 barely
+    # helps (3.9 vs 4.1) — not worth the complexity.
     war = pit.get("WAR", 0)
     if career_ip > 100:
-        ratings["pitching_clutch"] = clamp(3.52 * war + 60.8)
+        ratings["pitching_clutch"] = clamp(2.7 * war + 59.3)
     else:
         # Low IP: regress heavily toward 65
-        ratings["pitching_clutch"] = clamp(trust * (3.52 * war + 60.8) + (1 - trust) * 65)
+        ratings["pitching_clutch"] = clamp(trust * (2.7 * war + 59.3) + (1 - trust) * 65)
 
     # --- PITCHER FIELDING (mostly defaults) ---
     ratings["fielding"] = PITCHER_FIELDING_DEFAULTS["fielding"]

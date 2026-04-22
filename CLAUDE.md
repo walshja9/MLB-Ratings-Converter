@@ -83,14 +83,14 @@ Multi-position players are aggregated across all position entries per year (e.g.
 
 | Attribute | Formula | RMSE |
 |-----------|---------|------|
-| HR/9 | `-13.87 * HR/9 + 82.7` (dampened) | 11.7 |
-| H/9 splits | `-250 * BA_against + 130` per split (dampened) | L: 10.6, R: 8.7 |
+| HR/9 | `-0.9 * HR/9 + 90.8` (dampen-aware refit, shallow slope) | 6.0 |
+| H/9 splits | L: `-215.5 * BA_vL + 128.8`, R: `-49.6 * BA_vR + 98.3` (dampen-aware refit) | L: 6.9, R: 6.1 |
 | K/9 splits | `2.2 * K%_split + 15` per split (dampened) | L: 11.3, R: 7.9 |
-| Control | `-4.44 * BB% + 104.9` (dampened) | 10.5 |
+| Control | `-0.7 * BB/9 - 71.2 * WHIP + 149.9` (WHIP dominates) | 9.5 |
 | Velocity | `3.1 * FB_Velo - 214` (partly reputation-based, r≈0.58) | 9.4 |
 | Stamina | SP: `0.62 * GS + 75` / RP: `4.8 * G - 268` | 7.6 |
 | Break | Pitch diversity heuristic: `75 + (num_pitches-2)*3 + offspeed_usage*0.2` (dampened). Not stat-derivable (r<0.4 with all metrics). | 7.6 |
-| Clutch | `3.52 * WAR + 60.8` (dampened) | 8.6 |
+| Clutch | `2.7 * WAR + 59.3` (dampen-aware refit) | 4.1 |
 
 **Sample size dampener**: `trust = min(career_IP / 200, 1.0)`. Low-IP pitchers regressed toward 65.
 
@@ -137,11 +137,12 @@ All findings from automated review have been fixed:
 | C (12-16) | Power L (~13.3, was 16.2), Stealing (13.4), Speed (~13.6, was 14.7) |
 | F (>16) | Arm Acc (16.1, scouting), Clutch (~16.5, was 18.3, reputation), Power R (~17.5, was 19.1) |
 
-### Pitcher Attributes (avg RMSE: 9.4)
+### Pitcher Attributes (avg RMSE: ~7.9, was 9.4)
 | Grade | Attributes |
 |-------|-----------|
-| A (≤8) | Stamina (7.6), Break (7.6), K/9 R (7.9) |
-| B (8-12) | Pit Clutch (8.6), H/9 R (8.7), Velocity (9.4), Control (10.5), H/9 L (10.6), K/9 L (11.3), HR/9 (11.7) |
+| A+ (≤5) | Pit Clutch (4.1, was 8.6) |
+| A (5-8) | HR/9 (6.0, was 11.7), H/9 R (6.1, was 8.7), H/9 L (6.9, was 10.6), Stamina (7.6), Break (7.6), K/9 R (7.9) |
+| B (8-12) | Velocity (9.4), Control (9.5, was 10.5), K/9 L (11.3) |
 
 ### OVR Accuracy
 | | RMSE | Notes |
