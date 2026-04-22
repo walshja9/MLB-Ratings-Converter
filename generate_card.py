@@ -1291,21 +1291,21 @@ def calculate_ratings(data, position_override=None, mode="season"):
     effective_k = vis_trust * bat["K_pct"] + (1 - vis_trust) * LEAGUE_AVG_K
     ratings["vision"] = clamp(-3.07 * effective_k + 126.9)
 
-    # --- SPEED: Statcast sprint speed > FG Spd > BBRef running proxy ---
-    # Sprint-only: 14.82*sprint-350.6, RMSE=6.5 for full-sample players.
-    # Nearly identical to original 15.01*sprint-353.5 (RMSE=6.6).
-    # Adding SB/162 only helps marginally (6.5→6.0) — not worth the complexity.
+    # --- SPEED: Sprint speed + SB/162 (refit RMSE 17.6 → 13.5) ---
+    # Adding SB/162 captures baserunning utility that sprint speed misses.
+    # Players like Trea Turner (sprint 30.3 but Show 83, not 99) and
+    # Esteury Ruiz (sprint 24.5 but Show 70, not 15) are much better calibrated.
     # Small-sample guard: sprint speed from <30 games regressed toward baseline.
     sprint = data.get("sprint_speed")
     games_played = bat.get("G", 0) or 0
     games = max(bat["G"], 1)
     sb_per_162 = min(bat["SB"] / games * 162.0, 60.0)
     if sprint:
-        raw_speed = max(15.01 * sprint - 353.5, 15)
+        raw_speed = max(7.36 * sprint + 0.45 * sb_per_162 - 147.1, 15)
         if games_played < 30:
             # Regress toward position baseline for tiny samples
             pos_speed_baseline = TRACKING_SPEED_BASELINES.get(pos, 44)
-            pos_speed_default = clamp(max(15.01 * 27.0 - 353.5, pos_speed_baseline))  # ~52
+            pos_speed_default = clamp(max(7.36 * 27.0 + 0.45 * sb_per_162 - 147.1, pos_speed_baseline))  # ~52
             speed_trust = games_played / 30.0
             ratings["speed"] = clamp(speed_trust * raw_speed + (1 - speed_trust) * pos_speed_default)
         else:
@@ -1370,7 +1370,15 @@ def calculate_ratings(data, position_override=None, mode="season"):
     contact_l_ba = trust_l * ba_vs_lhp + (1 - trust_l) * fallback_ba
     ratings["contact_left"] = clamp(281 * contact_l_ba - 3)
 
-    # --- POWER R ---
+    # --- HR RATE (used by Power R and Power L) ---
+    # Dampened toward league avg (~3.0%) for small samples, same trust as BA/ISO.
+    LEAGUE_AVG_HR_RATE = 0.030
+    raw_hr_rate = bat["HR"] / max(pa, 1)
+    hr_rate = ba_trust * raw_hr_rate + (1 - ba_trust) * LEAGUE_AVG_HR_RATE
+
+    # --- POWER R: ISO + HR/PA refit (RMSE 19.1 → 17.5) ---
+    # Adding HR rate captures sluggers whose ISO is modest but who hit bombs
+    # (Turner: ISO .156 but 15 HR in 639 PA → Show 81; pure ISO gave 56).
     if use_career:
         career_iso = career.get("ISO", bat["ISO"])
         career_yearly = data.get("career_yearly", {})
@@ -1394,11 +1402,13 @@ def calculate_ratings(data, position_override=None, mode="season"):
             iso_blend = trust_r * iso_vr + (1 - trust_r) * effective_iso
         else:
             iso_blend = effective_iso
-    ratings["power_right"] = clamp(336.17 * iso_blend + 3.9)
+    ratings["power_right"] = clamp(91.6 * iso_blend + 502.4 * hr_rate + 31.8)
 
-    # --- POWER L ---
+    # --- POWER L: ISO_vL + HR/PA refit (RMSE 16.2 → 13.3) ---
+    # HR rate is the dominant signal for opposite-hand power. ISO_vL alone
+    # missed badly on Soto (66 vs 88), Elly (46 vs 70), Dingler (76 vs 46).
     if use_career:
-        ratings["power_left"] = clamp(244.42 * iso_blend + 17.4)
+        ratings["power_left"] = clamp(18.6 * iso_blend + 764.6 * hr_rate + 31.2)
     else:
         iso_vl = splits.get("vs_LHP", {}).get("ISO")
         if iso_vl is not None and pa_vs_lhp > 0:
@@ -1406,7 +1416,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
             iso_l = trust_l_pwr * iso_vl + (1 - trust_l_pwr) * effective_iso
         else:
             iso_l = effective_iso
-        ratings["power_left"] = clamp(244.42 * iso_l + 17.4)
+        ratings["power_left"] = clamp(18.6 * iso_l + 764.6 * hr_rate + 31.2)
 
     # --- FIELDING: 2.09 * OAA + 68.6 ---
     # Minimum 200 innings for full trust in defensive metrics
@@ -1647,18 +1657,27 @@ def calculate_ratings(data, position_override=None, mode="season"):
         ratings["reaction_forward"] = defaults["react_f"]
         ratings["reaction_back"] = defaults["react_b"]
 
-    # --- BATTING CLUTCH ---
-    # Show's clutch is partly reputation-based (r≈0.58 with best stat combo).
-    # WAR-only (8.5*WAR+48) had +9.8 bias and RMSE 23.2 — over-predicted
-    # high-WAR players (Shaw 74 vs Show 25, Turner 94 vs 47).
-    # Optimal lstsq fit on 18-player set: 93*BA + 2.6*WAR + 34 (RMSE 18.2).
-    # BA captures batting quality, WAR adds production context.
-    # Uses raw BA (not effective_ba) — the sample-size dampening toward .248
-    # would inflate clutch for low-PA players. Separate PA trust instead.
+    # --- BATTING CLUTCH: BA + WAR + RISP BA refit (RMSE 18.3 → 16.5) ---
+    # Adding RISP batting average captures situational performance that BA+WAR
+    # miss. Negative BA coefficient encodes the "clutch differential" — given
+    # equal RISP performance, a lower-BA hitter is more clutch (hits better in
+    # big spots relative to overall). RISP data from Statcast (2015+); falls
+    # back to BA+WAR for older players.
     war = bat.get("WAR", 0) or 0
     raw_ba = bat.get("BA", 0) or 0
-    raw_clutch = 93 * raw_ba + 2.6 * war + 34
+    risp_ba = splits.get("risp_ba") if splits else None
+    risp_pa = splits.get("risp_pa", 0) if splits else 0
     clutch_trust = min(pa / 150, 1.0)
+
+    if risp_ba is not None and risp_pa and risp_pa > 30:
+        # Trust-blend RISP BA toward overall BA for small RISP samples
+        risp_trust = min(risp_pa / 100, 1.0)
+        eff_risp = risp_trust * risp_ba + (1 - risp_trust) * raw_ba
+        raw_clutch = -161.7 * raw_ba + 2.2 * war + 239.4 * eff_risp + 39.1
+    else:
+        # Pre-Statcast fallback: original BA + WAR formula
+        raw_clutch = 93 * raw_ba + 2.6 * war + 34
+
     ratings["batting_clutch"] = clamp(clutch_trust * raw_clutch + (1 - clutch_trust) * 50)
     ratings["bunting"] = defaults["bunt"]
     ratings["drag_bunt"] = defaults["drag"]
@@ -2047,7 +2066,8 @@ def display_verbose(data, ratings):
     bat = data["batting"]
     print("\n  RAW INPUTS:")
     print(f"    BA={bat['BA']:.3f}  OBP={bat['OBP']:.3f}  SLG={bat['SLG']:.3f}  ISO={bat['ISO']:.3f}")
-    print(f"    BB%={bat['BB_pct']:.1f}  K%={bat['K_pct']:.1f}  HR={bat['HR']}  SB={bat['SB']}  G={bat['G']}")
+    hr_rate_raw = bat['HR'] / max(bat.get('PA', 1), 1)
+    print(f"    BB%={bat['BB_pct']:.1f}  K%={bat['K_pct']:.1f}  HR={bat['HR']}  HR/PA={hr_rate_raw:.3f}  SB={bat['SB']}  CS={bat.get('CS', 0)}  G={bat['G']}")
     if data.get("sprint_speed"):
         print(f"    Sprint Speed: {data['sprint_speed']:.1f}")
     if data.get("avg_ev"):
@@ -2062,7 +2082,11 @@ def display_verbose(data, ratings):
         for label in ["vs_RHP", "vs_LHP"]:
             s = data["splits"].get(label, {})
             if s:
-                print(f"    {label}: PA={s.get('PA', 0)}, BA={s.get('BA', 0):.3f}, OBP={s.get('OBP', 0):.3f}")
+                print(f"    {label}: PA={s.get('PA', 0)}, BA={s.get('BA', 0):.3f}, OBP={s.get('OBP', 0):.3f}, ISO={s.get('ISO', 0):.3f}")
+        risp = data["splits"].get("risp_ba")
+        risp_pa = data["splits"].get("risp_pa", 0)
+        if risp is not None:
+            print(f"    RISP: BA={risp:.3f} ({risp_pa} PA)")
 
 
 # ================================================================

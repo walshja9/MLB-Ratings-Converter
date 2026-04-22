@@ -42,16 +42,16 @@ Then open **http://localhost:5000** in your browser.
 | Attribute | Formula | Source |
 |-----------|---------|--------|
 | Vision | `-3.07 * K% + 126.9` (dampened toward 25% K for PA<200) | r=0.909, RMSE=7.6 |
-| Speed | `15.01 * Sprint - 353.5` (Statcast, regressed for G<30) or `9.42 * FG_Spd + 19.1` (pre-2015) or SB-based (pre-2002) | r=0.785, RMSE=14.7 |
+| Speed | `7.36 * Sprint + 0.45 * SB/162 - 147.1` (Statcast, regressed for G<30) or `9.42 * FG_Spd + 19.1` (pre-2015) or SB-based (pre-2002) | RMSE=~13.6 |
 | Discipline | `4.86 * BB% + 17.2` (dampened toward 8% BB for PA<200) | r=0.835, RMSE=10.7 |
 | Fielding | `2.09 * OAA + 68.6` or `1.38 * FG_Def + 67.3` (pre-OAA) or position baseline | RMSE=11.9 |
 | Contact R | `240 * BA_vR + 2.09 * Exit_Velo - 168` (Statcast) or `372 * BA_vR - 29` (dampened BA) | r=0.803, RMSE=8.8 |
 | Contact L | `281 * BA_vs_LHP - 3` (trust-blended) | r=0.710, RMSE=12.0 |
-| Power R | `336.17 * ISO_blend + 3.9` (recency-weighted or season-only, dampened ISO) | RMSE=19.1 |
-| Power L | `244.42 * ISO_blend + 17.4` | RMSE=16.2 |
+| Power R | `91.6 * ISO_blend + 502.4 * HR_rate + 31.8` (ISO + HR/PA, both dampened) | RMSE=~17.5 |
+| Power L | `18.6 * ISO_blend + 764.6 * HR_rate + 31.2` (HR rate dominates) | RMSE=~13.3 |
 | Stealing | Tiered: SB/162<2 → `3 + 0.04*Speed`; else → `2.0*SB/162 + 9`. Cap SB/162 at 60. | r=0.916, RMSE=13.4 |
 | Durability | Season: `0.17 * GP + 72` (floor 78, dampened) / Career: `0.16 * blended_GP + 72` | RMSE=4.9 |
-| Batting Clutch | `93 * BA + 2.6 * WAR + 34` (dampened toward 50 for PA<150). Partly reputation-based (r≈0.54). | RMSE=18.3 |
+| Batting Clutch | `-161.7 * BA + 2.2 * WAR + 239.4 * RISP_BA + 39.1` (Statcast era) or `93 * BA + 2.6 * WAR + 34` (pre-Statcast). Dampened toward 50 for PA<150. | RMSE=~16.5 |
 | Arm Strength | rARM-based for OF only, position default for IF/C | RMSE=11.5 |
 | Arm Accuracy | ErrR-based when available, else position default | RMSE=16.1 (r=0.17, scouting) |
 | Reactions (L/R/F/B) | OAA or RngR -> base reaction, then position-specific directional weights | |
@@ -128,14 +128,14 @@ All findings from automated review have been fixed:
 
 ## Calibration Accuracy (2026-04-20, N=18 hitters, 10 pitchers)
 
-### Hitter Attributes (avg RMSE: 12.6)
+### Hitter Attributes (avg RMSE: ~11.6, was 12.6)
 | Grade | Attributes |
 |-------|-----------|
 | A+ (≤5) | Durability (4.9) |
 | A (5-8) | Vision (7.6) |
 | B (8-12) | Contact R (8.8), Discipline (10.7), Arm Str (11.5), BR Agg (11.9), Fielding (11.9), Contact L (12.0) |
-| C (12-16) | Stealing (13.4), Speed (14.7) |
-| F (>16) | Arm Acc (16.1, scouting), Power L (16.2), Clutch (18.3, reputation), Power R (19.1) |
+| C (12-16) | Power L (~13.3, was 16.2), Stealing (13.4), Speed (~13.6, was 14.7) |
+| F (>16) | Arm Acc (16.1, scouting), Clutch (~16.5, was 18.3, reputation), Power R (~17.5, was 19.1) |
 
 ### Pitcher Attributes (avg RMSE: 9.4)
 | Grade | Attributes |
@@ -155,7 +155,7 @@ All findings from automated review have been fixed:
 3. Pitcher Velocity is partly reputation-based (r≈0.58) — Crochet gets 99 in Show despite similar mph to Skubal who gets 77
 4. Pitcher Break is heuristic-based (no stat correlates >0.4)
 5. Batting Clutch is partly reputation-based (r≈0.54) — Shaw/Turner/Dingler get Show values (25/47/38) that no stat can predict
-6. Power R/L has large errors for players where Show uses career reputation (Dingler 86 vs predicted 40, Yordan 99 vs 57)
+6. Power R/L improved with HR rate but still has large errors for career-reputation players (Yordan 99 vs ~61, Dingler 86 vs ~56)
 7. Arm Accuracy is essentially a scouting attribute (r=0.17)
 8. FanGraphs rate limiting with heavy use — need local data caching for deployment
 9. NaN-safe for very old eras (1890s+)
