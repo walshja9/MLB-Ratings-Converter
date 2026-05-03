@@ -147,8 +147,9 @@ def collect_pitcher(name):
         return None
 
 
-def collect_all(skip_pull=False):
-    """Collect generated ratings for all calibration players."""
+def collect_all(skip_pull=False, max_hitters=None, max_pitchers=None):
+    """Collect generated ratings for all calibration players.
+    If max_hitters/max_pitchers set, only process that many (sorted by OVR desc)."""
     if skip_pull and os.path.exists(CACHE_FILE):
         print(f"Loading cached results from {CACHE_FILE}...")
         with open(CACHE_FILE, "r") as f:
@@ -156,12 +157,27 @@ def collect_all(skip_pull=False):
 
     results = {"hitters": {}, "pitchers": {}}
 
-    for name in HITTER_TRUTH:
+    # Sort by OVR descending so we get the best players first (most calibration value)
+    hitter_names = sorted(HITTER_TRUTH.keys(),
+                          key=lambda n: HITTER_TRUTH[n].get("ovr", 0), reverse=True)
+    pitcher_names = sorted(PITCHER_TRUTH.keys(),
+                           key=lambda n: PITCHER_TRUTH[n].get("ovr", 0), reverse=True)
+
+    if max_hitters:
+        hitter_names = hitter_names[:max_hitters]
+    if max_pitchers:
+        pitcher_names = pitcher_names[:max_pitchers]
+
+    print(f"\n  Will process {len(hitter_names)} hitters, {len(pitcher_names)} pitchers")
+
+    for i, name in enumerate(hitter_names):
+        print(f"\n  [{i+1}/{len(hitter_names)}]", end="")
         r = collect_hitter(name)
         if r:
             results["hitters"][name] = r
 
-    for name in PITCHER_TRUTH:
+    for i, name in enumerate(pitcher_names):
+        print(f"\n  [{i+1}/{len(pitcher_names)}]", end="")
         r = collect_pitcher(name)
         if r:
             results["pitchers"][name] = r
@@ -376,6 +392,10 @@ def main():
                         help="Print per-player detail for every attribute")
     parser.add_argument("--refresh-truth", action="store_true",
                         help="Re-scrape truth data from theshowratings.com before refitting")
+    parser.add_argument("--max-hitters", type=int, default=None,
+                        help="Limit hitters to process (sorted by OVR desc)")
+    parser.add_argument("--max-pitchers", type=int, default=None,
+                        help="Limit pitchers to process (sorted by OVR desc)")
     args = parser.parse_args()
 
     # 0. Optionally refresh truth data from the web
@@ -390,7 +410,9 @@ def main():
         HITTER_TRUTH, PITCHER_TRUTH = load_truth_data()
 
     # 1. Collect data
-    results = collect_all(skip_pull=args.skip_pull)
+    results = collect_all(skip_pull=args.skip_pull,
+                          max_hitters=args.max_hitters,
+                          max_pitchers=args.max_pitchers)
     hitters = results["hitters"]
     pitchers = results["pitchers"]
 
