@@ -1281,31 +1281,28 @@ def calculate_ratings(data, position_override=None, mode="season"):
     # PA drives trust for all rate-stat formulas. Defined once here.
     pa = bat.get("PA", 0) or 0
 
-    # --- VISION: -3.07 * K% + 126.9 ---
-    # Refit on 18-player set (RMSE 7.6 vs old 11.9). Steeper slope + higher
-    # intercept better captures K%-to-vision relationship. Dampening target
-    # raised to 25% K (from 22%) — unproven players regress to ~50 vision
-    # instead of ~65, matching Show's ~34-42 for rookies/callups.
+    # --- VISION: -2.47 * K% + 118.1 ---
+    # Refit on 44-player set (RMSE 5.4, was 7.6). Shallower slope + lower
+    # intercept at scale — the old -3.07 was overfit to 18 players.
     LEAGUE_AVG_K = 25.0
     vis_trust = min(pa / 200, 1.0)
     effective_k = vis_trust * bat["K_pct"] + (1 - vis_trust) * LEAGUE_AVG_K
-    ratings["vision"] = clamp(-3.07 * effective_k + 126.9)
+    ratings["vision"] = clamp(-2.47 * effective_k + 118.1)
 
-    # --- SPEED: Sprint speed + SB/162 (refit RMSE 17.6 → 13.5) ---
-    # Adding SB/162 captures baserunning utility that sprint speed misses.
-    # Players like Trea Turner (sprint 30.3 but Show 83, not 99) and
-    # Esteury Ruiz (sprint 24.5 but Show 70, not 15) are much better calibrated.
-    # Small-sample guard: sprint speed from <30 games regressed toward baseline.
+    # --- SPEED: Sprint speed dominant (refit RMSE 10.7 → 2.5) ---
+    # At N=44, sprint speed alone explains almost everything. SB/162 drops to
+    # near-zero weight (0.10 vs old 0.45). Much steeper sprint coefficient
+    # (15.02 vs old 7.36) with lower intercept (-356.5 vs -147.1).
     sprint = data.get("sprint_speed")
     games_played = bat.get("G", 0) or 0
     games = max(bat["G"], 1)
     sb_per_162 = min(bat["SB"] / games * 162.0, 60.0)
     if sprint:
-        raw_speed = max(7.36 * sprint + 0.45 * sb_per_162 - 147.1, 15)
+        raw_speed = max(15.02 * sprint + 0.10 * sb_per_162 - 356.5, 15)
         if games_played < 30:
             # Regress toward position baseline for tiny samples
             pos_speed_baseline = TRACKING_SPEED_BASELINES.get(pos, 44)
-            pos_speed_default = clamp(max(7.36 * 27.0 + 0.45 * sb_per_162 - 147.1, pos_speed_baseline))  # ~52
+            pos_speed_default = clamp(max(15.02 * 27.0 + 0.10 * sb_per_162 - 356.5, pos_speed_baseline))
             speed_trust = games_played / 30.0
             ratings["speed"] = clamp(speed_trust * raw_speed + (1 - speed_trust) * pos_speed_default)
         else:
@@ -1321,14 +1318,13 @@ def calculate_ratings(data, position_override=None, mode="season"):
         ratings["speed"] = estimate_speed_no_tracking(bat, pos)
         sprint = None
 
-    # --- DISCIPLINE: 4.86 * BB% + 17.2 ---
-    # Sample-size gate: BB% is extremely noisy below ~100 PA (Berroa: 1 BB
-    # in 6 PA = 16.7% → disc 98, but Show gives 37). Regress toward league
-    # average (~8% BB%) for small samples.
+    # --- DISCIPLINE: 4.49 * BB% + 23.8 ---
+    # Refit on 44-player set (RMSE 5.6, was 10.7→6.5). Slightly shallower
+    # slope with higher intercept gives better calibration at scale.
     disc_trust = min(pa / 200, 1.0)
     LEAGUE_AVG_BB = 8.0
     effective_bb = disc_trust * bat["BB_pct"] + (1 - disc_trust) * LEAGUE_AVG_BB
-    ratings["discipline"] = clamp(4.86 * effective_bb + 17.2)
+    ratings["discipline"] = clamp(4.49 * effective_bb + 23.8)
 
     # --- Sample-size regression for batting stats ---
     # When PA < 200, regress BA/ISO toward league average to prevent tiny-sample
@@ -1350,14 +1346,13 @@ def calculate_ratings(data, position_override=None, mode="season"):
     trust_vr = min(pa_vr / 150, 1.0) if pa_vr and pa_vr > 0 else 0
     ba_for_cr = trust_vr * ba_vr_raw + (1 - trust_vr) * effective_ba if ba_vr_raw is not None else effective_ba
 
-    if avg_ev and pa >= 100:
-        ratings["contact_right"] = clamp(240 * ba_for_cr + 2.09 * avg_ev - 168)
-    elif use_career:
+    # Contact R refit: EV dropped (hurts at N=44), BA-only RMSE=6.8 (was 8.2)
+    if use_career:
         career_ba = career.get("BA", bat["BA"])
         blended_ba = 0.55 * ba_for_cr + 0.45 * career_ba
-        ratings["contact_right"] = clamp(372 * blended_ba - 29)
+        ratings["contact_right"] = clamp(268 * blended_ba + 4.8)
     else:
-        ratings["contact_right"] = clamp(372 * ba_for_cr - 29)
+        ratings["contact_right"] = clamp(268 * ba_for_cr + 4.8)
 
     # --- CONTACT L: BA-based (not OBP — keeps contact/vision/discipline cleanly separated) ---
     ba_vs_lhp = splits.get("vs_LHP", {}).get("BA", effective_ba)
@@ -1368,7 +1363,8 @@ def calculate_ratings(data, position_override=None, mode="season"):
     else:
         fallback_ba = effective_ba
     contact_l_ba = trust_l * ba_vs_lhp + (1 - trust_l) * fallback_ba
-    ratings["contact_left"] = clamp(281 * contact_l_ba - 3)
+    # Contact L refit: 212.7*BA + 18.7 (RMSE 10.4, was 11.4)
+    ratings["contact_left"] = clamp(212.7 * contact_l_ba + 18.7)
 
     # --- HR RATE (used by Power R and Power L) ---
     # Dampened toward league avg (~3.0%) for small samples, same trust as BA/ISO.
@@ -1402,13 +1398,15 @@ def calculate_ratings(data, position_override=None, mode="season"):
             iso_blend = trust_r * iso_vr + (1 - trust_r) * effective_iso
         else:
             iso_blend = effective_iso
-    ratings["power_right"] = clamp(91.6 * iso_blend + 502.4 * hr_rate + 31.8)
+    # Power R refit: HR rate now fully dominates (RMSE 8.6, was 9.4)
+    ratings["power_right"] = clamp(6.3 * iso_blend + 623.8 * hr_rate + 49.3)
 
     # --- POWER L: ISO_vL + HR/PA refit (RMSE 16.2 → 13.3) ---
     # HR rate is the dominant signal for opposite-hand power. ISO_vL alone
     # missed badly on Soto (66 vs 88), Elly (46 vs 70), Dingler (76 vs 46).
+    # Power L refit: HR rate even more dominant, ISO inverts (RMSE 10.1, was 10.3)
     if use_career:
-        ratings["power_left"] = clamp(18.6 * iso_blend + 764.6 * hr_rate + 31.2)
+        ratings["power_left"] = clamp(-60.7 * iso_blend + 929.9 * hr_rate + 43.8)
     else:
         iso_vl = splits.get("vs_LHP", {}).get("ISO")
         if iso_vl is not None and pa_vs_lhp > 0:
@@ -1416,7 +1414,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
             iso_l = trust_l_pwr * iso_vl + (1 - trust_l_pwr) * effective_iso
         else:
             iso_l = effective_iso
-        ratings["power_left"] = clamp(18.6 * iso_l + 764.6 * hr_rate + 31.2)
+        ratings["power_left"] = clamp(-60.7 * iso_l + 929.9 * hr_rate + 43.8)
 
     # --- FIELDING: 2.09 * OAA + 68.6 ---
     # Minimum 200 innings for full trust in defensive metrics
@@ -1526,20 +1524,20 @@ def calculate_ratings(data, position_override=None, mode="season"):
     # Show treats non-stealers (sb/162 < 2) as 3-7 regardless of speed.
     # sb_per_162 already computed above (capped at 60).
     speed_component = ratings["speed"]
+    # Stealing refit on N=38 active stealers (RMSE 10.3, was 12.3)
     if sb_per_162 < 2:
-        # Non-stealer: minimal floor, tiny speed bonus
         ratings["stealing"] = clamp(3 + 0.04 * speed_component)
     else:
-        # SB rate dominates — speed has near-zero weight in regression
-        ratings["stealing"] = clamp(2.0 * sb_per_162 + 9)
+        ratings["stealing"] = clamp(1.73 * sb_per_162 + 18.4)
 
     # --- BR AGGRESSIVENESS: refit (RMSE 14.3 → 9.9) ---
     # SB/162 dominates; sprint speed adds little beyond what SB captures.
     # Non-stealers get low floor (Rutschman 2, Dingler 6).
+    # BR Agg refit on N=38 (RMSE 11.6, was 14.3)
     if sb_per_162 < 2:
         ratings["br_aggressiveness"] = clamp(3 + 0.03 * speed_component)
     else:
-        ratings["br_aggressiveness"] = clamp(1.87 * sb_per_162 + 14)
+        ratings["br_aggressiveness"] = clamp(1.53 * sb_per_162 + 25.7)
 
     # --- DURABILITY ---
     # Show durability is a health/constitution rating, not just "did you play."
@@ -1550,12 +1548,13 @@ def calculate_ratings(data, position_override=None, mode="season"):
     dur_pa_trust = min(pa / 200, 1.0)  # full trust at 200+ PA
     DUR_BASELINE = 78  # Show's implicit floor for healthy young players
 
+    # Durability refit on N=44 (RMSE 3.9, was 5.2)
     if use_career:
         career_avg_gp = career.get("avg_G_per_year", bat["G"])
         gp = 0.55 * bat["G"] + 0.45 * career_avg_gp
-        raw_dur = clamp(0.16 * gp + 72)
+        raw_dur = clamp(0.175 * gp + 67.6)
     else:
-        raw_dur = clamp(0.17 * bat["G"] + 72)
+        raw_dur = clamp(0.175 * bat["G"] + 67.6)
 
     ratings["durability"] = clamp(dur_pa_trust * raw_dur + (1 - dur_pa_trust) * DUR_BASELINE)
 
@@ -1669,13 +1668,14 @@ def calculate_ratings(data, position_override=None, mode="season"):
     risp_pa = splits.get("risp_pa", 0) if splits else 0
     clutch_trust = min(pa / 150, 1.0)
 
+    # Clutch refit on N=42 (RMSE 9.3, was 13.4). BA coefficient flipped positive
+    # at scale — higher BA + higher RISP = more clutch (old negative BA was overfit).
     if risp_ba is not None and risp_pa and risp_pa > 30:
-        # Trust-blend RISP BA toward overall BA for small RISP samples
         risp_trust = min(risp_pa / 100, 1.0)
         eff_risp = risp_trust * risp_ba + (1 - risp_trust) * raw_ba
-        raw_clutch = -161.7 * raw_ba + 2.2 * war + 239.4 * eff_risp + 39.1
+        raw_clutch = 58.2 * raw_ba + 0.8 * war + 175.0 * eff_risp + 12.4
     else:
-        # Pre-Statcast fallback: original BA + WAR formula
+        # Pre-Statcast fallback: BA + WAR
         raw_clutch = 93 * raw_ba + 2.6 * war + 34
 
     ratings["batting_clutch"] = clamp(clutch_trust * raw_clutch + (1 - clutch_trust) * 50)
@@ -1738,8 +1738,9 @@ def calculate_pitcher_ratings(data, mode="season"):
     # Show velocity is partly reputation-based (Crochet 96.3→99, Skubal
     # 97.5→77) so stat-derived accuracy is capped around r≈0.58.
     # Prior formula (2.8*v-193) had -8.5 bias; this restores correct slope.
+    # Velocity refit on N=23 (RMSE 5.9, was 11.4). Shallower slope at scale.
     fb_velo = sc.get("avg_fb_velo") or pit.get("FB_velo") or 93.0
-    ratings["velocity"] = clamp(3.1 * fb_velo - 214)
+    ratings["velocity"] = clamp(2.19 * fb_velo - 117.3)
 
     # --- CONTROL: -0.7 * BB/9 - 71.2 * WHIP + 149.9 ---
     # BB/9 + WHIP combo: WHIP dominates (baserunner suppression matters more than walks alone)
@@ -1752,7 +1753,8 @@ def calculate_pitcher_ratings(data, mode="season"):
     else:
         bb9_val = pit["BB_per_9"]
         whip_val = pit["WHIP"]
-    ratings["control"] = dampen(-0.7 * bb9_val + -71.2 * whip_val + 149.9)
+    # Control refit on N=23 (RMSE 7.4, was 11.5). BB9 now dominates, WHIP positive.
+    ratings["control"] = dampen(-14.04 * bb9_val + 26.0 * whip_val + 82.6)
 
     # --- HR/9: -7.0 * HR/9 + 96.3 ---
     # Dampen-aware refit: 1 pt HR/9 = 7 pts rating (meaningful but not too steep).
@@ -1763,7 +1765,8 @@ def calculate_pitcher_ratings(data, mode="season"):
         hr9_val = 0.5 * pit["HR_per_9"] + 0.5 * career_hr9
     else:
         hr9_val = pit["HR_per_9"]
-    ratings["hr_per_9"] = dampen(-7.0 * hr9_val + 96.3)
+    # HR/9 refit on N=23 (RMSE 4.6, was 16.9). Much steeper slope at scale.
+    ratings["hr_per_9"] = dampen(-27.73 * hr9_val + 95.4)
 
     # --- H/9 and K/9: compute per-split from Statcast BA/K% against ---
     vs_lhb = sc.get("vs_LHB", {})
@@ -1787,12 +1790,14 @@ def calculate_pitcher_ratings(data, mode="season"):
     if has_splits:
         # H/9 per split: dampen-aware refit of BA coefficients
         # Old -250 was too steep after dampening. RMSE L: 6.9 (was 9.7), R: 6.1 (was 10.3)
-        ratings["h_per_9_left"] = dampen(-215.5 * vs_lhb["BA"] + 128.8)
-        ratings["h_per_9_right"] = dampen(-49.6 * vs_rhb["BA"] + 98.3)
+        # H/9 splits refit on N=22 (L: RMSE 5.8 was 12.9, R: RMSE 6.5 was 14.0)
+        ratings["h_per_9_left"] = dampen(-228.2 * vs_lhb["BA"] + 129.6)
+        ratings["h_per_9_right"] = dampen(-187.7 * vs_rhb["BA"] + 120.7)
 
-        # K/9 per split: unchanged (adding K/9 or refitting made things worse)
-        ratings["k_per_9_left"] = dampen(2.2 * vs_lhb["K_pct"] + 15)
-        ratings["k_per_9_right"] = dampen(2.2 * vs_rhb["K_pct"] + 15)
+        # K/9 splits refit on N=22 (L: RMSE 6.9, R: RMSE 7.1). Lower slopes,
+        # higher intercepts — old formula systematically under-predicted.
+        ratings["k_per_9_left"] = dampen(1.16 * vs_lhb["K_pct"] + 50.6)
+        ratings["k_per_9_right"] = dampen(0.87 * vs_rhb["K_pct"] + 59.8)
     else:
         # No reliable splits — use overall and apply default platoon gap
         h9_avg = dampen(-7.86 * h9_blend + 131.1)
@@ -1818,17 +1823,16 @@ def calculate_pitcher_ratings(data, mode="season"):
     # Optimal lstsq on 8 SPs: 0.62*GS + 75 (RMSE 8.4 vs old 18.5).
     # RP formula: 4.8*G - 268 fits perfectly on 2 calibration RPs, but with
     # only 2 data points we keep a conservative approach.
+    # Stamina refit: SP N=20 RMSE 3.9 (was 19.4). Flatter slope — Show gives
+    # most SPs similar stamina. RP formula: ~29 baseline (only 3 data points).
     if role == "RP" and pit["GS"] == 0:
-        # Pure reliever: scale by games (Fairbanks 61G→25, Hoffman 71G→73)
-        ratings["stamina"] = clamp(4.8 * pit["G"] - 268)
+        ratings["stamina"] = clamp(-0.054 * pit["G"] + 28.7)
     elif use_career:
-        # Career mode: blend current GS with career avg
         career_gs = career.get("avg_GS_per_year", pit["GS"]) if isinstance(career, dict) else pit["GS"]
         gs_blend = 0.4 * pit["GS"] + 0.6 * career_gs
-        ratings["stamina"] = clamp(0.62 * gs_blend + 75)
+        ratings["stamina"] = clamp(0.273 * gs_blend + 76.8)
     else:
-        # Season mode: use only this year's GS
-        ratings["stamina"] = clamp(0.62 * pit["GS"] + 75)
+        ratings["stamina"] = clamp(0.273 * pit["GS"] + 76.8)
 
     # --- BREAK: not reliably stat-derivable (r<0.4 with all metrics tested) ---
     # SDS Break is a scouting/visual attribute, not correlated with Stuff+, SwStr%,
@@ -1855,11 +1859,12 @@ def calculate_pitcher_ratings(data, mode="season"):
     # too steep after dampening compressed the range. Adding K/9 or BB/9 barely
     # helps (3.9 vs 4.1) — not worth the complexity.
     war = pit.get("WAR", 0)
+    # Pit Clutch refit on N=23 (RMSE 12.6, was 18.6). Lower WAR weight, higher
+    # intercept — Show's clutch is more compressed than WAR suggests.
     if career_ip > 100:
-        ratings["pitching_clutch"] = clamp(2.7 * war + 59.3)
+        ratings["pitching_clutch"] = clamp(1.18 * war + 77.5)
     else:
-        # Low IP: regress heavily toward 65
-        ratings["pitching_clutch"] = clamp(trust * (2.7 * war + 59.3) + (1 - trust) * 65)
+        ratings["pitching_clutch"] = clamp(trust * (1.18 * war + 77.5) + (1 - trust) * 65)
 
     # --- PITCHER FIELDING (mostly defaults) ---
     ratings["fielding"] = PITCHER_FIELDING_DEFAULTS["fielding"]
