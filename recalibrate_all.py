@@ -40,44 +40,46 @@ from generate_card import (
 
 YEAR = 2025
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "_recal_cache.json")
+TRUTH_FILE = os.path.join(os.path.dirname(__file__), "show_truth.json")
 
 # ================================================================
-# GROUND TRUTH: Show 26 per-attribute ratings
+# GROUND TRUTH: loaded from show_truth.json (scraped from theshowratings.com)
 # ================================================================
 
-HITTER_TRUTH = {
+def load_truth_data():
+    """Load ground truth from show_truth.json. Falls back to legacy hardcoded set."""
+    if os.path.exists(TRUTH_FILE):
+        with open(TRUTH_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        hitters = data.get("hitters", {})
+        pitchers = data.get("pitchers", {})
+        meta = data.get("metadata", {})
+        print(f"  Loaded truth data: {len(hitters)} hitters, {len(pitchers)} pitchers")
+        print(f"  Source: {meta.get('source', '?')}, scraped: {meta.get('scraped_at', '?')}")
+        return hitters, pitchers
+    else:
+        print("  WARNING: show_truth.json not found. Run scrape_truth.py first.")
+        print("  Falling back to legacy hardcoded truth (18 hitters, 10 pitchers).")
+        return _LEGACY_HITTER_TRUTH, _LEGACY_PITCHER_TRUTH
+
+
+# Legacy fallback (original 18 hitters + 10 pitchers from manual data entry)
+_LEGACY_HITTER_TRUTH = {
     "Juan Soto":              {"ovr": 98, "con_r": 85, "con_l": 75, "pwr_r": 99, "pwr_l": 88, "vision": 72, "disc": 99, "clutch": 83, "fielding": 53, "arm_str": 71, "arm_acc": 70, "speed": 42, "stealing": 77, "br_agg": 77, "dur": 98, "bunt": 38, "drag": 56},
     "Byron Buxton":           {"ovr": 95, "con_r": 70, "con_l": 87, "pwr_r": 85, "pwr_l": 84, "vision": 50, "disc": 50, "clutch": 78, "fielding": 83, "arm_str": 78, "arm_acc": 71, "speed": 99, "stealing": 75, "br_agg": 61, "dur": 84, "bunt": 35, "drag": 25},
     "Vladimir Guerrero Jr.":  {"ovr": 94, "con_r": 93, "con_l": 99, "pwr_r": 73, "pwr_l": 73, "vision": 85, "disc": 84, "clutch": 92, "fielding": 55, "arm_str": 59, "arm_acc": 62, "speed": 45, "stealing": 16, "br_agg": 26, "dur": 98, "bunt": 35, "drag": 25},
-    "Yordan Alvarez":         {"ovr": 91, "con_r": 76, "con_l": 80, "pwr_r": 99, "pwr_l": 93, "vision": 80, "disc": 80, "clutch": 86, "fielding": 54, "arm_str": 50, "arm_acc": 51, "speed": 24, "stealing": 37, "br_agg": 18, "dur": 80, "bunt": 35, "drag": 30},
-    "Pete Crow-Armstrong":    {"ovr": 87, "con_r": 73, "con_l": 45, "pwr_r": 78, "pwr_l": 60, "vision": 59, "disc": 39, "clutch": 69, "fielding": 99, "arm_str": 97, "arm_acc": 90, "speed": 93, "stealing": 83, "br_agg": 84, "dur": 92, "bunt": 82, "drag": 80},
-    "Bobby Witt Jr.":         {"ovr": 99, "con_r": 88, "con_l": 96, "pwr_r": 71, "pwr_l": 51, "vision": 78, "disc": 52, "clutch": 99, "fielding": 99, "arm_str": 75, "arm_acc": 82, "speed": 99, "stealing": 82, "br_agg": 81, "dur": 98, "bunt": 35, "drag": 25},
-    "Xander Bogaerts":        {"ovr": 80, "con_r": 75, "con_l": 82, "pwr_r": 53, "pwr_l": 47, "vision": 78, "disc": 58, "clutch": 44, "fielding": 85, "arm_str": 55, "arm_acc": 73, "speed": 59, "stealing": 65, "br_agg": 63, "dur": 87, "bunt": 38, "drag": 25},
-    "Matt Shaw":              {"ovr": 74, "con_r": 49, "con_l": 65, "pwr_r": 49, "pwr_l": 73, "vision": 65, "disc": 63, "clutch": 25, "fielding": 62, "arm_str": 55, "arm_acc": 75, "speed": 83, "stealing": 56, "br_agg": 71, "dur": 91, "bunt": 35, "drag": 44},
-    "Hyeseong Kim":           {"ovr": 74, "con_r": 72, "con_l": 68, "pwr_r": 39, "pwr_l": 40, "vision": 45, "disc": 35, "clutch": 76, "fielding": 79, "arm_str": 64, "arm_acc": 66, "speed": 78, "stealing": 70, "br_agg": 73, "dur": 88, "bunt": 56, "drag": 25},
-    "Adley Rutschman":        {"ovr": 84, "con_r": 60, "con_l": 91, "pwr_r": 58, "pwr_l": 59, "vision": 81, "disc": 70, "clutch": 63, "fielding": 74, "arm_str": 94, "arm_acc": 64, "speed": 45, "stealing": 3, "br_agg": 2, "dur": 86, "bunt": 35, "drag": 25},
-    "Trea Turner":            {"ovr": 91, "con_r": 61, "con_l": 84, "pwr_r": 81, "pwr_l": 58, "vision": 63, "disc": 73, "clutch": 47, "fielding": 76, "arm_str": 90, "arm_acc": 57, "speed": 83, "stealing": 99, "br_agg": 75, "dur": 90, "bunt": 35, "drag": 25},
-    "Elly De La Cruz":        {"ovr": 87, "con_r": 58, "con_l": 78, "pwr_r": 55, "pwr_l": 70, "vision": 53, "disc": 46, "clutch": 70, "fielding": 72, "arm_str": 80, "arm_acc": 92, "speed": 85, "stealing": 99, "br_agg": 99, "dur": 99, "bunt": 40, "drag": 36},
-    "Esteury Ruiz":           {"ovr": 64, "con_r": 52, "con_l": 56, "pwr_r": 25, "pwr_l": 52, "vision": 34, "disc": 42, "clutch": 61, "fielding": 65, "arm_str": 65, "arm_acc": 42, "speed": 70, "stealing": 90, "br_agg": 99, "dur": 81, "bunt": 64, "drag": 25},
     "Aaron Judge":            {"ovr": 99, "con_r": 90, "con_l": 92, "pwr_r": 99, "pwr_l": 99, "vision": 42, "disc": 99, "clutch": 91, "fielding": 61, "arm_str": 80, "arm_acc": 78, "speed": 50, "stealing": 36, "br_agg": 51, "dur": 97, "bunt": 35, "drag": 25},
-    "Dillon Dingler":         {"ovr": 83, "con_r": 54, "con_l": 65, "pwr_r": 86, "pwr_l": 46, "vision": 61, "disc": 58, "clutch": 38, "fielding": 37, "arm_str": 85, "arm_acc": 99, "speed": 59, "stealing": 5, "br_agg": 6, "dur": 84, "bunt": 35, "drag": 25},
-    "Steward Berroa":         {"ovr": 63, "con_r": 46, "con_l": 50, "pwr_r": 33, "pwr_l": 38, "vision": 38, "disc": 37, "clutch": 39, "fielding": 72, "arm_str": 72, "arm_acc": 85, "speed": 75, "stealing": 80, "br_agg": 80, "dur": 82, "bunt": 35, "drag": 25},
-    "Steven Kwan":            {"ovr": 82, "con_r": 78, "con_l": 81, "pwr_r": 51, "pwr_l": 39, "vision": 99, "disc": 64, "clutch": 93, "fielding": 80, "arm_str": 72, "arm_acc": 99, "speed": 54, "stealing": 47, "br_agg": 61, "dur": 92, "bunt": 49, "drag": 85},
-    "George Valera":          {"ovr": 68, "con_r": 55, "con_l": 41, "pwr_r": 60, "pwr_l": 38, "vision": 40, "disc": 72, "clutch": 47, "fielding": 63, "arm_str": 60, "arm_acc": 54, "speed": 77, "stealing": 46, "br_agg": 26, "dur": 73, "bunt": 49, "drag": 47},
 }
 
-PITCHER_TRUTH = {
+_LEGACY_PITCHER_TRUTH = {
     "Garrett Crochet":      {"ovr": 94, "h9_l": 81, "h9_r": 86, "k9_l": 63, "k9_r": 92, "hr9": 72, "clutch": 64, "ctrl": 64, "velo": 99, "brk": 81, "stam": 90},
     "Tarik Skubal":         {"ovr": 96, "h9_l": 89, "h9_r": 91, "k9_l": 77, "k9_r": 88, "hr9": 79, "clutch": 95, "ctrl": 82, "velo": 77, "brk": 84, "stam": 99},
-    "Ranger Suárez":        {"ovr": 88, "h9_l": 82, "h9_r": 78, "k9_l": 72, "k9_r": 65, "hr9": 80, "clutch": 80, "ctrl": 76, "velo": 66, "brk": 82, "stam": 93},
-    "Cole Ragans":          {"ovr": 83, "h9_l": 83, "h9_r": 65, "k9_l": 68, "k9_r": 85, "hr9": 55, "clutch": 73, "ctrl": 61, "velo": 74, "brk": 72, "stam": 90},
-    "Pablo López":          {"ovr": 82, "h9_l": 71, "h9_r": 75, "k9_l": 71, "k9_r": 64, "hr9": 60, "clutch": 72, "ctrl": 86, "velo": 73, "brk": 65, "stam": 95},
-    "Pete Fairbanks":       {"ovr": 81, "h9_l": 70, "h9_r": 75, "k9_l": 84, "k9_r": 65, "hr9": 86, "clutch": 73, "ctrl": 50, "velo": 97, "brk": 72, "stam": 25},
-    "Jeff Hoffman":         {"ovr": 80, "h9_l": 68, "h9_r": 75, "k9_l": 85, "k9_r": 63, "hr9": 67, "clutch": 66, "ctrl": 74, "velo": 75, "brk": 77, "stam": 73},
-    "Parker Messick":       {"ovr": 77, "h9_l": 55, "h9_r": 45, "k9_l": 51, "k9_r": 59, "hr9": 72, "clutch": 63, "ctrl": 78, "velo": 75, "brk": 76, "stam": 82},
-    "Payton Tolle":         {"ovr": 69, "h9_l": 52, "h9_r": 51, "k9_l": 67, "k9_r": 84, "hr9": 40, "clutch": 72, "ctrl": 72, "velo": 87, "brk": 69, "stam": 62},
     "Yoshinobu Yamamoto":   {"ovr": 95, "h9_l": 91, "h9_r": 84, "k9_l": 76, "k9_r": 89, "hr9": 72, "clutch": 82, "ctrl": 68, "velo": 98, "brk": 99, "stam": 83},
 }
+
+# These get populated at runtime by load_truth_data()
+HITTER_TRUTH = {}
+PITCHER_TRUTH = {}
 
 
 # ================================================================
@@ -372,7 +374,20 @@ def main():
                         help="Reuse cached data from last run")
     parser.add_argument("--detail", action="store_true",
                         help="Print per-player detail for every attribute")
+    parser.add_argument("--refresh-truth", action="store_true",
+                        help="Re-scrape truth data from theshowratings.com before refitting")
     args = parser.parse_args()
+
+    # 0. Optionally refresh truth data from the web
+    global HITTER_TRUTH, PITCHER_TRUTH
+    if args.refresh_truth:
+        print("\n  Refreshing truth data from theshowratings.com...")
+        from scrape_truth import scrape_all, save_truth
+        h, p = scrape_all()
+        save_truth(h, p)
+        HITTER_TRUTH, PITCHER_TRUTH = h, p
+    else:
+        HITTER_TRUTH, PITCHER_TRUTH = load_truth_data()
 
     # 1. Collect data
     results = collect_all(skip_pull=args.skip_pull)
