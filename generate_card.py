@@ -923,6 +923,63 @@ def pull_statcast_data(mlbam_id, year):
     return splits, avg_ev, len(df)
 
 
+def pull_catcher_stats(player_name, year):
+    """Pull Statcast catcher metrics: pop time, arm speed, blocking.
+    Only available for catchers in the Statcast era (2015+)."""
+    print(f"  Pulling {year} catcher stats...")
+    try:
+        from pybaseball import statcast_catcher_poptime
+        pt = statcast_catcher_poptime(year, min_2b_att=1)
+        if pt.empty:
+            return None
+
+        # Match player by name: entity_name is "Last, First"
+        parts = player_name.replace("Jr.", "").replace("Sr.", "").strip().split()
+        first = parts[0]
+        last = " ".join(parts[1:])
+
+        match = None
+        for suffix in ["", " Jr.", " Sr."]:
+            search = f"{last}{suffix}, {first}"
+            m = pt[pt["entity_name"] == search]
+            if not m.empty:
+                match = m.iloc[0]
+                break
+
+        if match is None:
+            # Partial last name match
+            m = pt[pt["entity_name"].str.contains(last, case=False, na=False)]
+            if len(m) == 1:
+                match = m.iloc[0]
+            elif len(m) > 1:
+                narrow = m[m["entity_name"].str.contains(first, case=False, na=False)]
+                if not narrow.empty:
+                    match = narrow.iloc[0]
+
+        if match is None:
+            print(f"    Catcher stats not found for {player_name}")
+            return None
+
+        import math as _math
+        def sf(val):
+            if val is None or (isinstance(val, float) and _math.isnan(val)):
+                return None
+            return float(val)
+
+        result = {
+            "pop_2b": sf(match.get("pop_2b_sba")),
+            "arm_mph": sf(match.get("maxeff_arm_2b_3b_sba")),
+            "exchange": sf(match.get("exchange_2b_3b_sba")),
+            "attempts_2b": int(match.get("pop_2b_sba_count", 0)),
+        }
+        print(f"    Catcher: pop={result['pop_2b']}, arm={result['arm_mph']}mph, "
+              f"exchange={result['exchange']}, attempts={result['attempts_2b']}")
+        return result
+    except Exception as e:
+        print(f"    Catcher stats error: {e}")
+        return None
+
+
 def pull_all_data(player_name, year):
     """Orchestrate all data pulls and return consolidated stats dict."""
     print(f"\nPulling data for {player_name} ({year})...")
@@ -953,6 +1010,13 @@ def pull_all_data(player_name, year):
         print(f"    WARNING: Could not find MLBAM ID for {player_name}")
         data["splits"] = None
         data["avg_ev"] = None
+
+    # Catcher-specific Statcast data (pop time, arm speed)
+    pos = data.get("position") or "OF"
+    if pos == "C" and year >= 2015:
+        data["catcher_stats"] = pull_catcher_stats(player_name, year)
+    else:
+        data["catcher_stats"] = None
 
     return data
 
@@ -1570,19 +1634,36 @@ def calculate_ratings(data, position_override=None, mode="season"):
     chances = oaa_data.get(f"ch_{target_year}")
     arm_innings = oaa_data.get(f"inn_{target_year}")
 
-    if pos in ("LF", "CF", "RF", "OF") and rarm is not None:
-        # OF arm strength: rARM maps ~-6=50, 0=68, +8=99
-        # Formula: 3.9 * rARM + 68 (position baseline adjusts from there)
+    # --- CATCHER-SPECIFIC: arm strength from Statcast arm_mph (RMSE 2.4) ---
+    catcher_stats = data.get("catcher_stats")
+    if pos == "C" and catcher_stats and catcher_stats.get("arm_mph"):
+        # Catcher arm: 4.95 * arm_mph - 337.6 (r=0.985, near-perfect fit)
+        ratings["arm_strength"] = clamp(4.95 * catcher_stats["arm_mph"] - 337.6)
+    elif pos in ("LF", "CF", "RF", "OF") and rarm is not None:
         ratings["arm_strength"] = clamp(3.9 * rarm + defaults["arm_str"])
     else:
         ratings["arm_strength"] = estimate_arm_strength_from_bbref(pos, defaults, assists, arm_innings)
 
     if errr is not None:
-        # ErrR: fewer errors = better accuracy. Range ~-5 to +5
-        # Positive ErrR = fewer errors than average = good
         ratings["arm_accuracy"] = clamp(3.0 * errr + defaults["arm_acc"])
     else:
         ratings["arm_accuracy"] = estimate_arm_accuracy_from_bbref(pos, defaults, errors, chances)
+
+    # --- CATCHER-SPECIFIC: blocking and pop time ---
+    if pos == "C":
+        if catcher_stats and catcher_stats.get("pop_2b"):
+            # Pop Time: -211.0 * pop_2b + 473.6 (RMSE 14.0, r=-0.559)
+            # Partially scouting — raw pop doesn't capture everything Show uses.
+            ratings["pop_time"] = clamp(-211.0 * catcher_stats["pop_2b"] + 473.6)
+        else:
+            ratings["pop_time"] = 55  # league average default
+
+        # Blocking: no Statcast metric directly maps. Use framing runs as proxy
+        # for now, or default. The Show's blocking is partly scouting.
+        ratings["blocking"] = 65  # default until we find a better stat signal
+    else:
+        ratings["pop_time"] = 0
+        ratings["blocking"] = 0
 
     # --- REACTIONS: position-specific directional mapping ---
     # Use RngR (range) + OOZ to estimate overall reaction quality,
@@ -1698,6 +1779,12 @@ def calculate_overalls(ratings):
         ratings["reaction_left"], ratings["reaction_right"],
         ratings["reaction_forward"], ratings["reaction_back"],
     ]
+    # Catcher-specific attrs in fielding overall
+    if ratings.get("blocking"):
+        fielding.append(ratings["blocking"])
+    if ratings.get("pop_time"):
+        fielding.append(ratings["pop_time"])
+
     baserunning = [
         ratings["speed"], ratings["stealing"], ratings["br_aggressiveness"],
     ]
@@ -2060,6 +2147,8 @@ def display_card(player_name, year, ratings, overalls, team=""):
     print(row("Arm Accuracy", ratings["arm_accuracy"], "Reaction L", ratings["reaction_left"]))
     print(row("Reaction R", ratings["reaction_right"], "Reaction F", ratings["reaction_forward"]))
     print(row("Reaction B", ratings["reaction_back"]))
+    if ratings.get("blocking"):
+        print(row("Blocking", ratings["blocking"], "Pop Time", ratings.get("pop_time", 0)))
     print("+" + "-" * W + "+")
 
     # Baserunning

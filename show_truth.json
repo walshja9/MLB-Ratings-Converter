@@ -3,7 +3,7 @@
     "source": "theshowratings.com",
     "game": "MLB The Show 26",
     "scraped_at": "2026-05-03 15:20:57",
-    "hitter_count": 281,
+    "hitter_count": 290,
     "pitcher_count": 100
   },
   "hitters": {
@@ -28,7 +28,9 @@
       "speed": 35,
       "stealing": 43,
       "br_agg": 50,
-      "ovr": 95
+      "ovr": 95,
+      "blocking": 70,
+      "pop": 55
     },
     "Will Smith": {
       "fielding": 60,
@@ -51,7 +53,9 @@
       "speed": 52,
       "stealing": 3,
       "br_agg": 14,
-      "ovr": 88
+      "ovr": 88,
+      "blocking": 58,
+      "pop": 59
     },
     "William Contreras": {
       "fielding": 75,
@@ -74,7 +78,9 @@
       "speed": 37,
       "stealing": 31,
       "br_agg": 48,
-      "ovr": 87
+      "ovr": 87,
+      "blocking": 71,
+      "pop": 58
     },
     "Alejandro Kirk": {
       "fielding": 99,
@@ -97,7 +103,9 @@
       "speed": 9,
       "stealing": 3,
       "br_agg": 2,
-      "ovr": 86
+      "ovr": 86,
+      "blocking": 94,
+      "pop": 55
     },
     "Shea Langeliers": {
       "fielding": 52,
@@ -120,7 +128,9 @@
       "speed": 75,
       "stealing": 33,
       "br_agg": 28,
-      "ovr": 85
+      "ovr": 85,
+      "blocking": 54,
+      "pop": 76
     },
     "Adley Rutschman": {
       "fielding": 74,
@@ -143,7 +153,9 @@
       "speed": 45,
       "stealing": 3,
       "br_agg": 2,
-      "ovr": 84
+      "ovr": 84,
+      "blocking": 81,
+      "pop": 58
     },
     "Gabriel Moreno": {
       "fielding": 84,
@@ -166,7 +178,9 @@
       "speed": 50,
       "stealing": 15,
       "br_agg": 16,
-      "ovr": 84
+      "ovr": 84,
+      "blocking": 75,
+      "pop": 72
     },
     "Dillon Dingler": {
       "fielding": 85,
@@ -189,7 +203,9 @@
       "speed": 59,
       "stealing": 5,
       "br_agg": 6,
-      "ovr": 83
+      "ovr": 83,
+      "blocking": 82,
+      "pop": 79
     },
     "Drake Baldwin": {
       "fielding": 63,
@@ -212,7 +228,9 @@
       "speed": 35,
       "stealing": 0,
       "br_agg": 0,
-      "ovr": 83
+      "ovr": 83,
+      "blocking": 79,
+      "pop": 57
     },
     "Hunter Goodman": {
       "fielding": 64,
@@ -235,7 +253,9 @@
       "speed": 52,
       "stealing": 2,
       "br_agg": 10,
-      "ovr": 83
+      "ovr": 83,
+      "blocking": 67,
+      "pop": 75
     },
     "J.T. Realmuto": {
       "fielding": 56,
@@ -258,7 +278,9 @@
       "speed": 72,
       "stealing": 30,
       "br_agg": 28,
-      "ovr": 83
+      "ovr": 83,
+      "blocking": 67,
+      "pop": 91
     },
     "Sean Murphy": {
       "fielding": 80,
@@ -281,7 +303,9 @@
       "speed": 14,
       "stealing": 0,
       "br_agg": 0,
-      "ovr": 81
+      "ovr": 81,
+      "blocking": 90,
+      "pop": 68
     },
     "Yainer Diaz": {
       "fielding": 61,
@@ -304,7 +328,9 @@
       "speed": 54,
       "stealing": 9,
       "br_agg": 8,
-      "ovr": 81
+      "ovr": 81,
+      "blocking": 67,
+      "pop": 59
     },
     "Carson Kelly": {
       "fielding": 75,
@@ -327,7 +353,9 @@
       "speed": 32,
       "stealing": 6,
       "br_agg": 4,
-      "ovr": 80
+      "ovr": 80,
+      "blocking": 75,
+      "pop": 58
     },
     "Austin Wells": {
       "fielding": 90,
@@ -350,7 +378,9 @@
       "speed": 40,
       "stealing": 13,
       "br_agg": 18,
-      "ovr": 79
+      "ovr": 79,
+      "blocking": 68,
+      "pop": 71
     },
     "Francisco Alvarez": {
       "fielding": 66,
@@ -373,7 +403,9 @@
       "speed": 33,
       "stealing": 2,
       "br_agg": 4,
-      "ovr": 79
+      "ovr": 79,
+      "blocking": 51,
+      "pop": 63
     },
     "Ryan Jeffers": {
       "fielding": 49,
@@ -396,7 +428,9 @@
       "speed": 31,
       "stealing": 12,
       "br_agg": 10,
-      "ovr": 79
+      "ovr": 79,
+      "blocking": 56,
+      "pop": 75
     },
     "Salvador Perez": {
       "fielding": 59,
@@ -419,9 +453,11 @@
       "speed": 10,
       "stealing": 0,
       "br_agg": 0,
-      "ovr": 79
+      "ovr": 79,
+      "blocking": 48,
+      "pop": 73
     },
-    "Carlos Narváez": {
+    "Carlos NarvÃ¡ez": {
       "fielding": 86,
       "arm_str": 55,
       "arm_acc": 90,
@@ -465,7 +501,9 @@
       "speed": 46,
       "stealing": 2,
       "br_agg": 4,
-      "ovr": 77
+      "ovr": 77,
+      "blocking": 81,
+      "pop": 51
     },
     "Freddy Fermin": {
       "fielding": 77,
@@ -488,7 +526,9 @@
       "speed": 50,
       "stealing": 6,
       "br_agg": 10,
-      "ovr": 76
+      "ovr": 76,
+      "blocking": 80,
+      "pop": 80
     },
     "Patrick Bailey": {
       "fielding": 99,
@@ -511,7 +551,9 @@
       "speed": 28,
       "stealing": 15,
       "br_agg": 10,
-      "ovr": 76
+      "ovr": 76,
+      "blocking": 70,
+      "pop": 89
     },
     "Danny Jansen": {
       "fielding": 53,
@@ -534,9 +576,11 @@
       "speed": 34,
       "stealing": 0,
       "br_agg": 0,
-      "ovr": 75
+      "ovr": 75,
+      "blocking": 96,
+      "pop": 51
     },
-    "Gary Sánchez": {
+    "Gary SÃ¡nchez": {
       "fielding": 51,
       "arm_str": 93,
       "arm_acc": 62,
@@ -580,7 +624,9 @@
       "speed": 58,
       "stealing": 30,
       "br_agg": 24,
-      "ovr": 75
+      "ovr": 75,
+      "blocking": 46,
+      "pop": 74
     },
     "Logan O'Hoppe": {
       "fielding": 51,
@@ -603,7 +649,9 @@
       "speed": 54,
       "stealing": 8,
       "br_agg": 16,
-      "ovr": 75
+      "ovr": 75,
+      "blocking": 61,
+      "pop": 47
     },
     "Bo Naylor": {
       "fielding": 72,
@@ -626,7 +674,9 @@
       "speed": 59,
       "stealing": 14,
       "br_agg": 24,
-      "ovr": 74
+      "ovr": 74,
+      "blocking": 71,
+      "pop": 56
     },
     "Victor Caratini": {
       "fielding": 67,
@@ -649,7 +699,9 @@
       "speed": 9,
       "stealing": 2,
       "br_agg": 4,
-      "ovr": 74
+      "ovr": 74,
+      "blocking": 78,
+      "pop": 56
     },
     "Carter Jensen": {
       "fielding": 64,
@@ -672,9 +724,11 @@
       "speed": 58,
       "stealing": 20,
       "br_agg": 22,
-      "ovr": 73
+      "ovr": 73,
+      "blocking": 55,
+      "pop": 84
     },
-    "Iván Herrera": {
+    "IvÃ¡n Herrera": {
       "fielding": 57,
       "arm_str": 48,
       "arm_acc": 40,
@@ -718,7 +772,9 @@
       "speed": 42,
       "stealing": 2,
       "br_agg": 4,
-      "ovr": 73
+      "ovr": 73,
+      "blocking": 54,
+      "pop": 51
     },
     "Luis Torrens": {
       "fielding": 87,
@@ -741,7 +797,9 @@
       "speed": 42,
       "stealing": 2,
       "br_agg": 4,
-      "ovr": 73
+      "ovr": 73,
+      "blocking": 62,
+      "pop": 84
     },
     "Keibert Ruiz": {
       "fielding": 66,
@@ -764,7 +822,9 @@
       "speed": 11,
       "stealing": 3,
       "br_agg": 12,
-      "ovr": 72
+      "ovr": 72,
+      "blocking": 57,
+      "pop": 55
     },
     "Mitch Garver": {
       "fielding": 53,
@@ -787,9 +847,11 @@
       "speed": 28,
       "stealing": 4,
       "br_agg": 10,
-      "ovr": 72
+      "ovr": 72,
+      "blocking": 58,
+      "pop": 0
     },
-    "Pedro Pagés": {
+    "Pedro PagÃ©s": {
       "fielding": 70,
       "arm_str": 77,
       "arm_acc": 66,
@@ -833,7 +895,9 @@
       "speed": 46,
       "stealing": 3,
       "br_agg": 2,
-      "ovr": 71
+      "ovr": 71,
+      "blocking": 76,
+      "pop": 76
     },
     "Jonah Heim": {
       "fielding": 67,
@@ -856,7 +920,9 @@
       "speed": 19,
       "stealing": 12,
       "br_agg": 10,
-      "ovr": 71
+      "ovr": 71,
+      "blocking": 65,
+      "pop": 66
     },
     "Eric Haase": {
       "fielding": 36,
@@ -879,7 +945,9 @@
       "speed": 64,
       "stealing": 4,
       "br_agg": 8,
-      "ovr": 70
+      "ovr": 70,
+      "blocking": 67,
+      "pop": 0
     },
     "Kyle Higashioka": {
       "fielding": 62,
@@ -902,7 +970,9 @@
       "speed": 18,
       "stealing": 15,
       "br_agg": 12,
-      "ovr": 70
+      "ovr": 70,
+      "blocking": 53,
+      "pop": 40
     },
     "Miguel Amaya": {
       "fielding": 64,
@@ -925,9 +995,11 @@
       "speed": 31,
       "stealing": 0,
       "br_agg": 0,
-      "ovr": 70
+      "ovr": 70,
+      "blocking": 75,
+      "pop": 50
     },
-    "Rafael Marchán": {
+    "Rafael MarchÃ¡n": {
       "fielding": 67,
       "arm_str": 94,
       "arm_acc": 84,
@@ -971,7 +1043,9 @@
       "speed": 38,
       "stealing": 3,
       "br_agg": 2,
-      "ovr": 70
+      "ovr": 70,
+      "blocking": 67,
+      "pop": 52
     },
     "Tyler Heineman": {
       "fielding": 87,
@@ -994,7 +1068,9 @@
       "speed": 40,
       "stealing": 6,
       "br_agg": 4,
-      "ovr": 70
+      "ovr": 70,
+      "blocking": 78,
+      "pop": 71
     },
     "James McCann": {
       "fielding": 52,
@@ -1017,7 +1093,9 @@
       "speed": 39,
       "stealing": 3,
       "br_agg": 2,
-      "ovr": 69
+      "ovr": 69,
+      "blocking": 57,
+      "pop": 52
     },
     "Harry Ford": {
       "fielding": 64,
@@ -1040,7 +1118,9 @@
       "speed": 81,
       "stealing": 34,
       "br_agg": 32,
-      "ovr": 68
+      "ovr": 68,
+      "blocking": 66,
+      "pop": 66
     },
     "Liam Hicks": {
       "fielding": 59,
@@ -1063,7 +1143,9 @@
       "speed": 37,
       "stealing": 6,
       "br_agg": 4,
-      "ovr": 68
+      "ovr": 68,
+      "blocking": 66,
+      "pop": 50
     },
     "Nick Fortes": {
       "fielding": 73,
@@ -1086,7 +1168,9 @@
       "speed": 46,
       "stealing": 2,
       "br_agg": 4,
-      "ovr": 68
+      "ovr": 68,
+      "blocking": 80,
+      "pop": 60
     },
     "Adrian Del Castillo": {
       "fielding": 56,
@@ -1109,9 +1193,11 @@
       "speed": 31,
       "stealing": 2,
       "br_agg": 4,
-      "ovr": 67
+      "ovr": 67,
+      "blocking": 68,
+      "pop": 36
     },
-    "Agustín Ramírez": {
+    "AgustÃ­n RamÃ­rez": {
       "fielding": 30,
       "arm_str": 73,
       "arm_acc": 36,
@@ -1155,7 +1241,9 @@
       "speed": 16,
       "stealing": 3,
       "br_agg": 10,
-      "ovr": 67
+      "ovr": 67,
+      "blocking": 75,
+      "pop": 59
     },
     "Connor Wong": {
       "fielding": 51,
@@ -1178,7 +1266,9 @@
       "speed": 65,
       "stealing": 12,
       "br_agg": 46,
-      "ovr": 67
+      "ovr": 67,
+      "blocking": 43,
+      "pop": 55
     },
     "Daniel Susac": {
       "fielding": 65,
@@ -1201,7 +1291,9 @@
       "speed": 58,
       "stealing": 19,
       "br_agg": 12,
-      "ovr": 67
+      "ovr": 67,
+      "blocking": 65,
+      "pop": 65
     },
     "Drew Millas": {
       "fielding": 67,
@@ -1224,7 +1316,9 @@
       "speed": 56,
       "stealing": 38,
       "br_agg": 40,
-      "ovr": 67
+      "ovr": 67,
+      "blocking": 60,
+      "pop": 76
     },
     "Edgar Quero": {
       "fielding": 32,
@@ -1247,7 +1341,9 @@
       "speed": 15,
       "stealing": 0,
       "br_agg": 2,
-      "ovr": 67
+      "ovr": 67,
+      "blocking": 64,
+      "pop": 74
     },
     "Yohel Pozo": {
       "fielding": 68,
@@ -1270,7 +1366,9 @@
       "speed": 14,
       "stealing": 0,
       "br_agg": 0,
-      "ovr": 67
+      "ovr": 67,
+      "blocking": 69,
+      "pop": 50
     },
     "Austin Wynns": {
       "fielding": 66,
@@ -1293,7 +1391,9 @@
       "speed": 10,
       "stealing": 0,
       "br_agg": 0,
-      "ovr": 66
+      "ovr": 66,
+      "blocking": 67,
+      "pop": 58
     },
     "Brandon Valenzuela": {
       "fielding": 61,
@@ -1316,7 +1416,9 @@
       "speed": 55,
       "stealing": 19,
       "br_agg": 12,
-      "ovr": 66
+      "ovr": 66,
+      "blocking": 70,
+      "pop": 70
     },
     "Dalton Rushing": {
       "fielding": 55,
@@ -1339,7 +1441,9 @@
       "speed": 61,
       "stealing": 3,
       "br_agg": 2,
-      "ovr": 66
+      "ovr": 66,
+      "blocking": 48,
+      "pop": 60
     },
     "Henry Davis": {
       "fielding": 61,
@@ -1362,7 +1466,9 @@
       "speed": 70,
       "stealing": 4,
       "br_agg": 6,
-      "ovr": 66
+      "ovr": 66,
+      "blocking": 59,
+      "pop": 83
     },
     "J.C. Escarra": {
       "fielding": 74,
@@ -1385,7 +1491,9 @@
       "speed": 30,
       "stealing": 3,
       "br_agg": 2,
-      "ovr": 66
+      "ovr": 66,
+      "blocking": 51,
+      "pop": 78
     },
     "Joe Mack": {
       "fielding": 71,
@@ -1408,7 +1516,9 @@
       "speed": 52,
       "stealing": 19,
       "br_agg": 12,
-      "ovr": 66
+      "ovr": 66,
+      "blocking": 75,
+      "pop": 75
     },
     "Jose Trevino": {
       "fielding": 80,
@@ -1431,9 +1541,11 @@
       "speed": 9,
       "stealing": 3,
       "br_agg": 2,
-      "ovr": 66
+      "ovr": 66,
+      "blocking": 69,
+      "pop": 46
     },
-    "Moisés Ballesteros": {
+    "MoisÃ©s Ballesteros": {
       "fielding": 54,
       "arm_str": 67,
       "arm_acc": 52,
@@ -1477,9 +1589,11 @@
       "speed": 29,
       "stealing": 10,
       "br_agg": 15,
-      "ovr": 66
+      "ovr": 66,
+      "blocking": 44,
+      "pop": 60
     },
-    "Christian Vázquez": {
+    "Christian VÃ¡zquez": {
       "fielding": 84,
       "arm_str": 63,
       "arm_acc": 67,
@@ -1523,7 +1637,9 @@
       "speed": 36,
       "stealing": 3,
       "br_agg": 2,
-      "ovr": 65
+      "ovr": 65,
+      "blocking": 64,
+      "pop": 48
     },
     "Jimmy Crooks": {
       "fielding": 60,
@@ -1546,7 +1662,9 @@
       "speed": 65,
       "stealing": 27,
       "br_agg": 22,
-      "ovr": 65
+      "ovr": 65,
+      "blocking": 69,
+      "pop": 66
     },
     "Rafael Flores Jr.": {
       "fielding": 67,
@@ -1569,7 +1687,9 @@
       "speed": 69,
       "stealing": 34,
       "br_agg": 43,
-      "ovr": 65
+      "ovr": 65,
+      "blocking": 62,
+      "pop": 61
     },
     "Braxton Fulford": {
       "fielding": 44,
@@ -1592,7 +1712,9 @@
       "speed": 84,
       "stealing": 12,
       "br_agg": 12,
-      "ovr": 64
+      "ovr": 64,
+      "blocking": 58,
+      "pop": 62
     },
     "Garrett Stubbs": {
       "fielding": 50,
@@ -1615,7 +1737,9 @@
       "speed": 65,
       "stealing": 15,
       "br_agg": 10,
-      "ovr": 64
+      "ovr": 64,
+      "blocking": 62,
+      "pop": 82
     },
     "Jeferson Quero": {
       "fielding": 63,
@@ -1638,7 +1762,9 @@
       "speed": 40,
       "stealing": 15,
       "br_agg": 12,
-      "ovr": 64
+      "ovr": 64,
+      "blocking": 74,
+      "pop": 79
     },
     "Dom Keegan": {
       "fielding": 66,
@@ -1661,7 +1787,9 @@
       "speed": 59,
       "stealing": 19,
       "br_agg": 14,
-      "ovr": 63
+      "ovr": 63,
+      "blocking": 66,
+      "pop": 66
     },
     "Hayden Senger": {
       "fielding": 80,
@@ -1684,7 +1812,9 @@
       "speed": 42,
       "stealing": 4,
       "br_agg": 3,
-      "ovr": 63
+      "ovr": 63,
+      "blocking": 78,
+      "pop": 81
     },
     "Jhonny Pereda": {
       "fielding": 54,
@@ -1707,7 +1837,9 @@
       "speed": 16,
       "stealing": 0,
       "br_agg": 0,
-      "ovr": 63
+      "ovr": 63,
+      "blocking": 66,
+      "pop": 79
     },
     "Leo Bernal": {
       "fielding": 68,
@@ -1730,7 +1862,9 @@
       "speed": 35,
       "stealing": 26,
       "br_agg": 24,
-      "ovr": 63
+      "ovr": 63,
+      "blocking": 67,
+      "pop": 74
     },
     "Thayron Liranzo": {
       "fielding": 59,
@@ -1753,7 +1887,9 @@
       "speed": 55,
       "stealing": 19,
       "br_agg": 17,
-      "ovr": 63
+      "ovr": 63,
+      "blocking": 64,
+      "pop": 72
     },
     "Jesus Rodriguez": {
       "fielding": 67,
@@ -1776,7 +1912,9 @@
       "speed": 76,
       "stealing": 38,
       "br_agg": 34,
-      "ovr": 62
+      "ovr": 62,
+      "blocking": 66,
+      "pop": 66
     },
     "Luis Campusano": {
       "fielding": 38,
@@ -1799,7 +1937,9 @@
       "speed": 16,
       "stealing": 0,
       "br_agg": 0,
-      "ovr": 62
+      "ovr": 62,
+      "blocking": 40,
+      "pop": 54
     },
     "Eduardo Valencia": {
       "fielding": 67,
@@ -1822,7 +1962,9 @@
       "speed": 48,
       "stealing": 8,
       "br_agg": 14,
-      "ovr": 60
+      "ovr": 60,
+      "blocking": 65,
+      "pop": 65
     },
     "Willie MacIver": {
       "fielding": 54,
@@ -1845,7 +1987,9 @@
       "speed": 57,
       "stealing": 33,
       "br_agg": 26,
-      "ovr": 60
+      "ovr": 60,
+      "blocking": 56,
+      "pop": 50
     },
     "Aaron Judge": {
       "fielding": 61,
@@ -1962,7 +2106,7 @@
       "br_agg": 36,
       "ovr": 97
     },
-    "José Ramírez": {
+    "JosÃ© RamÃ­rez": {
       "fielding": 80,
       "arm_str": 61,
       "arm_acc": 73,
@@ -2146,7 +2290,7 @@
       "br_agg": 48,
       "ovr": 90
     },
-    "Jeremy Peña": {
+    "Jeremy PeÃ±a": {
       "fielding": 85,
       "arm_str": 53,
       "arm_acc": 75,
@@ -2376,7 +2520,7 @@
       "br_agg": 84,
       "ovr": 86
     },
-    "Eugenio Suárez": {
+    "Eugenio SuÃ¡rez": {
       "fielding": 71,
       "arm_str": 59,
       "arm_acc": 70,
@@ -2537,7 +2681,7 @@
       "br_agg": 58,
       "ovr": 85
     },
-    "Yandy Díaz": {
+    "Yandy DÃ­az": {
       "fielding": 44,
       "arm_str": 30,
       "arm_acc": 75,
@@ -3204,7 +3348,7 @@
       "br_agg": 63,
       "ovr": 80
     },
-    "Andrés Giménez": {
+    "AndrÃ©s GimÃ©nez": {
       "fielding": 99,
       "arm_str": 62,
       "arm_acc": 87,
@@ -3365,7 +3509,7 @@
       "br_agg": 24,
       "ovr": 78
     },
-    "Luis García Jr.": {
+    "Luis GarcÃ­a Jr.": {
       "fielding": 47,
       "arm_str": 77,
       "arm_acc": 52,
@@ -3526,7 +3670,7 @@
       "br_agg": 63,
       "ovr": 77
     },
-    "Javier Báez": {
+    "Javier BÃ¡ez": {
       "fielding": 80,
       "arm_str": 80,
       "arm_acc": 58,
@@ -3848,7 +3992,7 @@
       "br_agg": 26,
       "ovr": 75
     },
-    "José Caballero": {
+    "JosÃ© Caballero": {
       "fielding": 81,
       "arm_str": 75,
       "arm_acc": 63,
@@ -3894,7 +4038,7 @@
       "br_agg": 4,
       "ovr": 75
     },
-    "Mauricio Dubón": {
+    "Mauricio DubÃ³n": {
       "fielding": 99,
       "arm_str": 84,
       "arm_acc": 80,
@@ -4193,7 +4337,7 @@
       "br_agg": 61,
       "ovr": 95
     },
-    "Ronald Acuña Jr.": {
+    "Ronald AcuÃ±a Jr.": {
       "fielding": 40,
       "arm_str": 99,
       "arm_acc": 86,
@@ -4239,7 +4383,7 @@
       "br_agg": 69,
       "ovr": 93
     },
-    "Julio Rodríguez": {
+    "Julio RodrÃ­guez": {
       "fielding": 90,
       "arm_str": 95,
       "arm_acc": 70,
@@ -4860,7 +5004,7 @@
       "br_agg": 46,
       "ovr": 81
     },
-    "Ramón Laureano": {
+    "RamÃ³n Laureano": {
       "fielding": 46,
       "arm_str": 82,
       "arm_acc": 95,
@@ -4883,7 +5027,7 @@
       "br_agg": 56,
       "ovr": 81
     },
-    "Teoscar Hernández": {
+    "Teoscar HernÃ¡ndez": {
       "fielding": 42,
       "arm_str": 70,
       "arm_acc": 63,
@@ -5274,7 +5418,7 @@
       "br_agg": 22,
       "ovr": 78
     },
-    "Adolis García": {
+    "Adolis GarcÃ­a": {
       "fielding": 68,
       "arm_str": 90,
       "arm_acc": 79,
@@ -5504,7 +5648,7 @@
       "br_agg": 51,
       "ovr": 76
     },
-    "Luisangel Acuña": {
+    "Luisangel AcuÃ±a": {
       "fielding": 76,
       "arm_str": 52,
       "arm_acc": 66,
@@ -5780,7 +5924,7 @@
       "br_agg": 20,
       "ovr": 74
     },
-    "Heriberto Hernández": {
+    "Heriberto HernÃ¡ndez": {
       "fielding": 84,
       "arm_str": 70,
       "arm_acc": 46,
@@ -6033,7 +6177,7 @@
       "br_agg": 79,
       "ovr": 73
     },
-    "Jasson Domínguez": {
+    "Jasson DomÃ­nguez": {
       "fielding": 33,
       "arm_str": 90,
       "arm_acc": 63,
@@ -6056,7 +6200,7 @@
       "br_agg": 81,
       "ovr": 73
     },
-    "Jesús Sánchez": {
+    "JesÃºs SÃ¡nchez": {
       "fielding": 67,
       "arm_str": 79,
       "arm_acc": 66,
@@ -6217,7 +6361,7 @@
       "br_agg": 85,
       "ovr": 73
     },
-    "Wenceel Pérez": {
+    "Wenceel PÃ©rez": {
       "fielding": 78,
       "arm_str": 78,
       "arm_acc": 55,
@@ -6469,6 +6613,222 @@
       "stealing": 18,
       "br_agg": 30,
       "ovr": 62
+    },
+    "Carlos Narváez": {
+      "blocking": 76,
+      "pop": 70,
+      "fielding": 86,
+      "arm_str": 55,
+      "arm_acc": 90,
+      "react_l": 46,
+      "react_r": 48,
+      "react_f": 51,
+      "react_b": 49,
+      "con_r": 58,
+      "con_l": 57,
+      "pwr_r": 61,
+      "pwr_l": 57,
+      "vision": 55,
+      "disc": 63,
+      "clutch": 56,
+      "bunt": 44,
+      "drag": 25,
+      "dur": 82,
+      "speed": 27,
+      "stealing": 2,
+      "br_agg": 4,
+      "ovr": 77
+    },
+    "Gary Sánchez": {
+      "blocking": 38,
+      "pop": 85,
+      "fielding": 51,
+      "arm_str": 93,
+      "arm_acc": 62,
+      "react_l": 0,
+      "react_r": 0,
+      "react_f": 0,
+      "react_b": 0,
+      "con_r": 48,
+      "con_l": 46,
+      "pwr_r": 65,
+      "pwr_l": 80,
+      "vision": 49,
+      "disc": 60,
+      "clutch": 69,
+      "bunt": 35,
+      "drag": 25,
+      "dur": 74,
+      "speed": 12,
+      "stealing": 0,
+      "br_agg": 0,
+      "ovr": 75
+    },
+    "Iván Herrera": {
+      "blocking": 69,
+      "pop": 50,
+      "fielding": 57,
+      "arm_str": 48,
+      "arm_acc": 40,
+      "react_l": 47,
+      "react_r": 46,
+      "react_f": 44,
+      "react_b": 42,
+      "con_r": 64,
+      "con_l": 66,
+      "pwr_r": 51,
+      "pwr_l": 69,
+      "vision": 66,
+      "disc": 69,
+      "clutch": 90,
+      "bunt": 35,
+      "drag": 25,
+      "dur": 82,
+      "speed": 38,
+      "stealing": 39,
+      "br_agg": 30,
+      "ovr": 73
+    },
+    "Pedro Pagés": {
+      "blocking": 66,
+      "pop": 60,
+      "fielding": 70,
+      "arm_str": 77,
+      "arm_acc": 66,
+      "react_l": 0,
+      "react_r": 0,
+      "react_f": 0,
+      "react_b": 0,
+      "con_r": 55,
+      "con_l": 66,
+      "pwr_r": 65,
+      "pwr_l": 43,
+      "vision": 52,
+      "disc": 42,
+      "clutch": 54,
+      "bunt": 58,
+      "drag": 25,
+      "dur": 78,
+      "speed": 27,
+      "stealing": 6,
+      "br_agg": 4,
+      "ovr": 72
+    },
+    "Rafael Marchán": {
+      "blocking": 67,
+      "pop": 85,
+      "fielding": 67,
+      "arm_str": 94,
+      "arm_acc": 84,
+      "react_l": 0,
+      "react_r": 0,
+      "react_f": 0,
+      "react_b": 0,
+      "con_r": 46,
+      "con_l": 58,
+      "pwr_r": 43,
+      "pwr_l": 45,
+      "vision": 63,
+      "disc": 48,
+      "clutch": 42,
+      "bunt": 57,
+      "drag": 25,
+      "dur": 65,
+      "speed": 39,
+      "stealing": 0,
+      "br_agg": 0,
+      "ovr": 70
+    },
+    "Agustín Ramírez": {
+      "blocking": 30,
+      "pop": 52,
+      "fielding": 30,
+      "arm_str": 73,
+      "arm_acc": 36,
+      "react_l": 42,
+      "react_r": 41,
+      "react_f": 47,
+      "react_b": 42,
+      "con_r": 57,
+      "con_l": 46,
+      "pwr_r": 59,
+      "pwr_l": 61,
+      "vision": 70,
+      "disc": 47,
+      "clutch": 78,
+      "bunt": 35,
+      "drag": 25,
+      "dur": 93,
+      "speed": 44,
+      "stealing": 58,
+      "br_agg": 59,
+      "ovr": 67
+    },
+    "Moisés Ballesteros": {
+      "blocking": 51,
+      "pop": 45,
+      "fielding": 54,
+      "arm_str": 67,
+      "arm_acc": 52,
+      "react_l": 53,
+      "react_r": 54,
+      "react_f": 52,
+      "react_b": 53,
+      "con_r": 67,
+      "con_l": 54,
+      "pwr_r": 54,
+      "pwr_l": 44,
+      "vision": 52,
+      "disc": 44,
+      "clutch": 62,
+      "bunt": 35,
+      "drag": 25,
+      "dur": 88,
+      "speed": 33,
+      "stealing": 10,
+      "br_agg": 14,
+      "ovr": 66
+    },
+    "Christian Vázquez": {
+      "blocking": 65,
+      "pop": 0,
+      "fielding": 84,
+      "arm_str": 63,
+      "arm_acc": 67,
+      "react_l": 0,
+      "react_r": 0,
+      "react_f": 0,
+      "react_b": 0,
+      "con_r": 77,
+      "con_l": 64,
+      "pwr_r": 42,
+      "pwr_l": 53,
+      "vision": 76,
+      "disc": 48,
+      "clutch": 73,
+      "bunt": 40,
+      "drag": 29,
+      "dur": 73,
+      "speed": 25,
+      "stealing": 19,
+      "br_agg": 0,
+      "ovr": 65
+    },
+    "Shohei Ohtani": {
+      "h9_l": 93,
+      "h9_r": 88,
+      "k9_l": 95,
+      "k9_r": 78,
+      "hr9": 90,
+      "clutch": 74,
+      "ctrl": 74,
+      "velo": 99,
+      "brk": 82,
+      "stam": 70,
+      "fielding": 62,
+      "dur": 98,
+      "speed": 67,
+      "ovr": 99
     }
   },
   "pitchers": {
@@ -6664,7 +7024,7 @@
       "speed": 35,
       "ovr": 94
     },
-    "Cristopher Sánchez": {
+    "Cristopher SÃ¡nchez": {
       "h9_l": 85,
       "h9_r": 61,
       "k9_l": 84,
@@ -6824,7 +7184,7 @@
       "speed": 39,
       "ovr": 90
     },
-    "Edwin Díaz": {
+    "Edwin DÃ­az": {
       "h9_l": 92,
       "h9_r": 99,
       "k9_l": 99,
@@ -6984,7 +7344,7 @@
       "speed": 35,
       "ovr": 87
     },
-    "Jesús Luzardo": {
+    "JesÃºs Luzardo": {
       "h9_l": 77,
       "h9_r": 61,
       "k9_l": 93,
@@ -7032,7 +7392,7 @@
       "speed": 23,
       "ovr": 87
     },
-    "Andrés Muñoz": {
+    "AndrÃ©s MuÃ±oz": {
       "h9_l": 99,
       "h9_r": 99,
       "k9_l": 89,
@@ -7048,7 +7408,7 @@
       "speed": 40,
       "ovr": 86
     },
-    "Carlos Rodón": {
+    "Carlos RodÃ³n": {
       "h9_l": 86,
       "h9_r": 73,
       "k9_l": 78,
@@ -7272,7 +7632,7 @@
       "speed": 31,
       "ovr": 83
     },
-    "Eury Pérez": {
+    "Eury PÃ©rez": {
       "h9_l": 84,
       "h9_r": 73,
       "k9_l": 78,
@@ -7496,7 +7856,7 @@
       "speed": 31,
       "ovr": 82
     },
-    "Pablo López": {
+    "Pablo LÃ³pez": {
       "h9_l": 50,
       "h9_r": 75,
       "k9_l": 57,
@@ -7752,7 +8112,7 @@
       "speed": 40,
       "ovr": 81
     },
-    "Reynaldo López": {
+    "Reynaldo LÃ³pez": {
       "h9_l": 60,
       "h9_r": 74,
       "k9_l": 63,
@@ -7928,7 +8288,7 @@
       "speed": 0,
       "ovr": 80
     },
-    "Emilio Pagán": {
+    "Emilio PagÃ¡n": {
       "h9_l": 85,
       "h9_r": 83,
       "k9_l": 76,

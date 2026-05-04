@@ -81,6 +81,10 @@ HITTER_ATTR_MAP = {
     "stealing": "stealing",
     "baserunning aggressiveness": "br_agg",
     "br agg": "br_agg",
+    # Catcher-specific attributes
+    "blocking": "blocking",
+    "pop time": "pop",
+    "pop": "pop",
 }
 
 PITCHER_ATTR_MAP = {
