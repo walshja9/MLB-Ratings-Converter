@@ -2009,23 +2009,32 @@ def calculate_pitcher_ratings(data, mode="season"):
     else:
         ratings["stamina"] = clamp(0.273 * pit["GS"] + 76.8)
 
-    # --- BREAK: not reliably stat-derivable (r<0.4 with all metrics tested) ---
-    # SDS Break is a scouting/visual attribute, not correlated with Stuff+, SwStr%,
-    # CSW%, O-Swing%, Contact%, FB%, or even raw Statcast pitch movement.
-    # Best heuristic: base 80, adjust by pitch diversity and offspeed reliance.
+    # --- BREAK: refit using Statcast pitch movement data (RMSE 8.5, was 14.8) ---
+    # At N=22 with per-pitch break measurements:
+    #   max_break + num_pitches + offspeed_usage -> RMSE 8.5
+    # Max break on best pitch matters most. More offspeed = higher break.
+    # Fewer distinct pitches (specialists) get a slight bonus.
     arsenal = sc.get("arsenal", [])
     if arsenal:
-        # Count distinct pitch types with >5% usage
         pitch_types = [p for p in arsenal if p["usage"] > 5]
         num_pitches = len(pitch_types)
-
-        # Calculate offspeed/breaking usage % (everything except FF)
         offspeed_usage = sum(p["usage"] for p in arsenal if p["code"] not in ("FF",))
 
-        # More pitch types and more offspeed = higher break
-        # Base 75, +3 per pitch type beyond 2, +0.2 per % of offspeed usage
-        base_break = 75 + max(0, (num_pitches - 2)) * 3 + offspeed_usage * 0.2
-        ratings["break_"] = dampen(clamp(base_break))
+        # Compute max total break from per-pitch movement data
+        max_break = 0
+        for pitch in arsenal:
+            tb = pitch.get("total_break_inches")
+            if tb is not None and tb > max_break:
+                max_break = tb
+
+        if max_break > 0:
+            # Statcast movement formula: 2.72*max_break - 2.08*pitches + 0.29*offspeed + 32.7
+            raw_break = 2.72 * max_break - 2.08 * num_pitches + 0.29 * offspeed_usage + 32.7
+            ratings["break_"] = dampen(clamp(raw_break))
+        else:
+            # No movement data — use pitch diversity heuristic as fallback
+            base_break = 75 + max(0, (num_pitches - 2)) * 3 + offspeed_usage * 0.2
+            ratings["break_"] = dampen(clamp(base_break))
     else:
         ratings["break_"] = 80  # default when no arsenal data
 

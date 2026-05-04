@@ -138,8 +138,7 @@ def collect_pitcher(name):
             "ovr": ovr,
             "raw_data": {
                 "pitching": data["pitching"],
-                "statcast": {k: v for k, v in (data.get("statcast") or {}).items()
-                             if k != "arsenal"},
+                "statcast": data.get("statcast") or {},
             },
         }
     except Exception as e:
