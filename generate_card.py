@@ -923,6 +923,61 @@ def pull_statcast_data(mlbam_id, year):
     return splits, avg_ev, len(df)
 
 
+def pull_barrel_stats(player_name, year):
+    """Pull Statcast barrel% and hard-hit% data for a hitter."""
+    print(f"  Pulling {year} barrel stats...")
+    try:
+        from pybaseball import statcast_batter_exitvelo_barrels
+        df = statcast_batter_exitvelo_barrels(year, minBBE=30)
+        if df.empty:
+            return None
+
+        # Match by name: "Last, First" format
+        parts = player_name.replace("Jr.", "").replace("Sr.", "").strip().split()
+        first = parts[0]
+        last = " ".join(parts[1:])
+
+        match = None
+        for suffix in ["", " Jr.", " Sr."]:
+            search = f"{last}{suffix}, {first}"
+            m = df[df["last_name, first_name"] == search]
+            if not m.empty:
+                match = m.iloc[0]
+                break
+
+        if match is None:
+            m = df[df["last_name, first_name"].str.contains(last, case=False, na=False)]
+            if len(m) == 1:
+                match = m.iloc[0]
+            elif len(m) > 1:
+                narrow = m[m["last_name, first_name"].str.contains(first, case=False, na=False)]
+                if not narrow.empty:
+                    match = narrow.iloc[0]
+
+        if match is None:
+            return None
+
+        import math as _math
+        def sf(val):
+            if val is None or (isinstance(val, float) and _math.isnan(val)):
+                return None
+            return float(val)
+
+        result = {
+            "brl_percent": sf(match.get("brl_percent")),
+            "brl_pa": sf(match.get("brl_pa")),
+            "ev95percent": sf(match.get("ev95percent")),
+            "avg_ev": sf(match.get("avg_hit_speed")),
+            "max_ev": sf(match.get("max_hit_speed")),
+        }
+        if result["brl_percent"] is not None:
+            print(f"    Barrels: {result['brl_percent']}%, hard-hit: {result['ev95percent']}%, maxEV: {result['max_ev']}")
+        return result
+    except Exception as e:
+        print(f"    Barrel stats error: {e}")
+        return None
+
+
 def pull_catcher_stats(player_name, year):
     """Pull Statcast catcher metrics: pop time, arm speed, blocking.
     Only available for catchers in the Statcast era (2015+)."""
@@ -1010,6 +1065,12 @@ def pull_all_data(player_name, year):
         print(f"    WARNING: Could not find MLBAM ID for {player_name}")
         data["splits"] = None
         data["avg_ev"] = None
+
+    # Barrel% / hard-hit% data (Statcast era)
+    if year >= 2015:
+        data["barrel_stats"] = pull_barrel_stats(player_name, year)
+    else:
+        data["barrel_stats"] = None
 
     # Catcher-specific Statcast data (pop time, arm speed)
     pos = data.get("position") or "OF"
@@ -1462,14 +1523,38 @@ def calculate_ratings(data, position_override=None, mode="season"):
             iso_blend = trust_r * iso_vr + (1 - trust_r) * effective_iso
         else:
             iso_blend = effective_iso
-    # Power R refit: HR rate now fully dominates (RMSE 8.6, was 9.4)
-    ratings["power_right"] = clamp(6.3 * iso_blend + 623.8 * hr_rate + 49.3)
+    # Power R: barrel% is the best signal at scale (N=233, RMSE=10.1, r=0.781).
+    # When available, blend barrel-based estimate with ISO+HR formula.
+    barrel = data.get("barrel_stats")
+    brl_pct = barrel.get("brl_percent") if barrel else None
+    if brl_pct is not None and pa >= 100:
+        # Barrel-based power: 2.83 * brl% + 36.5
+        pwr_r_barrel = 2.83 * brl_pct + 36.5
+        # ISO+HR formula as backup signal
+        pwr_r_trad = 6.3 * iso_blend + 623.8 * hr_rate + 49.3
+        # Blend: 60% barrel, 40% traditional (barrel is more robust at scale)
+        ratings["power_right"] = clamp(0.6 * pwr_r_barrel + 0.4 * pwr_r_trad)
+    else:
+        ratings["power_right"] = clamp(6.3 * iso_blend + 623.8 * hr_rate + 49.3)
 
     # --- POWER L: ISO_vL + HR/PA refit (RMSE 16.2 → 13.3) ---
     # HR rate is the dominant signal for opposite-hand power. ISO_vL alone
     # missed badly on Soto (66 vs 88), Elly (46 vs 70), Dingler (76 vs 46).
-    # Power L refit: HR rate even more dominant, ISO inverts (RMSE 10.1, was 10.3)
-    if use_career:
+    # Power L: barrel% also helps (N=233, RMSE=13.2, r=0.602).
+    if brl_pct is not None and pa >= 100:
+        pwr_l_barrel = 2.24 * brl_pct + 38.7
+        if use_career:
+            pwr_l_trad = -60.7 * iso_blend + 929.9 * hr_rate + 43.8
+        else:
+            iso_vl = splits.get("vs_LHP", {}).get("ISO")
+            if iso_vl is not None and pa_vs_lhp > 0:
+                trust_l_pwr = min(pa_vs_lhp / 120, 1.0)
+                iso_l = trust_l_pwr * iso_vl + (1 - trust_l_pwr) * effective_iso
+            else:
+                iso_l = effective_iso
+            pwr_l_trad = -60.7 * iso_l + 929.9 * hr_rate + 43.8
+        ratings["power_left"] = clamp(0.5 * pwr_l_barrel + 0.5 * pwr_l_trad)
+    elif use_career:
         ratings["power_left"] = clamp(-60.7 * iso_blend + 929.9 * hr_rate + 43.8)
     else:
         iso_vl = splits.get("vs_LHP", {}).get("ISO")
@@ -1658,9 +1743,10 @@ def calculate_ratings(data, position_override=None, mode="season"):
         else:
             ratings["pop_time"] = 55  # league average default
 
-        # Blocking: no Statcast metric directly maps. Use framing runs as proxy
-        # for now, or default. The Show's blocking is partly scouting.
-        ratings["blocking"] = 65  # default until we find a better stat signal
+        # Blocking: highly correlated with Show fielding for catchers (r=0.929).
+        # Formula: 0.75 * fielding + 13.3 (RMSE 5.2 on small N=5, but strong signal).
+        # Uses the fielding rating we already computed above.
+        ratings["blocking"] = clamp(0.75 * ratings["fielding"] + 13.3)
     else:
         ratings["pop_time"] = 0
         ratings["blocking"] = 0
@@ -1881,10 +1967,12 @@ def calculate_pitcher_ratings(data, mode="season"):
         ratings["h_per_9_left"] = dampen(-228.2 * vs_lhb["BA"] + 129.6)
         ratings["h_per_9_right"] = dampen(-187.7 * vs_rhb["BA"] + 120.7)
 
-        # K/9 splits refit on N=22 (L: RMSE 6.9, R: RMSE 7.1). Lower slopes,
-        # higher intercepts — old formula systematically under-predicted.
-        ratings["k_per_9_left"] = dampen(1.16 * vs_lhb["K_pct"] + 50.6)
-        ratings["k_per_9_right"] = dampen(0.87 * vs_rhb["K_pct"] + 59.8)
+        # K/9 splits: NO DAMPENING when we have split data (PA >= 50).
+        # Dampening was the primary cause of -8 to -10 systematic bias.
+        # The regression coefficients (1.16/0.87) already compress the range
+        # appropriately. Undampened RMSE: L=6.9, R=7.1 with zero bias.
+        ratings["k_per_9_left"] = clamp(1.16 * vs_lhb["K_pct"] + 50.6)
+        ratings["k_per_9_right"] = clamp(0.87 * vs_rhb["K_pct"] + 59.8)
     else:
         # No reliable splits — use overall and apply default platoon gap
         h9_avg = dampen(-7.86 * h9_blend + 131.1)
@@ -2180,7 +2268,7 @@ def display_verbose(data, ratings):
         ca = data["career_avg"]
         print(f"    Career ISO: {ca.get('ISO', '?'):.3f}  Career BA: {ca.get('BA', '?'):.3f}  ({ca.get('num_years', '?')} yrs, {ca.get('total_PA', '?')} PA)")
     if data.get("fielding_oaa"):
-        oaa_str = ", ".join(f"{y}:{v}" for y, v in sorted(data["fielding_oaa"].items()))
+        oaa_str = ", ".join(f"{y}:{v}" for y, v in sorted(data["fielding_oaa"].items(), key=lambda x: str(x[0])))
         print(f"    OAA by year: {oaa_str}")
     if data.get("splits"):
         for label in ["vs_RHP", "vs_LHP"]:
