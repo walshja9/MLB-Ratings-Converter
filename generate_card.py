@@ -1478,7 +1478,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
     # --- CONTACT L: BA-based (not OBP — keeps contact/vision/discipline cleanly separated) ---
     ba_vs_lhp = splits.get("vs_LHP", {}).get("BA", effective_ba)
     pa_vs_lhp = splits.get("vs_LHP", {}).get("PA", 0)
-    trust_l = min(pa_vs_lhp / 120, 1.0) if pa_vs_lhp > 0 else 0
+    trust_l = min(pa_vs_lhp / 80, 1.0) if pa_vs_lhp > 0 else 0
     if use_career:
         fallback_ba = career.get("BA", effective_ba) if isinstance(career, dict) else effective_ba
     else:
@@ -1539,7 +1539,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
     else:
         iso_vl = splits.get("vs_LHP", {}).get("ISO")
         if iso_vl is not None and pa_vs_lhp > 0:
-            trust_l_pwr = min(pa_vs_lhp / 120, 1.0)
+            trust_l_pwr = min(pa_vs_lhp / 80, 1.0)
             iso_l = trust_l_pwr * iso_vl + (1 - trust_l_pwr) * effective_iso
         else:
             iso_l = effective_iso
