@@ -1523,39 +1523,23 @@ def calculate_ratings(data, position_override=None, mode="season"):
             iso_blend = trust_r * iso_vr + (1 - trust_r) * effective_iso
         else:
             iso_blend = effective_iso
-    # Power R: barrel% is the best signal at scale (N=233, RMSE=10.1, r=0.781).
-    # When available, blend barrel-based estimate with ISO+HR formula.
+    # --- POWER R: split ISO vs RHP + HR rate (RMSE 8.3, was 8.6) ---
+    # Using split ISO_vR gives ISO a real coefficient (87.1 vs near-zero 6.3).
+    # Barrel% blended when available for robustness at scale.
     barrel = data.get("barrel_stats")
     brl_pct = barrel.get("brl_percent") if barrel else None
+    pwr_r_trad = 87.1 * iso_blend + 352.5 * hr_rate + 43.4
     if brl_pct is not None and pa >= 100:
-        # Barrel-based power: 2.83 * brl% + 36.5
         pwr_r_barrel = 2.83 * brl_pct + 36.5
-        # ISO+HR formula as backup signal
-        pwr_r_trad = 6.3 * iso_blend + 623.8 * hr_rate + 49.3
-        # Blend: 60% barrel, 40% traditional (barrel is more robust at scale)
         ratings["power_right"] = clamp(0.6 * pwr_r_barrel + 0.4 * pwr_r_trad)
     else:
-        ratings["power_right"] = clamp(6.3 * iso_blend + 623.8 * hr_rate + 49.3)
+        ratings["power_right"] = clamp(pwr_r_trad)
 
-    # --- POWER L: ISO_vL + HR/PA refit (RMSE 16.2 → 13.3) ---
-    # HR rate is the dominant signal for opposite-hand power. ISO_vL alone
-    # missed badly on Soto (66 vs 88), Elly (46 vs 70), Dingler (76 vs 46).
-    # Power L: barrel% also helps (N=233, RMSE=13.2, r=0.602).
-    if brl_pct is not None and pa >= 100:
-        pwr_l_barrel = 2.24 * brl_pct + 38.7
-        if use_career:
-            pwr_l_trad = -60.7 * iso_blend + 929.9 * hr_rate + 43.8
-        else:
-            iso_vl = splits.get("vs_LHP", {}).get("ISO")
-            if iso_vl is not None and pa_vs_lhp > 0:
-                trust_l_pwr = min(pa_vs_lhp / 120, 1.0)
-                iso_l = trust_l_pwr * iso_vl + (1 - trust_l_pwr) * effective_iso
-            else:
-                iso_l = effective_iso
-            pwr_l_trad = -60.7 * iso_l + 929.9 * hr_rate + 43.8
-        ratings["power_left"] = clamp(0.5 * pwr_l_barrel + 0.5 * pwr_l_trad)
-    elif use_career:
-        ratings["power_left"] = clamp(-60.7 * iso_blend + 929.9 * hr_rate + 43.8)
+    # --- POWER L: split ISO vs LHP + HR rate (RMSE 9.8, was 10.1) ---
+    # Using split ISO_vL fixes the negative ISO coefficient (-60.7 → +55.1).
+    # Both ISO and HR now have sensible positive weights.
+    if use_career:
+        iso_l = iso_blend  # career mode uses recency-weighted overall ISO
     else:
         iso_vl = splits.get("vs_LHP", {}).get("ISO")
         if iso_vl is not None and pa_vs_lhp > 0:
@@ -1563,7 +1547,12 @@ def calculate_ratings(data, position_override=None, mode="season"):
             iso_l = trust_l_pwr * iso_vl + (1 - trust_l_pwr) * effective_iso
         else:
             iso_l = effective_iso
-        ratings["power_left"] = clamp(-60.7 * iso_l + 929.9 * hr_rate + 43.8)
+    pwr_l_trad = 55.1 * iso_l + 504.6 * hr_rate + 38.6
+    if brl_pct is not None and pa >= 100:
+        pwr_l_barrel = 2.24 * brl_pct + 38.7
+        ratings["power_left"] = clamp(0.5 * pwr_l_barrel + 0.5 * pwr_l_trad)
+    else:
+        ratings["power_left"] = clamp(pwr_l_trad)
 
     # --- FIELDING: 2.09 * OAA + 68.6 ---
     # Minimum 200 innings for full trust in defensive metrics
