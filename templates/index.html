@@ -544,6 +544,21 @@
             .card { min-width: unset; max-width: unset; }
             .attr-grid { grid-template-columns: 1fr; }
             .btn-row { flex-direction: column; }
+            .pitch-row {
+                grid-template-columns: 80px 1fr 36px 36px 36px;
+                gap: 4px;
+            }
+            .pitch-labels {
+                grid-template-columns: 80px 1fr 36px 36px 36px;
+                gap: 4px;
+            }
+            .pitch-labels span:last-child { display: none; }
+            .pitch-row > .pitch-stat:last-child { display: none; }
+            .pitch-row .pitch-name { font-size: 0.7rem; }
+            .pitch-stat { font-size: 0.68rem; }
+            .cmp-row { flex-wrap: wrap; }
+            .cmp-row input[type="number"] { width: 65px; }
+            .header h1 { font-size: 1.3rem; letter-spacing: 2px; }
         }
     </style>
 </head>
@@ -599,11 +614,17 @@
                 <span>1</span>
                 <input type="number" id="cy1" value="2025" min="1900" max="2026">
                 <input type="text" id="cn1" placeholder="Player 1">
+                <select id="cm1" style="padding:7px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.8rem;font-family:'Inter',sans-serif;">
+                    <option value="season">Season</option><option value="career">Career</option>
+                </select>
             </div>
             <div class="cmp-row">
                 <span>2</span>
                 <input type="number" id="cy2" value="2025" min="1900" max="2026">
                 <input type="text" id="cn2" placeholder="Player 2">
+                <select id="cm2" style="padding:7px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.8rem;font-family:'Inter',sans-serif;">
+                    <option value="season">Season</option><option value="career">Career</option>
+                </select>
             </div>
             <button class="btn btn-primary" onclick="cmp()" style="margin-top:10px;width:100%">Compare</button>
         </div>
@@ -612,8 +633,8 @@
 
         <div class="status" id="loading">
             <div class="spinner"></div>
-            <p>Pulling stats...</p>
-            <p class="sub">This takes 15-30 seconds</p>
+            <p id="loading-text">Pulling stats...</p>
+            <p class="sub">This takes 15-30 seconds (BBRef + Statcast)</p>
         </div>
 
         <div class="cards-wrap" id="cards"></div>
@@ -639,9 +660,10 @@ function tier(v) {
 
 function attrHTML(label, val) {
     const cls = rc(val);
+    const barW = Math.min(Math.max(val, 0), 99);
     return `<div class="attr">
         <span class="attr-label">${label}</span>
-        <div class="attr-bar"><div class="attr-bar-fill fill-${cls}" style="width:${val}%"></div></div>
+        <div class="attr-bar"><div class="attr-bar-fill fill-${cls}" style="width:${barW}%"></div></div>
         <span class="attr-val c-${cls}">${val}</span>
     </div>`;
 }
@@ -666,6 +688,9 @@ function hitterCard(d) {
     const r = d.ratings, o = d.overalls;
     const t = tier(d.ovr);
     const modeLabel = d.mode === 'career' ? ' &bull; CAREER' : '';
+    // Catcher-specific attributes
+    const catcherAttrs = (r.blocking ? attrHTML('BLOCK', r.blocking) : '') +
+                         (r.pop_time ? attrHTML('POP', r.pop_time) : '');
     return `
         <div class="card-top">
             <div class="name">${esc(d.name)}</div>
@@ -683,7 +708,7 @@ function hitterCard(d) {
             attrHTML('FIELD', r.fielding) + attrHTML('ARM STR', r.arm_strength) +
             attrHTML('ARM ACC', r.arm_accuracy) + attrHTML('REAC L', r.reaction_left) +
             attrHTML('REAC R', r.reaction_right) + attrHTML('REAC F', r.reaction_forward) +
-            attrHTML('REAC B', r.reaction_back)
+            attrHTML('REAC B', r.reaction_back) + catcherAttrs
         )}
         ${secHTML('Baserunning', o.baserunning,
             attrHTML('SPEED', r.speed) + attrHTML('STEAL', r.stealing) +
@@ -796,7 +821,7 @@ async function gen() {
     const mode = document.getElementById('card_mode').value;
     if (!name || !year) { showErr('Enter a player name and year.'); return; }
 
-    setLoading(true);
+    setLoading(true, `Generating ${name} (${year})...`);
     try {
         const fd = new FormData();
         fd.append('player_name', name);
@@ -823,12 +848,17 @@ async function cmp() {
     const y2 = document.getElementById('cy2').value;
     if (!n1 || !n2) { showErr('Enter both player names.'); return; }
 
-    setLoading(true);
+    setLoading(true, `Comparing ${n1} vs ${n2}...`);
     try {
+        const m1 = document.getElementById('cm1').value;
+        const m2 = document.getElementById('cm2').value;
         const r = await fetch('/compare', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ players: [{ name: n1, year: +y1 }, { name: n2, year: +y2 }] })
+            body: JSON.stringify({ players: [
+                { name: n1, year: +y1, mode: m1 },
+                { name: n2, year: +y2, mode: m2 }
+            ] })
         });
         const d = await r.json();
         if (d.error) { showErr(d.error); return; }
@@ -914,10 +944,14 @@ function showErr(msg) {
     setTimeout(() => el.classList.remove('active'), 8000);
 }
 
-function setLoading(on) {
+function setLoading(on, msg) {
     document.getElementById('loading').classList.toggle('active', on);
     document.getElementById('gen-btn').disabled = on;
-    if (on) { document.getElementById('err').classList.remove('active'); document.getElementById('cards').innerHTML = ''; }
+    if (on) {
+        document.getElementById('err').classList.remove('active');
+        document.getElementById('cards').innerHTML = '';
+        if (msg) document.getElementById('loading-text').textContent = msg;
+    }
 }
 
 // ========== AUTOCOMPLETE ==========
@@ -978,6 +1012,11 @@ function pickAC(name) { acIn.value = name; acList.classList.remove('active'); ac
 
 document.getElementById('year').addEventListener('change', () => { acCache = {}; });
 document.getElementById('year').addEventListener('keydown', e => { if (e.key === 'Enter') gen(); });
+
+// Enter key in compare inputs triggers compare
+['cn1', 'cn2', 'cy1', 'cy2'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') cmp(); });
+});
 </script>
 </body>
 </html>
