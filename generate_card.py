@@ -379,14 +379,9 @@ def detect_player_type(player_name, year):
 def estimate_ovr_hitter(ratings, overalls):
     """Estimate hitter OVR from sub-attributes.
 
-    Recalibrated 2026-04-19 against expanded 18-player set (NNLS).
-    NNLS RMSE=4.46 (improved from 3.89 on old 11-player set but with
-    much better generalization to speed-first and low-OVR players).
-
-    Speed weight is now non-zero (0.0825) thanks to expanded set including
-    Turner, Elly, Ruiz — the data now supports separating speed from core_hit.
-    Fielding dropped to 0 (Show OVR seems to weight fielding through the
-    core hitting average rather than as a separate OVR component).
+    Refit 2026-05-03 against N=44 with updated formulas (NNLS RMSE=3.7).
+    Key change: fielding now contributes (0.148) — with improved attribute
+    formulas the signal emerged. Speed dropped to near-zero (0.024).
     """
     core_hitting = np.mean([
         ratings["contact_right"], ratings["contact_left"],
@@ -394,23 +389,24 @@ def estimate_ovr_hitter(ratings, overalls):
         ratings["vision"], ratings["discipline"],
         ratings["batting_clutch"],
     ])
-    ovr = (0.9082 * core_hitting +
-           0.0000 * overalls["fielding"] +
-           0.1058 * ratings["speed"] +
-           0.1924 * overalls["durability"])
+    ovr = (0.8165 * core_hitting +
+           0.1476 * overalls["fielding"] +
+           0.0236 * ratings["speed"] +
+           0.1957 * overalls["durability"])
     return clamp(ovr)
 
 
 def estimate_ovr_pitcher(ratings, overalls):
     """Estimate pitcher OVR from sub-attributes.
 
-    Recalibrated 2026-04-19 against 10-pitcher set (NNLS).
-    NNLS RMSE=3.05. Pitching weight > 1.0 reflects that Show OVR
-    is dominated by pitching attributes. Fielding stays at 0.
+    Refit 2026-05-03 against N=23 (NNLS RMSE=2.4).
+    Key change: fielding now has high weight (0.727) — pitcher fielding
+    overall includes reactions which correlate with overall quality.
+    Durability dropped to 0.
     """
-    ovr = (1.0345 * overalls["pitching"] +
-           0.0000 * overalls["fielding"] +
-           0.1173 * overalls["durability"])
+    ovr = (0.7076 * overalls["pitching"] +
+           0.7267 * overalls["fielding"] +
+           0.0000 * overalls["durability"])
     return clamp(ovr)
 
 
@@ -1554,7 +1550,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
     else:
         ratings["power_left"] = clamp(pwr_l_trad)
 
-    # --- FIELDING: 2.09 * OAA + 68.6 ---
+    # --- FIELDING: 2.09 * OAA + 74.6 (bias-corrected +6, was 68.6) ---
     # Minimum 200 innings for full trust in defensive metrics
     # Below that, blend with position baseline weighted by innings
     oaa_data = data.get("fielding_oaa", {})
@@ -1613,11 +1609,11 @@ def calculate_ratings(data, position_override=None, mode="season"):
                     total_oaa += oaa_data[y] * weight
                     total_w += weight
             weighted_oaa = total_oaa / total_w if total_w > 0 else 0
-            raw_fld = clamp(2.09 * weighted_oaa + 68.6)
+            raw_fld = clamp(2.09 * weighted_oaa + 74.6)
         else:
             target_oaa = oaa_data.get(target_year)
             if target_oaa is not None:
-                raw_fld = clamp(2.09 * target_oaa + 68.6)
+                raw_fld = clamp(2.09 * target_oaa + 74.6)
             else:
                 raw_fld = pos_baseline
         ratings["fielding"] = clamp(def_trust * raw_fld + (1 - def_trust) * pos_baseline)
@@ -1633,7 +1629,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
         rngr_val = oaa_data.get(f"rngr_{target_year}") if oaa_data else None
 
         if fg_def_val is not None:
-            raw_fld = clamp(1.38 * fg_def_val + 67.3)
+            raw_fld = clamp(1.38 * fg_def_val + 73.3)
         elif rngr_val is not None:
             # RngR is the range-only UZR component (FG).  Calibrated against
             # Pedroia 2007 (RngR=0.56→73) and Sizemore 2008 (RngR=12.2→90).
@@ -1950,11 +1946,10 @@ def calculate_pitcher_ratings(data, mode="season"):
         kpct_blend = pit["K_pct"]
 
     if has_splits:
-        # H/9 per split: dampen-aware refit of BA coefficients
-        # Old -250 was too steep after dampening. RMSE L: 6.9 (was 9.7), R: 6.1 (was 10.3)
-        # H/9 splits refit on N=22 (L: RMSE 5.8 was 12.9, R: RMSE 6.5 was 14.0)
-        ratings["h_per_9_left"] = dampen(-228.2 * vs_lhb["BA"] + 129.6)
-        ratings["h_per_9_right"] = dampen(-187.7 * vs_rhb["BA"] + 120.7)
+        # H/9 splits: NO DAMPENING when split data available (same fix as K/9).
+        # Dampening caused -6 to -8 systematic bias. Coefficients from N=22 refit.
+        ratings["h_per_9_left"] = clamp(-228.2 * vs_lhb["BA"] + 129.6)
+        ratings["h_per_9_right"] = clamp(-187.7 * vs_rhb["BA"] + 120.7)
 
         # K/9 splits: NO DAMPENING when we have split data (PA >= 50).
         # Dampening was the primary cause of -8 to -10 systematic bias.
