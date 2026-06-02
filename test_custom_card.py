@@ -115,6 +115,16 @@ def test_catcher_block():
     assert d["catcher_stats"] == {"pop_2b": 1.95, "arm_mph": 82.0}
 
 
+def test_pitcher_platoon_same_hand_advantage():
+    # Same-handed platoon advantage in BOTH K/9 and H/9 (higher rating = better).
+    r = calculate_pitcher_ratings(build_custom_data({**PITCHER_FORM, "throws": "R"}, True), "season")
+    assert r["k_per_9_right"] >= r["k_per_9_left"]
+    assert r["h_per_9_right"] >= r["h_per_9_left"]
+    l = calculate_pitcher_ratings(build_custom_data({**PITCHER_FORM, "throws": "L"}, True), "season")
+    assert l["k_per_9_left"] >= l["k_per_9_right"]
+    assert l["h_per_9_left"] >= l["h_per_9_right"]
+
+
 def test_pitcher_role_rp():
     form = {**PITCHER_FORM, "role": "RP", "GS": "0", "G": "65", "SV": "30"}
     d = build_custom_data(form, is_pitcher=True)

@@ -2256,16 +2256,20 @@ def calculate_pitcher_ratings(data, mode="season"):
 
         # Apply ~10% platoon split based on handedness
         throws = sc.get("throws", "R")
+        # Platoon advantage is same-handed for BOTH hit-suppression and
+        # strikeouts: a RHP is tougher on RHB (and a LHP on LHB) in each. The
+        # higher H/9 rating = fewer hits, so same-hand gets the higher value in
+        # both H/9 and K/9.
         if throws == "L":
             ratings["h_per_9_left"] = clamp(h9_avg * 1.08)
             ratings["h_per_9_right"] = clamp(h9_avg * 0.92)
-            ratings["k_per_9_left"] = clamp(k9_avg * 0.90)
-            ratings["k_per_9_right"] = clamp(k9_avg * 1.10)
+            ratings["k_per_9_left"] = clamp(k9_avg * 1.10)
+            ratings["k_per_9_right"] = clamp(k9_avg * 0.90)
         else:
             ratings["h_per_9_left"] = clamp(h9_avg * 0.92)
             ratings["h_per_9_right"] = clamp(h9_avg * 1.08)
-            ratings["k_per_9_left"] = clamp(k9_avg * 1.10)
-            ratings["k_per_9_right"] = clamp(k9_avg * 0.90)
+            ratings["k_per_9_left"] = clamp(k9_avg * 0.90)
+            ratings["k_per_9_right"] = clamp(k9_avg * 1.10)
 
     # --- STAMINA ---
     # Show gives all SPs a high baseline (~75) with modest extra credit per
