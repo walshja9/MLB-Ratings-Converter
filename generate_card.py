@@ -58,6 +58,15 @@ _DEFAULT_BREAK_BY_TYPE = {
     "FF": 42,  # 4-seam
 }
 
+# Pitch code -> display name (module-level mirror of the map in
+# pull_pitcher_statcast, for custom arsenals where no Statcast pull happens).
+_PITCH_NAMES = {
+    "FF": "4-Seam FB", "SI": "Sinker", "FC": "Cutter", "SL": "Slider",
+    "ST": "Sweeper", "CU": "Curveball", "CH": "Changeup", "FS": "Splitter",
+    "SP": "Splitter", "KC": "Knuckle Curve", "SV": "Slurve", "KN": "Knuckleball",
+    "SC": "Screwball", "EP": "Eephus", "CS": "Slow Curve",
+}
+
 
 def get_arsenal_override(player_name, year):
     """Look up a manual arsenal for a pitcher. Returns dict with throws + arsenal,
@@ -1364,6 +1373,278 @@ def pull_all_pitcher_data(player_name, year):
 
 
 # ================================================================
+# CUSTOM PLAYER INPUT (hand-entered stats -> engine data dict)
+# ================================================================
+
+# Position-average fielding constants for translating a traditional fielding
+# line into a Total-Zone-style runs estimate. FLD% averages and range factors
+# (plays per 9 innings) are standard sabermetric ballpark values.
+_POS_FLD_AVG = {"C": 0.992, "1B": 0.994, "2B": 0.983, "SS": 0.974, "3B": 0.958,
+                "LF": 0.984, "CF": 0.987, "RF": 0.984, "OF": 0.985, "DH": 0.980}
+_POS_RF9 = {"2B": 4.7, "SS": 4.3, "3B": 2.7, "LF": 2.0, "CF": 2.5, "RF": 2.0, "OF": 2.2}
+# Range is the dominant component of real defensive value, so weight it ~2x
+# the prior values; error avoidance is de-emphasized (RUNS_PER_ERROR 0.75->0.5)
+# in _fielding_runs_from_traditional. Balances the spread toward ~60/40 range/error.
+_POS_RANGE_W = {"2B": 5.0, "SS": 5.0, "3B": 5.0, "LF": 5.0, "CF": 6.0, "RF": 5.0, "OF": 5.0}
+
+
+def _fielding_runs_from_traditional(pos, po, a, e, dp, ch, innings):
+    """Total-Zone-style runs estimate from a traditional fielding line.
+
+    Range runs (range factor vs position average) + error-avoidance runs
+    (errors vs a position-average fielder). Range is skipped for 1B/C/DH where
+    putouts are routine rather than range plays. Returns a clamped Rtot-equivalent
+    the engine's calibrated Rtot path turns into a FIELD/REAC rating, or None.
+    """
+    po = po or 0
+    a = a or 0
+    e = e or 0
+    ch = ch if ch else (po + a + e)
+    if ch <= 0 or innings <= 0:
+        return None
+    exp_e = (1 - _POS_FLD_AVG.get(pos, 0.980)) * ch
+    err_runs = (exp_e - e) * 0.5
+    range_runs = 0.0
+    if pos in _POS_RF9 and innings > 0:
+        rf9 = 9 * (po + a) / innings
+        # Guard against an implausible rate (e.g. season totals entered with a
+        # partial innings count): fall back to error-avoidance only.
+        if rf9 <= _POS_RF9[pos] * 2.0:
+            range_runs = (rf9 - _POS_RF9[pos]) * _POS_RANGE_W[pos]
+    return max(-15.0, min(15.0, round(err_runs + range_runs, 1)))
+
+
+def _parse_custom_arsenal(raw):
+    """Parse the custom pitch-arsenal JSON into engine arsenal entries.
+
+    Each input item is {code, velo?, usage?}. Output items carry name, usage
+    (even split when omitted), velo, and a pitch-type break_rating. Returns []
+    on missing/invalid input.
+    """
+    if not raw:
+        return []
+    try:
+        items = json.loads(raw)
+    except (ValueError, TypeError):
+        return []
+    items = [it for it in items if isinstance(it, dict) and (it.get("code") or "").strip()]
+    n = len(items)
+    arsenal = []
+    for it in items:
+        code = str(it["code"]).strip().upper()
+        usage = it.get("usage")
+        if usage in (None, ""):
+            usage = round(100.0 / n, 1) if n else 0.0
+        brk = _DEFAULT_BREAK_BY_TYPE.get(code, 55)
+        entry = {
+            "code": code,
+            "name": _PITCH_NAMES.get(code, code),
+            "usage": float(usage),
+            "break_rating": brk,
+            # Invert the per-pitch break->inches relation (break = inches*4.7 + 5)
+            # so the overall Break rating runs through the engine's movement
+            # formula (tied to what's actually thrown) instead of the flat
+            # count-based heuristic that floored everyone near 75.
+            "total_break_inches": round((brk - 5) / 4.7, 1),
+        }
+        velo = it.get("velo")
+        if velo not in (None, ""):
+            entry["velo"] = float(velo)
+        arsenal.append(entry)
+    return arsenal
+
+
+def build_custom_data(form, is_pitcher, position=None):
+    """Build the rating engine's `data` dict from a flat custom-stat form.
+
+    This is the second producer of the same `data` shape that pull_all_data /
+    pull_all_pitcher_data produce from the network. Feeding identical field
+    values yields identical ratings — the engine is never touched. Optional /
+    advanced fields left blank become None and drop into the engine's existing
+    fallback paths (the same ones that rate pre-Statcast players).
+    """
+
+    def fnum(key, default=None):
+        """Parse a form field to float; blank/invalid -> default."""
+        v = form.get(key, "")
+        v = "" if v is None else str(v).strip()
+        if v == "":
+            return default
+        try:
+            return float(v)
+        except ValueError:
+            return default
+
+    def inum(key, default=0):
+        v = fnum(key, None)
+        return int(round(v)) if v is not None else default
+
+    year = inum("year", 2025)
+    name = (form.get("name") or "Custom Player").strip()
+    team = (form.get("team") or "CUSTOM").strip()
+
+    if is_pitcher:
+        role = "RP" if (form.get("role") or "SP").upper() == "RP" else "SP"
+        ip = fnum("IP", 0.0) or 0.0
+        pitching = {
+            "W": inum("W"), "L": inum("L"),
+            "ERA": round(fnum("ERA", 0.0) or 0.0, 2),
+            "FIP": round(fnum("FIP", 0.0) or 0.0, 2),
+            "IP": round(ip, 1),
+            "G": inum("G"), "GS": inum("GS"), "SV": inum("SV"),
+            "K_per_9": round(fnum("K_per_9", 0.0) or 0.0, 1),
+            "BB_per_9": round(fnum("BB_per_9", 0.0) or 0.0, 1),
+            "HR_per_9": round(fnum("HR_per_9", 0.0) or 0.0, 2),
+            "H_per_9": round(fnum("H_per_9", 0.0) or 0.0, 1),
+            "K_pct": round(fnum("K_pct", 0.0) or 0.0, 1),
+            "BB_pct": round(fnum("BB_pct", 0.0) or 0.0, 1),
+            "WHIP": round(fnum("WHIP", 0.0) or 0.0, 3),
+            "WAR": round(fnum("WAR", 0.0) or 0.0, 1),
+            "LOB_pct": round(fnum("LOB_pct", 0.0) or 0.0, 1),
+            "FB_velo": fnum("FB_velo"),
+            "team": team,
+        }
+        statcast = {"throws": "L" if (form.get("throws") or "R").upper() == "L" else "R"}
+
+        # Optional pitch arsenal (JSON list of {code, velo, usage}). Break is the
+        # pitch-type heuristic (no measured movement); usage defaults to an even
+        # split. Flagged estimated so the card shows the EST. badge.
+        arsenal = _parse_custom_arsenal(form.get("arsenal"))
+        if arsenal:
+            statcast["arsenal"] = arsenal
+            statcast["arsenal_estimated"] = True
+            if pitching["FB_velo"] is None:
+                ff = next((p for p in arsenal if p["code"] == "FF" and p.get("velo")), None)
+                if ff:
+                    pitching["FB_velo"] = ff["velo"]
+
+        return {
+            "name": name, "year": year, "is_pitcher": True,
+            "pitching": pitching,
+            "career_avg": None, "career_yearly": {},
+            "statcast": statcast,
+            "role": role,
+            "sprint_speed": None,
+        }
+
+    # --- Hitter ---
+    pos = position or (form.get("position") or "OF")
+    pa = inum("PA", 0)
+    g = inum("G", 0)
+    ba = fnum("BA", 0.0) or 0.0
+    slg = fnum("SLG")
+    iso = fnum("ISO")
+    if iso is None:
+        iso = (slg - ba) if slg is not None else 0.0
+    if slg is None:
+        slg = ba + iso
+    batting = {
+        "G": g, "PA": pa,
+        "BA": round(ba, 3),
+        "OBP": round(fnum("OBP", 0.0) or 0.0, 3),
+        "SLG": round(slg, 3),
+        "ISO": round(iso, 3),
+        "HR": inum("HR"), "3B": inum("3B"),
+        "SB": inum("SB"), "CS": inum("CS"),
+        "BB_pct": round(fnum("BB_pct", 0.0) or 0.0, 1),
+        "K_pct": round(fnum("K_pct", 0.0) or 0.0, 1),
+        "wOBA": 0.0,
+        "WAR": round(fnum("WAR", 0.0) or 0.0, 1),
+        "fg_spd": None, "bsr": None,
+        "team": team,
+    }
+
+    data = {
+        "name": name, "year": year,
+        "batting": batting,
+        "career_avg": None, "career_yearly": {},
+        "sprint_speed": fnum("sprint_speed"),
+        "position": pos,
+        "avg_ev": fnum("avg_ev"),
+        "catcher_stats": None,
+    }
+
+    # Optional platoon / RISP splits. When provided, give the split a trusted
+    # sample (proportional to overall PA) so it actually influences the rating;
+    # blank splits -> None -> engine uses overall BA/ISO.
+    ba_r, iso_r = fnum("ba_vr"), fnum("iso_vr")
+    ba_l, iso_l = fnum("ba_vl"), fnum("iso_vl")
+    risp = fnum("risp_ba")
+    if any(x is not None for x in (ba_r, iso_r, ba_l, iso_l, risp)):
+        data["splits"] = {
+            "vs_RHP": {"PA": round(pa * 0.7), "OBP": 0,
+                       "BA": ba_r if ba_r is not None else ba,
+                       "ISO": iso_r if iso_r is not None else iso},
+            "vs_LHP": {"PA": round(pa * 0.3), "OBP": 0,
+                       "BA": ba_l if ba_l is not None else ba,
+                       "ISO": iso_l if iso_l is not None else iso},
+            "risp_ba": risp,
+            "risp_pa": round(pa * 0.25) if risp is not None else 0,
+        }
+    else:
+        data["splits"] = None
+
+    # Optional barrel% (power signal)
+    brl = fnum("brl_percent")
+    if brl is not None:
+        data["barrel_stats"] = {
+            "brl_percent": brl, "ev95percent": fnum("ev95percent"),
+            "brl_pa": None, "avg_ev": fnum("avg_ev"), "max_ev": None,
+        }
+    else:
+        data["barrel_stats"] = None
+
+    # Fielding. Accept either a traditional line (PO/A/E/DP + innings) or the
+    # advanced metrics (OAA/DRS). The traditional line is translated into a
+    # Total-Zone-style runs estimate fed through the engine's calibrated Rtot
+    # path, so it drives FIELD/REAC for every position; A/E/CH also feed the
+    # engine's outfield arm proxies. OAA (best) or DRS override the estimate.
+    # No fielding input at all -> empty dict -> position baseline.
+    oaa = fnum("oaa")
+    drs = fnum("drs")
+    po = fnum("po")
+    a = fnum("a")
+    e = fnum("e")
+    dp = fnum("dp")
+    ch = fnum("ch")
+    trad = any(v is not None for v in (po, a, e, dp, ch))
+    if trad or any(v is not None for v in (oaa, drs)):
+        # Innings drives defensive trust + range normalization. Derived from
+        # Games (consistent with the rest of the line) so the user never has to
+        # hand-reconcile it; full season's worth earns full trust.
+        innings = g * 8.5 if g and g > 0 else 1300.0
+        oaa_data = {"inn_%d" % year: innings}
+        if ch is None and any(v is not None for v in (po, a, e)):
+            ch = (po or 0) + (a or 0) + (e or 0)
+        # Outfield arm proxies (engine uses assists/errors/chances for OF only)
+        if a is not None:
+            oaa_data["ass_%d" % year] = a
+        if e is not None:
+            oaa_data["err_%d" % year] = e
+        if ch is not None:
+            oaa_data["ch_%d" % year] = ch
+        if trad and e is not None:
+            rtot = _fielding_runs_from_traditional(pos, po, a, e, dp, ch, innings)
+            if rtot is not None:
+                oaa_data["rtot_%d" % year] = rtot
+        if drs is not None:
+            oaa_data["rdrs_%d" % year] = drs
+        if oaa is not None:
+            oaa_data[year] = oaa            # best metric -> OAA branch wins
+        data["fielding_oaa"] = oaa_data
+    else:
+        data["fielding_oaa"] = {}
+
+    # Optional catcher block
+    if pos == "C":
+        pop, arm = fnum("pop_2b"), fnum("arm_mph")
+        if pop is not None or arm is not None:
+            data["catcher_stats"] = {"pop_2b": pop, "arm_mph": arm}
+
+    return data
+
+
+# ================================================================
 # RATING CALCULATIONS
 # ================================================================
 
@@ -2011,14 +2292,18 @@ def calculate_pitcher_ratings(data, mode="season"):
             if tb is not None and tb > max_break:
                 max_break = tb
 
+        # Break is near-uncorrelated with movement (r~0, a scouting attribute)
+        # and Show breaks run high, so low-IP pitchers dampen toward the Show
+        # Break mean (~78), not the generic 65 — the generic target was
+        # systematically under-rating relievers (low IP -> crushed toward 65).
+        BREAK_BASELINE = 78
         if max_break > 0:
-            # Statcast movement formula: 2.72*max_break - 2.08*pitches + 0.29*offspeed + 32.7
             raw_break = 2.72 * max_break - 2.08 * num_pitches + 0.29 * offspeed_usage + 32.7
-            ratings["break_"] = dampen(clamp(raw_break))
+            ratings["break_"] = clamp(trust * clamp(raw_break) + (1 - trust) * BREAK_BASELINE)
         else:
             # No movement data — use pitch diversity heuristic as fallback
             base_break = 75 + max(0, (num_pitches - 2)) * 3 + offspeed_usage * 0.2
-            ratings["break_"] = dampen(clamp(base_break))
+            ratings["break_"] = clamp(trust * clamp(base_break) + (1 - trust) * BREAK_BASELINE)
     else:
         ratings["break_"] = 80  # default when no arsenal data
 
@@ -2027,12 +2312,16 @@ def calculate_pitcher_ratings(data, mode="season"):
     # too steep after dampening compressed the range. Adding K/9 or BB/9 barely
     # helps (3.9 vs 4.1) — not worth the complexity.
     war = pit.get("WAR", 0)
-    # Pit Clutch refit on N=23 (RMSE 12.6, was 18.6). Lower WAR weight, higher
-    # intercept — Show's clutch is more compressed than WAR suggests.
-    if career_ip > 100:
-        ratings["pitching_clutch"] = clamp(1.18 * war + 77.5)
+    # Pit Clutch is ROLE-driven, not WAR-driven (calibration N=45: prior WAR-only
+    # formula was anti-correlated, r=-0.26). Relievers get high Show clutch
+    # regardless of IP, so they must NOT be IP-dampened (relievers inherently
+    # have low IP, which wrongly crushed them toward 65). Fits: RP ~2*WAR+87,
+    # SP ~3*WAR+64.
+    if role == "RP":
+        ratings["pitching_clutch"] = clamp(2.0 * war + 87)
     else:
-        ratings["pitching_clutch"] = clamp(trust * (1.18 * war + 77.5) + (1 - trust) * 65)
+        sp_trust = min(career_ip / 120, 1.0)  # regress only very low-IP rookies
+        ratings["pitching_clutch"] = clamp(sp_trust * (3.0 * war + 64) + (1 - sp_trust) * 64)
 
     # --- PITCHER FIELDING (mostly defaults) ---
     ratings["fielding"] = PITCHER_FIELDING_DEFAULTS["fielding"]

@@ -231,7 +231,9 @@ def analyze_attribute(attr_name, display_name, generated, show_truth, players):
     for name in players:
         gen_val = generated.get(name)
         show_val = show_truth.get(name)
-        if gen_val is not None and show_val is not None:
+        # show_val <= 0 means the scrape had no value (missing data stored as 0);
+        # none of the analyzed attributes are legitimately 0, so skip them.
+        if gen_val is not None and show_val is not None and show_val > 0:
             pairs.append((name, gen_val, show_val, gen_val - show_val))
 
     if len(pairs) < 3:

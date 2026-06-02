@@ -560,6 +560,39 @@
             .cmp-row input[type="number"] { width: 65px; }
             .header h1 { font-size: 1.3rem; letter-spacing: 2px; }
         }
+
+        /* ===== Mode tabs + custom-player form ===== */
+        .mode-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+        .mode-tab {
+            flex: 1; padding: 10px; border: 1px solid var(--border);
+            background: var(--surface); color: var(--text2); border-radius: 8px;
+            cursor: pointer; font-family: inherit; font-size: 0.8rem;
+            letter-spacing: 1px; text-transform: uppercase; transition: all .15s;
+        }
+        .mode-tab:hover { color: var(--text); }
+        .mode-tab.active { background: var(--accent); color: #fff; border-color: transparent; font-weight: 600; }
+        .custom-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+        .custom-panel .ident-row { display: grid; grid-template-columns: 1.4fr 1fr 0.7fr 1fr; gap: 10px; }
+        .cstat-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin: 16px 0 0; }
+        .cstat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-top: 8px; }
+        .cstat { display: flex; flex-direction: column; gap: 3px; }
+        .cstat label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: .4px; color: var(--text2); }
+        .cstat input, .cstat select {
+            padding: 7px 8px; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--bg); color: var(--text); font-size: 0.85rem; font-family: inherit; width: 100%;
+        }
+        details.cstat-adv { margin-top: 12px; }
+        details.cstat-adv > summary { cursor: pointer; font-size: 0.75rem; color: var(--accent); letter-spacing: .5px; }
+        .ars-head, .ars-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 8px; align-items: center; }
+        .ars-head { font-size: 0.62rem; text-transform: uppercase; letter-spacing: .4px; color: var(--text2); margin-bottom: 4px; }
+        .ars-row { margin-top: 6px; }
+        .ars-row select, .ars-row input {
+            padding: 7px 8px; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--bg); color: var(--text); font-size: 0.85rem; font-family: inherit; width: 100%;
+        }
+        @media (max-width: 600px) {
+            .custom-panel .ident-row { grid-template-columns: 1fr 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -569,6 +602,13 @@
     </div>
 
     <div class="main">
+        <!-- Mode tabs -->
+        <div class="mode-tabs">
+            <button class="mode-tab active" id="tab-real" onclick="setMode('real')">Real Player</button>
+            <button class="mode-tab" id="tab-custom" onclick="setMode('custom')">Custom Player</button>
+        </div>
+
+        <div id="real-controls">
         <!-- Search -->
         <div class="search-panel">
             <div class="search-row">
@@ -627,6 +667,148 @@
                 </select>
             </div>
             <button class="btn btn-primary" onclick="cmp()" style="margin-top:10px;width:100%">Compare</button>
+        </div>
+        </div><!-- /#real-controls -->
+
+        <!-- Custom Player -->
+        <div class="custom-panel" id="custom-panel" style="display:none">
+            <div class="ident-row">
+                <div class="cstat"><label>Player Name</label><input type="text" id="c_name" placeholder="Your player"></div>
+                <div class="cstat"><label>Team</label><input type="text" id="c_team" placeholder="CUSTOM"></div>
+                <div class="cstat"><label>Year</label><input type="number" id="c_year" value="2026" min="1" max="2100"></div>
+                <div class="cstat"><label>Type</label>
+                    <select id="c_type" onchange="setCustomType()">
+                        <option value="hitter">Hitter</option>
+                        <option value="pitcher">Pitcher</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Hitter -->
+            <div id="c-hitter">
+                <p class="cstat-title">Core</p>
+                <div class="cstat-grid">
+                    <div class="cstat"><label>Position</label>
+                        <select data-field="position">
+                            <option>C</option><option>1B</option><option>2B</option><option>SS</option>
+                            <option>3B</option><option>LF</option><option>CF</option><option selected>RF</option><option>DH</option>
+                        </select>
+                    </div>
+                    <div class="cstat"><label>PA</label><input type="number" id="f_PA" class="src-h" data-field="PA" placeholder="600"></div>
+                    <div class="cstat"><label>G</label><input type="number" data-field="G" placeholder="150"></div>
+                    <div class="cstat"><label>WAR</label><input type="number" step="0.1" data-field="WAR" placeholder="4.0"></div>
+                </div>
+
+                <p class="cstat-title">Box score <span style="text-transform:none;letter-spacing:0">— optional, auto-fills the rate stats</span></p>
+                <div class="cstat-grid">
+                    <div class="cstat"><label>AB</label><input type="number" id="s_AB" class="src-h" placeholder="550"></div>
+                    <div class="cstat"><label>H</label><input type="number" id="s_H" class="src-h" placeholder="160"></div>
+                    <div class="cstat"><label>2B</label><input type="number" id="s_2B" class="src-h" placeholder="30"></div>
+                    <div class="cstat"><label>3B</label><input type="number" id="s_3B" class="src-h" data-field="3B" placeholder="2"></div>
+                    <div class="cstat"><label>HR</label><input type="number" id="s_HR" class="src-h" data-field="HR" placeholder="30"></div>
+                    <div class="cstat"><label>BB</label><input type="number" id="s_BB" class="src-h" placeholder="55"></div>
+                    <div class="cstat"><label>K</label><input type="number" id="s_K" class="src-h" placeholder="120"></div>
+                    <div class="cstat"><label>SB</label><input type="number" data-field="SB" placeholder="10"></div>
+                    <div class="cstat"><label>CS</label><input type="number" data-field="CS" placeholder="3"></div>
+                </div>
+
+                <p class="cstat-title">Rate stats <span style="text-transform:none;letter-spacing:0">— auto-filled, or enter directly</span></p>
+                <div class="cstat-grid">
+                    <div class="cstat"><label>AVG</label><input type="number" step="0.001" id="f_BA" class="deriv" data-field="BA" placeholder=".280"></div>
+                    <div class="cstat"><label>OBP</label><input type="number" step="0.001" id="f_OBP" class="deriv" data-field="OBP" placeholder=".360"></div>
+                    <div class="cstat"><label>SLG</label><input type="number" step="0.001" id="f_SLG" class="deriv" data-field="SLG" placeholder=".500"></div>
+                    <div class="cstat"><label>ISO</label><input type="number" step="0.001" id="f_ISO" class="deriv" data-field="ISO" placeholder=".220"></div>
+                    <div class="cstat"><label>BB%</label><input type="number" step="0.1" id="f_BBpct" class="deriv" data-field="BB_pct" placeholder="9.0"></div>
+                    <div class="cstat"><label>K%</label><input type="number" step="0.1" id="f_Kpct" class="deriv" data-field="K_pct" placeholder="22.0"></div>
+                </div>
+
+                <details class="cstat-adv">
+                    <summary>Statcast / splits (optional — blank uses estimates)</summary>
+                    <div class="cstat-grid">
+                        <div class="cstat"><label>Sprint (ft/s)</label><input type="number" step="0.1" data-field="sprint_speed"></div>
+                        <div class="cstat"><label>Avg EV</label><input type="number" step="0.1" data-field="avg_ev"></div>
+                        <div class="cstat"><label>Barrel%</label><input type="number" step="0.1" data-field="brl_percent"></div>
+                        <div class="cstat"><label>Hard-hit%</label><input type="number" step="0.1" data-field="ev95percent"></div>
+                        <div class="cstat"><label>BA vs RHP</label><input type="number" step="0.001" data-field="ba_vr"></div>
+                        <div class="cstat"><label>ISO vs RHP</label><input type="number" step="0.001" data-field="iso_vr"></div>
+                        <div class="cstat"><label>BA vs LHP</label><input type="number" step="0.001" data-field="ba_vl"></div>
+                        <div class="cstat"><label>ISO vs LHP</label><input type="number" step="0.001" data-field="iso_vl"></div>
+                        <div class="cstat"><label>RISP BA</label><input type="number" step="0.001" data-field="risp_ba"></div>
+                        <div class="cstat"><label>Pop 2B (C)</label><input type="number" step="0.01" data-field="pop_2b"></div>
+                        <div class="cstat"><label>Arm mph (C)</label><input type="number" step="0.1" data-field="arm_mph"></div>
+                    </div>
+                </details>
+
+                <details class="cstat-adv">
+                    <summary>Fielding (optional — blank uses position baseline)</summary>
+                    <div class="cstat-grid">
+                        <div class="cstat"><label>PO</label><input type="number" id="h_PO" class="src-f" data-field="po" placeholder="250"></div>
+                        <div class="cstat"><label>A</label><input type="number" id="h_A" class="src-f" data-field="a" placeholder="350"></div>
+                        <div class="cstat"><label>E</label><input type="number" id="h_E" class="src-f" data-field="e" placeholder="10"></div>
+                        <div class="cstat"><label>DP</label><input type="number" data-field="dp" placeholder="90"></div>
+                        <div class="cstat"><label>CH</label><input type="number" id="h_CH" class="deriv" data-field="ch" placeholder="(auto)"></div>
+                        <div class="cstat"><label>FLD%</label><input type="number" step="0.001" id="h_FLDpct" class="deriv" placeholder="(auto)"></div>
+                        <div class="cstat"><label>OAA</label><input type="number" data-field="oaa" title="Outs Above Average — overrides the traditional estimate"></div>
+                        <div class="cstat"><label>DRS</label><input type="number" data-field="drs" title="Defensive Runs Saved — overrides if OAA blank"></div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Pitcher -->
+            <div id="c-pitcher" style="display:none">
+                <p class="cstat-title">Core</p>
+                <div class="cstat-grid">
+                    <div class="cstat"><label>Role</label>
+                        <select data-field="role"><option value="SP">SP</option><option value="RP">RP</option></select>
+                    </div>
+                    <div class="cstat"><label>Throws</label>
+                        <select data-field="throws"><option value="R">R</option><option value="L">L</option></select>
+                    </div>
+                    <div class="cstat"><label>IP</label><input type="number" step="0.1" id="p_IP" class="src-p" data-field="IP" placeholder="180"></div>
+                    <div class="cstat"><label>G</label><input type="number" data-field="G" placeholder="31"></div>
+                    <div class="cstat"><label>GS</label><input type="number" data-field="GS" placeholder="31"></div>
+                    <div class="cstat"><label>SV</label><input type="number" data-field="SV" placeholder="0"></div>
+                    <div class="cstat"><label>W</label><input type="number" data-field="W" placeholder="14"></div>
+                    <div class="cstat"><label>L</label><input type="number" data-field="L" placeholder="6"></div>
+                    <div class="cstat"><label>WAR</label><input type="number" step="0.1" data-field="WAR" placeholder="4.0"></div>
+                    <div class="cstat"><label>FB Velo</label><input type="number" step="0.1" data-field="FB_velo" placeholder="94.0"></div>
+                    <div class="cstat"><label>LOB%</label><input type="number" step="0.1" data-field="LOB_pct" placeholder="75.0"></div>
+                </div>
+
+                <p class="cstat-title">Box score <span style="text-transform:none;letter-spacing:0">— optional, auto-fills the rate stats</span></p>
+                <div class="cstat-grid">
+                    <div class="cstat"><label>TBF</label><input type="number" id="p_TBF" class="src-p" placeholder="(auto)" title="Total batters faced — blank estimates from IP + baserunners"></div>
+                    <div class="cstat"><label>K</label><input type="number" id="p_Kc" class="src-p" placeholder="200"></div>
+                    <div class="cstat"><label>BB</label><input type="number" id="p_BBc" class="src-p" placeholder="45"></div>
+                    <div class="cstat"><label>H</label><input type="number" id="p_Hc" class="src-p" placeholder="150"></div>
+                    <div class="cstat"><label>HR</label><input type="number" id="p_HRc" class="src-p" placeholder="18"></div>
+                    <div class="cstat"><label>R</label><input type="number" id="p_Rc" class="src-p" placeholder="60"></div>
+                    <div class="cstat"><label>ER</label><input type="number" id="p_ERc" class="src-p" placeholder="55"></div>
+                </div>
+
+                <p class="cstat-title">Rate stats <span style="text-transform:none;letter-spacing:0">— auto-filled, or enter directly</span></p>
+                <div class="cstat-grid">
+                    <div class="cstat"><label>ERA</label><input type="number" step="0.01" id="p_ERA" class="deriv" data-field="ERA" placeholder="3.20"></div>
+                    <div class="cstat"><label>K/9</label><input type="number" step="0.1" id="p_K9" class="deriv" data-field="K_per_9" placeholder="9.5"></div>
+                    <div class="cstat"><label>BB/9</label><input type="number" step="0.1" id="p_BB9" class="deriv" data-field="BB_per_9" placeholder="2.5"></div>
+                    <div class="cstat"><label>HR/9</label><input type="number" step="0.01" id="p_HR9" class="deriv" data-field="HR_per_9" placeholder="1.0"></div>
+                    <div class="cstat"><label>H/9</label><input type="number" step="0.1" id="p_H9" class="deriv" data-field="H_per_9" placeholder="7.5"></div>
+                    <div class="cstat"><label>WHIP</label><input type="number" step="0.001" id="p_WHIP" class="deriv" data-field="WHIP" placeholder="1.10"></div>
+                    <div class="cstat"><label>K%</label><input type="number" step="0.1" id="p_Kpct" class="deriv" data-field="K_pct" placeholder="26.0"></div>
+                    <div class="cstat"><label>BB%</label><input type="number" step="0.1" id="p_BBpct" class="deriv" data-field="BB_pct" placeholder="7.0"></div>
+                    <div class="cstat"><label>FIP</label><input type="number" step="0.01" id="p_FIP" class="deriv" data-field="FIP" placeholder="3.30"></div>
+                </div>
+
+                <p class="cstat-title">Pitch arsenal <span style="text-transform:none;letter-spacing:0">— pick a type + velocity (usage optional, auto-splits)</span></p>
+                <div id="c-arsenal">
+                    <div class="ars-head"><span>Pitch type</span><span>Velo</span><span>Usage %</span></div>
+                </div>
+            </div>
+
+            <div class="btn-row" style="margin-top:14px">
+                <button class="btn btn-primary" id="gen-custom-btn" onclick="genCustom()">Generate Card</button>
+            </div>
+            <p class="hint">Enter the stats you know — blanks fall back to estimates, same as a pre-Statcast player.</p>
         </div>
 
         <div class="error-msg" id="err"></div>
@@ -837,6 +1019,169 @@ async function gen() {
     } catch (e) { showErr(e.message); }
     finally { setLoading(false); }
 }
+
+// ========== MODE / CUSTOM ==========
+function setMode(m) {
+    const real = m === 'real';
+    document.getElementById('tab-real').classList.toggle('active', real);
+    document.getElementById('tab-custom').classList.toggle('active', !real);
+    document.getElementById('real-controls').style.display = real ? '' : 'none';
+    document.getElementById('custom-panel').style.display = real ? 'none' : '';
+}
+
+function setCustomType() {
+    const isPit = document.getElementById('c_type').value === 'pitcher';
+    document.getElementById('c-hitter').style.display = isPit ? 'none' : '';
+    document.getElementById('c-pitcher').style.display = isPit ? '' : 'none';
+}
+
+async function genCustom() {
+    const isPit = document.getElementById('c_type').value === 'pitcher';
+    const fd = new FormData();
+    fd.append('is_pitcher', isPit ? 'on' : '');
+    fd.append('name', document.getElementById('c_name').value.trim());
+    fd.append('team', document.getElementById('c_team').value.trim());
+    fd.append('year', document.getElementById('c_year').value.trim() || '2026');
+
+    const block = document.getElementById(isPit ? 'c-pitcher' : 'c-hitter');
+    block.querySelectorAll('[data-field]').forEach(el => fd.append(el.dataset.field, el.value.trim()));
+    if (isPit) {
+        const ars = gatherArsenal();
+        if (ars.length) fd.append('arsenal', JSON.stringify(ars));
+    }
+
+    const bulk = +(fd.get(isPit ? 'IP' : 'PA') || 0);
+    if (!(bulk > 0)) { showErr(`Enter ${isPit ? 'IP' : 'PA'} greater than 0.`); return; }
+
+    setLoading(true, 'Generating custom card...');
+    try {
+        const r = await fetch('/generate_custom', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.error) { showErr(d.error); return; }
+        showCards([d]);
+    } catch (e) { showErr(e.message); }
+    finally { setLoading(false); }
+}
+
+// ----- Live stat derivation (box score -> rates). All honest arithmetic. -----
+function dNum(id) { const el = document.getElementById(id); if (!el) return null; const v = el.value.trim(); return v === '' ? null : parseFloat(v); }
+const r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
+function setDeriv(id, val) {
+    const el = document.getElementById(id);
+    if (!el || el.dataset.locked || val === null || !isFinite(val)) return;
+    el.value = val;
+}
+function lockOnEdit(el) { if (el.value.trim() === '') delete el.dataset.locked; else el.dataset.locked = '1'; }
+
+function deriveHitter() {
+    const ab = dNum('s_AB'), h = dNum('s_H'), _2b = dNum('s_2B') || 0, _3b = dNum('s_3B') || 0,
+          hr = dNum('s_HR') || 0, bb = dNum('s_BB'), k = dNum('s_K');
+    let pa = dNum('f_PA');
+    if (pa === null && ab !== null) { pa = ab + (bb || 0); setDeriv('f_PA', pa); }
+    if (ab !== null && ab > 0) {
+        const xb = _2b + 2 * _3b + 3 * hr;          // extra bases beyond singles
+        if (h !== null) {
+            const avg = h / ab, slg = (h + xb) / ab;
+            setDeriv('f_BA', r3(avg));
+            setDeriv('f_SLG', r3(slg));
+            setDeriv('f_ISO', r3(slg - avg));
+            if (bb !== null) setDeriv('f_OBP', r3((h + bb) / (ab + bb)));
+        } else {
+            setDeriv('f_ISO', r3(xb / ab));
+        }
+    }
+    if (pa !== null && pa > 0) {
+        if (bb !== null) setDeriv('f_BBpct', r1(100 * bb / pa));
+        if (k !== null) setDeriv('f_Kpct', r1(100 * k / pa));
+    }
+}
+
+// ----- Pitch arsenal rows -----
+const PITCH_OPTS = [['', '—'], ['FF', '4-Seam FB'], ['SI', 'Sinker'], ['FC', 'Cutter'],
+    ['SL', 'Slider'], ['ST', 'Sweeper'], ['CU', 'Curveball'], ['KC', 'Knuckle Curve'],
+    ['CH', 'Changeup'], ['FS', 'Splitter'], ['SV', 'Slurve'], ['KN', 'Knuckleball'],
+    ['SC', 'Screwball'], ['EP', 'Eephus'], ['CS', 'Slow Curve']];
+
+function buildArsenalRows() {
+    const wrap = document.getElementById('c-arsenal');
+    if (!wrap) return;
+    const opts = PITCH_OPTS.map(([c, n]) => `<option value="${c}">${n}</option>`).join('');
+    for (let i = 0; i < 5; i++) {
+        const row = document.createElement('div');
+        row.className = 'ars-row';
+        row.innerHTML = `<select class="ars-type">${opts}</select>` +
+            `<input type="number" step="0.1" class="ars-velo" placeholder="mph">` +
+            `<input type="number" step="0.1" class="ars-usage" placeholder="auto">`;
+        wrap.appendChild(row);
+    }
+}
+
+function gatherArsenal() {
+    const out = [];
+    document.querySelectorAll('#c-arsenal .ars-row').forEach(r => {
+        const code = r.querySelector('.ars-type').value;
+        if (!code) return;
+        const velo = r.querySelector('.ars-velo').value.trim();
+        const usage = r.querySelector('.ars-usage').value.trim();
+        out.push({ code, velo: velo === '' ? null : +velo, usage: usage === '' ? null : +usage });
+    });
+    return out;
+}
+
+function deriveFielding() {
+    const po = dNum('h_PO'), a = dNum('h_A'), e = dNum('h_E');
+    if (po !== null && a !== null && e !== null) {
+        const ch = po + a + e;
+        setDeriv('h_CH', ch);
+        if (ch > 0) setDeriv('h_FLDpct', r3((po + a) / ch));
+    }
+}
+
+function derivePitcher() {
+    const ip = dNum('p_IP'), kc = dNum('p_Kc'), bbc = dNum('p_BBc'), hc = dNum('p_Hc'),
+          hrc = dNum('p_HRc'), er = dNum('p_ERc');
+    // Stage 1: counts + IP -> per-9 + WHIP + ERA
+    if (ip !== null && ip > 0) {
+        if (kc !== null) setDeriv('p_K9', r1(9 * kc / ip));
+        if (bbc !== null) setDeriv('p_BB9', r1(9 * bbc / ip));
+        if (hrc !== null) setDeriv('p_HR9', r2(9 * hrc / ip));
+        if (hc !== null) setDeriv('p_H9', r1(9 * hc / ip));
+        if (hc !== null && bbc !== null) setDeriv('p_WHIP', r3((hc + bbc) / ip));
+        if (er !== null) setDeriv('p_ERA', r2(9 * er / ip));
+    }
+    // Stage 2: rates (derived or typed) -> K%, BB%, FIP
+    const k9 = dNum('p_K9'), bb9 = dNum('p_BB9'), hr9 = dNum('p_HR9'), whip = dNum('p_WHIP');
+    let tbf = dNum('p_TBF');                          // explicit > from counts > from IP+WHIP
+    if (tbf === null && ip !== null && ip > 0) {
+        if (hc !== null && bbc !== null) tbf = 3 * ip + hc + bbc;
+        else if (whip !== null) tbf = ip * (3 + whip);
+    }
+    if (tbf !== null && tbf > 0) {
+        const kCt = kc !== null ? kc : (k9 !== null && ip !== null ? k9 * ip / 9 : null);
+        const bbCt = bbc !== null ? bbc : (bb9 !== null && ip !== null ? bb9 * ip / 9 : null);
+        if (kCt !== null) setDeriv('p_Kpct', r1(100 * kCt / tbf));
+        if (bbCt !== null) setDeriv('p_BBpct', r1(100 * bbCt / tbf));
+    } else if (whip !== null) {
+        const den = 9 * (3 + whip);
+        if (k9 !== null) setDeriv('p_Kpct', r1(100 * k9 / den));
+        if (bb9 !== null) setDeriv('p_BBpct', r1(100 * bb9 / den));
+    }
+    if (k9 !== null && bb9 !== null && hr9 !== null) setDeriv('p_FIP', r2((13 * hr9 + 3 * bb9 - 2 * k9) / 9 + 3.10));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    buildArsenalRows();
+    document.querySelectorAll('#c-hitter .src-h').forEach(el => el.addEventListener('input', deriveHitter));
+    document.querySelectorAll('#c-hitter .src-f').forEach(el => el.addEventListener('input', deriveFielding));
+    document.querySelectorAll('#c-pitcher .src-p').forEach(el => el.addEventListener('input', derivePitcher));
+    // Direct rate entry also feeds K%/BB%/FIP
+    ['p_K9', 'p_BB9', 'p_HR9', 'p_WHIP'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', derivePitcher);
+    });
+    // Typing in a derived field locks it from auto-overwrite
+    document.querySelectorAll('#custom-panel .deriv').forEach(el => el.addEventListener('input', () => lockOnEdit(el)));
+});
 
 // ========== COMPARE ==========
 function toggleCmp() { document.getElementById('cmp-panel').classList.toggle('active'); }

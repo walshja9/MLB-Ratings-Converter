@@ -24,6 +24,7 @@ from generate_card import (
     calculate_ratings, calculate_overalls,
     calculate_pitcher_ratings, calculate_pitcher_overalls,
     detect_player_type, estimate_ovr_hitter, estimate_ovr_pitcher,
+    build_custom_data,
 )
 
 app = Flask(__name__)
@@ -58,6 +59,44 @@ def load_player_names(year=2025):
     return sorted_names
 
 
+def assemble_card(data, is_pitcher, name, year, position=None, mode="season"):
+    """Run ratings + overalls on a prepared `data` dict and shape the card JSON.
+
+    Shared by the real-player path (data from pull_all_*) and the custom path
+    (data from build_custom_data) so both return an identical structure."""
+    if is_pitcher:
+        ratings = calculate_pitcher_ratings(data, mode=mode)
+        overalls = calculate_pitcher_overalls(ratings)
+        ovr = estimate_ovr_pitcher(ratings, overalls)
+        sc = data.get("statcast", {})
+        return {
+            "type": "pitcher",
+            "name": name,
+            "year": year,
+            "team": data["pitching"].get("team", ""),
+            "position": ratings.get("role", "SP"),
+            "ovr": ovr,
+            "ratings": ratings,
+            "overalls": overalls,
+            "arsenal": sc.get("arsenal", []),
+            "arsenal_estimated": sc.get("arsenal_estimated", False),
+            "throws": sc.get("throws", "R"),
+        }
+    ratings = calculate_ratings(data, position, mode=mode)
+    overalls = calculate_overalls(ratings)
+    ovr = estimate_ovr_hitter(ratings, overalls)
+    return {
+        "type": "hitter",
+        "name": name,
+        "year": year,
+        "team": data["batting"].get("team", ""),
+        "position": ratings["position"],
+        "ovr": ovr,
+        "ratings": ratings,
+        "overalls": overalls,
+    }
+
+
 def generate_card_data(player_name, year, is_pitcher=None, position=None, mode="season"):
     """Generate a full card for a player. Auto-detects pitcher if not specified.
     mode: 'season' = single season only, 'career' = career blended."""
@@ -70,48 +109,12 @@ def generate_card_data(player_name, year, is_pitcher=None, position=None, mode="
         data = pull_all_pitcher_data(player_name, year)
         if data is None:
             return None, f"Could not find pitcher '{player_name}' in {year}"
-        ratings = calculate_pitcher_ratings(data, mode=mode)
-        overalls = calculate_pitcher_overalls(ratings)
-        ovr = estimate_ovr_pitcher(ratings, overalls)
-        team = data["pitching"].get("team", "")
-
-        # Include pitch arsenal if available
-        arsenal = data.get("statcast", {}).get("arsenal", [])
-        arsenal_estimated = data.get("statcast", {}).get("arsenal_estimated", False)
-        throws = data.get("statcast", {}).get("throws", "R")
-
-        return {
-            "type": "pitcher",
-            "name": player_name,
-            "year": year,
-            "team": team,
-            "position": ratings.get("role", "SP"),
-            "ovr": ovr,
-            "ratings": ratings,
-            "overalls": overalls,
-            "arsenal": arsenal,
-            "arsenal_estimated": arsenal_estimated,
-            "throws": throws,
-        }, None
     else:
         data = pull_all_data(player_name, year)
         if data is None:
             return None, f"Could not find '{player_name}' in {year}"
-        ratings = calculate_ratings(data, position, mode=mode)
-        overalls = calculate_overalls(ratings)
-        ovr = estimate_ovr_hitter(ratings, overalls)
-        team = data["batting"].get("team", "")
 
-        return {
-            "type": "hitter",
-            "name": player_name,
-            "year": year,
-            "team": team,
-            "position": ratings["position"],
-            "ovr": ovr,
-            "ratings": ratings,
-            "overalls": overalls,
-        }, None
+    return assemble_card(data, is_pitcher, player_name, year, position, mode), None
 
 
 @app.route("/")
@@ -161,6 +164,37 @@ def generate():
         if error:
             return jsonify({"error": error}), 404
         result["mode"] = mode
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/generate_custom", methods=["POST"])
+def generate_custom():
+    """Generate a card from hand-entered (custom player) stats."""
+    form = request.form
+    is_pitcher = form.get("is_pitcher", "") == "on"
+    name = (form.get("name") or "").strip() or "Custom Player"
+
+    try:
+        year = int(form.get("year") or 0)
+    except ValueError:
+        return jsonify({"error": "Year must be a number"}), 400
+
+    # Reject the one input that breaks a formula (divide-by-zero on rate stats).
+    bulk = form.get("IP") if is_pitcher else form.get("PA")
+    try:
+        if float(bulk or 0) <= 0:
+            return jsonify({"error": f"{'IP' if is_pitcher else 'PA'} must be greater than 0"}), 400
+    except ValueError:
+        return jsonify({"error": f"{'IP' if is_pitcher else 'PA'} must be a number"}), 400
+
+    position = (form.get("position") or "").strip() or None
+    try:
+        data = build_custom_data(form, is_pitcher, position)
+        result = assemble_card(data, is_pitcher, name, year, position, mode="season")
+        result["mode"] = "season"
+        result["custom"] = True
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
