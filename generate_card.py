@@ -1450,6 +1450,9 @@ def _parse_custom_arsenal(raw):
         velo = it.get("velo")
         if velo not in (None, ""):
             entry["velo"] = float(velo)
+        spin = it.get("spin")
+        if spin not in (None, ""):
+            entry["spin"] = int(round(float(spin)))
         arsenal.append(entry)
     return arsenal
 
@@ -1482,6 +1485,7 @@ def build_custom_data(form, is_pitcher, position=None):
     year = inum("year", 2025)
     name = (form.get("name") or "Custom Player").strip()
     team = (form.get("team") or "CUSTOM").strip()
+    full_conf = str(form.get("full_confidence") or "").lower() in ("on", "true", "1", "yes")
 
     if is_pitcher:
         role = "RP" if (form.get("role") or "SP").upper() == "RP" else "SP"
@@ -1525,6 +1529,7 @@ def build_custom_data(form, is_pitcher, position=None):
             "statcast": statcast,
             "role": role,
             "sprint_speed": None,
+            "full_confidence": full_conf,
         }
 
     # --- Hitter ---
@@ -1562,6 +1567,7 @@ def build_custom_data(form, is_pitcher, position=None):
         "position": pos,
         "avg_ev": fnum("avg_ev"),
         "catcher_stats": None,
+        "full_confidence": full_conf,
     }
 
     # Optional platoon / RISP splits. When provided, give the split a trusted
@@ -1687,7 +1693,11 @@ def calculate_ratings(data, position_override=None, mode="season"):
     # Refit on 44-player set (RMSE 5.4, was 7.6). Shallower slope + lower
     # intercept at scale — the old -3.07 was overfit to 18 players.
     LEAGUE_AVG_K = 25.0
-    vis_trust = min(pa / 200, 1.0)
+    # Custom "full confidence": treat the entered stats as true talent and skip
+    # the small-sample regression toward league average (real players never set
+    # this flag, so the Converter is unaffected).
+    fc = bool(data.get("full_confidence"))
+    vis_trust = 1.0 if fc else min(pa / 200, 1.0)
     effective_k = vis_trust * bat["K_pct"] + (1 - vis_trust) * LEAGUE_AVG_K
     ratings["vision"] = clamp(-2.47 * effective_k + 118.1)
 
@@ -1701,7 +1711,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
     sb_per_162 = min(bat["SB"] / games * 162.0, 60.0)
     if sprint:
         raw_speed = max(15.02 * sprint + 0.10 * sb_per_162 - 356.5, 15)
-        if games_played < 30:
+        if games_played < 30 and not fc:
             # Regress toward position baseline for tiny samples
             pos_speed_baseline = TRACKING_SPEED_BASELINES.get(pos, 44)
             pos_speed_default = clamp(max(15.02 * 27.0 + 0.10 * sb_per_162 - 356.5, pos_speed_baseline))
@@ -1723,7 +1733,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
     # --- DISCIPLINE: 4.49 * BB% + 23.8 ---
     # Refit on 44-player set (RMSE 5.6, was 10.7→6.5). Slightly shallower
     # slope with higher intercept gives better calibration at scale.
-    disc_trust = min(pa / 200, 1.0)
+    disc_trust = 1.0 if fc else min(pa / 200, 1.0)
     LEAGUE_AVG_BB = 8.0
     effective_bb = disc_trust * bat["BB_pct"] + (1 - disc_trust) * LEAGUE_AVG_BB
     ratings["discipline"] = clamp(4.49 * effective_bb + 23.8)
@@ -1733,7 +1743,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
     # extremes (Berroa: .000 BA in 6 PA → Contact 0, Show gives 46).
     LEAGUE_AVG_BA = 0.248
     LEAGUE_AVG_ISO = 0.155
-    ba_trust = min(pa / 200, 1.0)
+    ba_trust = 1.0 if fc else min(pa / 200, 1.0)
     effective_ba = ba_trust * bat["BA"] + (1 - ba_trust) * LEAGUE_AVG_BA
     effective_iso = ba_trust * bat["ISO"] + (1 - ba_trust) * LEAGUE_AVG_ISO
 
@@ -1869,7 +1879,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
         pos_baseline = pos_fielding_base.get(pos, 55)
 
     # Trust factor: 0 at <50 inn, ramps to 1.0 at 500+ inn
-    def_trust = max(0, min((innings - 50) / 450, 1.0)) if innings > 50 else 0
+    def_trust = 1.0 if fc else (max(0, min((innings - 50) / 450, 1.0)) if innings > 50 else 0)
 
     # Bug 4 fix: when innings data is absent but Rtot is available, apply a
     # fixed partial trust so Rtot meaningfully influences the fielding rating.
@@ -2099,7 +2109,7 @@ def calculate_ratings(data, position_override=None, mode="season"):
     raw_ba = bat.get("BA", 0) or 0
     risp_ba = splits.get("risp_ba") if splits else None
     risp_pa = splits.get("risp_pa", 0) if splits else 0
-    clutch_trust = min(pa / 150, 1.0)
+    clutch_trust = 1.0 if fc else min(pa / 150, 1.0)
 
     # Clutch refit on N=42 (RMSE 9.3, was 13.4). BA coefficient flipped positive
     # at scale — higher BA + higher RISP = more clutch (old negative BA was overfit).
@@ -2165,7 +2175,8 @@ def calculate_pitcher_ratings(data, mode="season"):
         career_ip = career.get("total_IP", pit["IP"]) if isinstance(career, dict) else pit["IP"]
     else:
         career_ip = pit["IP"]
-    trust = min(career_ip / 200, 1.0)
+    fc = bool(data.get("full_confidence"))  # custom: skip small-sample regression
+    trust = 1.0 if fc else min(career_ip / 200, 1.0)
     LEAGUE_AVG = 65  # default rating for an average pitcher attribute
 
     def dampen(raw_rating):
@@ -2320,7 +2331,7 @@ def calculate_pitcher_ratings(data, mode="season"):
     if role == "RP":
         ratings["pitching_clutch"] = clamp(2.0 * war + 87)
     else:
-        sp_trust = min(career_ip / 120, 1.0)  # regress only very low-IP rookies
+        sp_trust = 1.0 if fc else min(career_ip / 120, 1.0)  # regress only very low-IP rookies
         ratings["pitching_clutch"] = clamp(sp_trust * (3.0 * war + 64) + (1 - sp_trust) * 64)
 
     # --- PITCHER FIELDING (mostly defaults) ---

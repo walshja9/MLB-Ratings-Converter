@@ -223,6 +223,50 @@ def test_route_pitcher_with_arsenal():
     assert j["arsenal_estimated"] is True
 
 
+def test_arsenal_spin_parsed():
+    import json
+    ars = json.dumps([{"code": "FF", "velo": 96, "usage": 60, "spin": 2400}])
+    d = build_custom_data({**PITCHER_FORM, "arsenal": ars}, is_pitcher=True)
+    assert d["statcast"]["arsenal"][0]["spin"] == 2400
+
+
+# ---- Full-confidence toggle ----
+
+SMALL_HITTER = {
+    "name": "Cup", "team": "X", "year": "2026", "position": "CF",
+    "PA": "50", "G": "14", "BA": "0.350", "OBP": "0.430", "SLG": "0.650",
+    "ISO": "0.300", "HR": "5", "3B": "1", "SB": "3", "CS": "0",
+    "BB_pct": "12", "K_pct": "10", "WAR": "2",
+}
+SMALL_PITCHER = {
+    "name": "Cup", "team": "X", "year": "2026", "role": "SP", "throws": "R",
+    "IP": "20", "G": "4", "GS": "4", "K_per_9": "14", "BB_per_9": "1.5",
+    "HR_per_9": "0.4", "H_per_9": "5", "K_pct": "40", "BB_pct": "4",
+    "WHIP": "0.8", "WAR": "1.5",
+}
+
+
+def test_full_confidence_flag_set():
+    assert build_custom_data(SMALL_HITTER, False, "CF")["full_confidence"] is False
+    assert build_custom_data({**SMALL_HITTER, "full_confidence": "on"}, False, "CF")["full_confidence"] is True
+
+
+def test_full_confidence_hitter_trusts_elite_rates():
+    reg = calculate_ratings(build_custom_data(SMALL_HITTER, False, "CF"), "CF", "season")
+    fc = calculate_ratings(build_custom_data({**SMALL_HITTER, "full_confidence": "on"}, False, "CF"), "CF", "season")
+    # Without FC a 50-PA line regresses toward league average; FC trusts it.
+    assert fc["contact_right"] > reg["contact_right"]
+    assert fc["vision"] > reg["vision"]
+    assert fc["power_right"] > reg["power_right"]
+
+
+def test_full_confidence_pitcher_trusts_elite_rates():
+    reg = calculate_pitcher_ratings(build_custom_data(SMALL_PITCHER, True), "season")
+    fc = calculate_pitcher_ratings(build_custom_data({**SMALL_PITCHER, "full_confidence": "on"}, True), "season")
+    assert fc["k_per_9_right"] > reg["k_per_9_right"]
+    assert fc["control"] > reg["control"]
+
+
 # ---- Route tests (edge + smoke) ----
 
 def test_route_rejects_zero_pa():
