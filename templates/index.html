@@ -572,7 +572,7 @@
         .mode-tab:hover { color: var(--text); }
         .mode-tab.active { background: var(--accent); color: #fff; border-color: transparent; font-weight: 600; }
         .custom-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-        .custom-panel .ident-row { display: grid; grid-template-columns: 1.4fr 1fr 0.7fr 1fr; gap: 10px; }
+        .custom-panel .ident-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
         .cstat-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin: 16px 0 0; }
         .cstat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-top: 8px; }
         .cstat { display: flex; flex-direction: column; gap: 3px; }
@@ -680,6 +680,17 @@
                     <select id="c_type" onchange="setCustomType()">
                         <option value="hitter">Hitter</option>
                         <option value="pitcher">Pitcher</option>
+                    </select>
+                </div>
+                <div class="cstat"><label>Stats from level</label>
+                    <select id="c_level" title="Minor-league lines are translated to MLB-equivalent before rating">
+                        <option value="MLB">MLB</option>
+                        <option value="AAA">AAA</option>
+                        <option value="AA">AA</option>
+                        <option value="A+">A+ (High-A)</option>
+                        <option value="A">A (Low-A)</option>
+                        <option value="A-">A- / Short</option>
+                        <option value="Rk">Rookie</option>
                     </select>
                 </div>
             </div>
@@ -874,13 +885,14 @@ function hitterCard(d) {
     const r = d.ratings, o = d.overalls;
     const t = tier(d.ovr);
     const modeLabel = d.mode === 'career' ? ' &bull; CAREER' : '';
+    const lvlLabel = (d.level && d.level !== 'MLB') ? ` &bull; ${esc(d.level)}&rarr;MLB` : '';
     // Catcher-specific attributes
     const catcherAttrs = (r.blocking ? attrHTML('BLOCK', r.blocking) : '') +
                          (r.pop_time ? attrHTML('POP', r.pop_time) : '');
     return `
         <div class="card-top">
             <div class="name">${esc(d.name)}</div>
-            <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}</div>
+            <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}${lvlLabel}</div>
             <div class="ovr-diamond tier-${t}"><span>${esc(d.ovr)}</span></div>
         </div>
         ${secHTML('Hitting', o.hitting,
@@ -951,10 +963,11 @@ function pitcherCard(d) {
     const r = d.ratings, o = d.overalls;
     const t = tier(d.ovr);
     const modeLabel = d.mode === 'career' ? ' &bull; CAREER' : '';
+    const lvlLabel = (d.level && d.level !== 'MLB') ? ` &bull; ${esc(d.level)}&rarr;MLB` : '';
     return `
         <div class="card-top">
             <div class="name">${esc(d.name)}</div>
-            <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}</div>
+            <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}${lvlLabel}</div>
             <div class="ovr-diamond tier-${t}"><span>${esc(d.ovr)}</span></div>
         </div>
         ${secHTML('Pitching', o.pitching,
@@ -1046,6 +1059,7 @@ async function genCustom() {
     fd.append('name', document.getElementById('c_name').value.trim());
     fd.append('team', document.getElementById('c_team').value.trim());
     fd.append('year', document.getElementById('c_year').value.trim() || '2026');
+    fd.append('level', document.getElementById('c_level').value);
     if (document.getElementById('c_full_conf').checked) fd.append('full_confidence', 'on');
 
     const block = document.getElementById(isPit ? 'c-pitcher' : 'c-hitter');

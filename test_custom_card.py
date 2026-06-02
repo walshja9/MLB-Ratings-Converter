@@ -240,6 +240,37 @@ def test_arsenal_spin_parsed():
     assert d["statcast"]["arsenal"][0]["spin"] == 2400
 
 
+# ---- Minor-league level (MLE translation) ----
+
+def test_level_mlb_is_identity():
+    mlb = build_custom_data({**PITCHER_FORM, "level": "MLB"}, is_pitcher=True)
+    none = build_custom_data(PITCHER_FORM, is_pitcher=True)
+    assert mlb["pitching"]["K_per_9"] == none["pitching"]["K_per_9"]
+
+
+def test_minor_pitcher_discounted_to_mlb():
+    # Same elite line entered as AA vs MLB: AA should translate to fewer Ks and
+    # more hits/HR -> lower K-ratings, and overall a tamer card.
+    mlb = build_custom_data({**PITCHER_FORM, "level": "MLB"}, is_pitcher=True)
+    aa = build_custom_data({**PITCHER_FORM, "level": "AA"}, is_pitcher=True)
+    assert aa["pitching"]["K_per_9"] < mlb["pitching"]["K_per_9"]
+    assert aa["pitching"]["HR_per_9"] > mlb["pitching"]["HR_per_9"]
+    r_mlb = calculate_pitcher_ratings(mlb, "season")
+    r_aa = calculate_pitcher_ratings(aa, "season")
+    assert r_aa["k_per_9_right"] < r_mlb["k_per_9_right"]
+
+
+def test_minor_hitter_discounted_to_mlb():
+    mlb = build_custom_data({**HITTER_FORM, "level": "MLB"}, is_pitcher=False, position="RF")
+    aa = build_custom_data({**HITTER_FORM, "level": "AA"}, is_pitcher=False, position="RF")
+    assert aa["batting"]["BA"] < mlb["batting"]["BA"]
+    assert aa["batting"]["ISO"] < mlb["batting"]["ISO"]
+    assert aa["batting"]["K_pct"] > mlb["batting"]["K_pct"]   # K% rises at MLB
+    r_mlb = calculate_ratings(mlb, "RF", "season")
+    r_aa = calculate_ratings(aa, "RF", "season")
+    assert r_aa["power_right"] < r_mlb["power_right"]
+
+
 # ---- Full-confidence toggle ----
 
 SMALL_HITTER = {

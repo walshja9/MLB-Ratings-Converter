@@ -1457,6 +1457,28 @@ def _parse_custom_arsenal(raw):
     return arsenal
 
 
+# Minor-league -> MLB equivalency multipliers, applied to the entered rate stats
+# before rating so a prospect's A+/AA line reads as an MLB-equivalent card. The
+# directions are firm (offense discounts and K% rises going up; pitcher Ks fall
+# while hits/HR/BB rise); magnitudes are estimates from published MLE research
+# and are tunable — our truth set is MLB-only so they can't be calibrated here.
+_MLE = {
+    "MLB": {},
+    "AAA": {"BA": 0.96, "ISO": 0.90, "BB_pct": 0.97, "K_pct": 1.08,
+            "K_per_9": 0.92, "BB_per_9": 1.05, "HR_per_9": 1.15, "H_per_9": 1.06, "WHIP": 1.05},
+    "AA":  {"BA": 0.93, "ISO": 0.82, "BB_pct": 0.95, "K_pct": 1.15,
+            "K_per_9": 0.85, "BB_per_9": 1.10, "HR_per_9": 1.28, "H_per_9": 1.12, "WHIP": 1.10},
+    "A+":  {"BA": 0.90, "ISO": 0.74, "BB_pct": 0.93, "K_pct": 1.22,
+            "K_per_9": 0.79, "BB_per_9": 1.14, "HR_per_9": 1.40, "H_per_9": 1.18, "WHIP": 1.15},
+    "A":   {"BA": 0.87, "ISO": 0.68, "BB_pct": 0.91, "K_pct": 1.30,
+            "K_per_9": 0.74, "BB_per_9": 1.18, "HR_per_9": 1.52, "H_per_9": 1.24, "WHIP": 1.20},
+    "A-":  {"BA": 0.85, "ISO": 0.64, "BB_pct": 0.90, "K_pct": 1.36,
+            "K_per_9": 0.70, "BB_per_9": 1.20, "HR_per_9": 1.60, "H_per_9": 1.28, "WHIP": 1.23},
+    "Rk":  {"BA": 0.82, "ISO": 0.58, "BB_pct": 0.88, "K_pct": 1.42,
+            "K_per_9": 0.66, "BB_per_9": 1.24, "HR_per_9": 1.70, "H_per_9": 1.34, "WHIP": 1.27},
+}
+
+
 def build_custom_data(form, is_pitcher, position=None):
     """Build the rating engine's `data` dict from a flat custom-stat form.
 
@@ -1486,6 +1508,12 @@ def build_custom_data(form, is_pitcher, position=None):
     name = (form.get("name") or "Custom Player").strip()
     team = (form.get("team") or "CUSTOM").strip()
     full_conf = str(form.get("full_confidence") or "").lower() in ("on", "true", "1", "yes")
+    # Minor-league -> MLB-equivalent multipliers for the entered rate stats.
+    mle = _MLE.get((form.get("level") or "MLB").strip(), {})
+
+    def lv(stat, val):
+        """Apply the level (MLE) multiplier for a stat to a value (or None)."""
+        return None if val is None else val * mle.get(stat, 1.0)
 
     if is_pitcher:
         role = "RP" if (form.get("role") or "SP").upper() == "RP" else "SP"
@@ -1496,13 +1524,14 @@ def build_custom_data(form, is_pitcher, position=None):
             "FIP": round(fnum("FIP", 0.0) or 0.0, 2),
             "IP": round(ip, 1),
             "G": inum("G"), "GS": inum("GS"), "SV": inum("SV"),
-            "K_per_9": round(fnum("K_per_9", 0.0) or 0.0, 1),
-            "BB_per_9": round(fnum("BB_per_9", 0.0) or 0.0, 1),
-            "HR_per_9": round(fnum("HR_per_9", 0.0) or 0.0, 2),
-            "H_per_9": round(fnum("H_per_9", 0.0) or 0.0, 1),
-            "K_pct": round(fnum("K_pct", 0.0) or 0.0, 1),
-            "BB_pct": round(fnum("BB_pct", 0.0) or 0.0, 1),
-            "WHIP": round(fnum("WHIP", 0.0) or 0.0, 3),
+            "K_per_9": round(lv("K_per_9", fnum("K_per_9", 0.0) or 0.0), 1),
+            "BB_per_9": round(lv("BB_per_9", fnum("BB_per_9", 0.0) or 0.0), 1),
+            "HR_per_9": round(lv("HR_per_9", fnum("HR_per_9", 0.0) or 0.0), 2),
+            "H_per_9": round(lv("H_per_9", fnum("H_per_9", 0.0) or 0.0), 1),
+            # K% / BB% track the K/9 and BB/9 directions across levels.
+            "K_pct": round((fnum("K_pct", 0.0) or 0.0) * mle.get("K_per_9", 1.0), 1),
+            "BB_pct": round((fnum("BB_pct", 0.0) or 0.0) * mle.get("BB_per_9", 1.0), 1),
+            "WHIP": round(lv("WHIP", fnum("WHIP", 0.0) or 0.0), 3),
             "WAR": round(fnum("WAR", 0.0) or 0.0, 1),
             "LOB_pct": round(fnum("LOB_pct", 0.0) or 0.0, 1),
             "FB_velo": fnum("FB_velo"),
@@ -1541,18 +1570,23 @@ def build_custom_data(form, is_pitcher, position=None):
     iso = fnum("ISO")
     if iso is None:
         iso = (slg - ba) if slg is not None else 0.0
-    if slg is None:
-        slg = ba + iso
+    # Translate the rate stats to MLB-equivalent (identity at MLB level).
+    ba = lv("BA", ba)
+    iso = lv("ISO", iso)
+    slg = ba + iso                                   # keep consistent post-translation
+    obp = lv("BA", fnum("OBP", 0.0) or 0.0)
+    bb_pct = lv("BB_pct", fnum("BB_pct", 0.0) or 0.0)
+    k_pct = lv("K_pct", fnum("K_pct", 0.0) or 0.0)
     batting = {
         "G": g, "PA": pa,
         "BA": round(ba, 3),
-        "OBP": round(fnum("OBP", 0.0) or 0.0, 3),
+        "OBP": round(obp, 3),
         "SLG": round(slg, 3),
         "ISO": round(iso, 3),
         "HR": inum("HR"), "3B": inum("3B"),
         "SB": inum("SB"), "CS": inum("CS"),
-        "BB_pct": round(fnum("BB_pct", 0.0) or 0.0, 1),
-        "K_pct": round(fnum("K_pct", 0.0) or 0.0, 1),
+        "BB_pct": round(bb_pct, 1),
+        "K_pct": round(k_pct, 1),
         "wOBA": 0.0,
         "WAR": round(fnum("WAR", 0.0) or 0.0, 1),
         "fg_spd": None, "bsr": None,
@@ -1573,9 +1607,9 @@ def build_custom_data(form, is_pitcher, position=None):
     # Optional platoon / RISP splits. When provided, give the split a trusted
     # sample (proportional to overall PA) so it actually influences the rating;
     # blank splits -> None -> engine uses overall BA/ISO.
-    ba_r, iso_r = fnum("ba_vr"), fnum("iso_vr")
-    ba_l, iso_l = fnum("ba_vl"), fnum("iso_vl")
-    risp = fnum("risp_ba")
+    ba_r, iso_r = lv("BA", fnum("ba_vr")), lv("ISO", fnum("iso_vr"))
+    ba_l, iso_l = lv("BA", fnum("ba_vl")), lv("ISO", fnum("iso_vl"))
+    risp = lv("BA", fnum("risp_ba"))
     if any(x is not None for x in (ba_r, iso_r, ba_l, iso_l, risp)):
         data["splits"] = {
             "vs_RHP": {"PA": round(pa * 0.7), "OBP": 0,

@@ -195,6 +195,7 @@ def generate_custom():
         result = assemble_card(data, is_pitcher, name, year, position, mode="season")
         result["mode"] = "season"
         result["custom"] = True
+        result["level"] = (form.get("level") or "MLB").strip()
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
