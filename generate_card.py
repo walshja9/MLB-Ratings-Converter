@@ -406,16 +406,15 @@ def estimate_ovr_hitter(ratings, overalls):
 
 
 def estimate_ovr_pitcher(ratings, overalls):
-    """Estimate pitcher OVR from sub-attributes.
+    """Estimate pitcher OVR from the pitching category.
 
-    Refit 2026-05-03 against N=23 (NNLS RMSE=2.4).
-    Key change: fielding now has high weight (0.727) — pitcher fielding
-    overall includes reactions which correlate with overall quality.
-    Durability dropped to 0.
+    Refit 2026-06-02 (N=40 cleaned). The prior formula's big fielding weight
+    (0.727) was spurious: pitcher fielding is a near-constant ~52, so that term
+    was a disguised +38 intercept that inflated every pitcher (e.g. a 71
+    pitching grade -> 88 OVR) and carried a +3.4 bias even on the elite
+    calibration set. Pitching alone fits better (RMSE 3.40 vs 4.85, ~0 bias).
     """
-    ovr = (0.7076 * overalls["pitching"] +
-           0.7267 * overalls["fielding"] +
-           0.0000 * overalls["durability"])
+    ovr = 0.929 * overalls["pitching"] + 16.7
     return clamp(ovr)
 
 
