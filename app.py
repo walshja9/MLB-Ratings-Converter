@@ -15,7 +15,7 @@ if _venv_site and os.path.isdir(_venv_site):
 import warnings
 warnings.filterwarnings("ignore")
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 
 # Import our card generator logic
 sys.path.insert(0, os.path.dirname(__file__))
@@ -119,7 +119,10 @@ def generate_card_data(player_name, year, is_pitcher=None, position=None, mode="
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    # No-cache so the phone always picks up the latest UI (active development).
+    resp = make_response(render_template("index.html"))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 
 @app.route("/players")

@@ -1092,6 +1092,19 @@ function setDeriv(id, val) {
 }
 function lockOnEdit(el) { if (el.value.trim() === '') delete el.dataset.locked; else el.dataset.locked = '1'; }
 
+// Mobile browsers restore old form values on refresh (bfcache/autofill), which
+// shows stale "random" stats AND locks the derived fields (the restore fires
+// input events) so auto-fill stops. Force a clean slate on every page show.
+function resetCustomForm() {
+    document.querySelectorAll('#custom-panel input').forEach(el => {
+        el.setAttribute('autocomplete', 'off');
+        if (el.type === 'checkbox') el.checked = false; else el.value = '';
+        delete el.dataset.locked;
+    });
+    const yr = document.getElementById('c_year'); if (yr) yr.value = '2026';
+}
+window.addEventListener('pageshow', () => { resetCustomForm(); setTimeout(resetCustomForm, 50); });
+
 function deriveHitter() {
     const ab = dNum('s_AB'), h = dNum('s_H'), _2b = dNum('s_2B') || 0, _3b = dNum('s_3B') || 0,
           hr = dNum('s_HR') || 0, bb = dNum('s_BB'), k = dNum('s_K');
@@ -1202,6 +1215,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     // Typing in a derived field locks it from auto-overwrite
     document.querySelectorAll('#custom-panel .deriv').forEach(el => el.addEventListener('input', () => lockOnEdit(el)));
+    resetCustomForm();
 });
 
 // ========== COMPARE ==========
