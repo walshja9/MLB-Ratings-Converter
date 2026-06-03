@@ -388,11 +388,10 @@ def detect_player_type(player_name, year):
 def estimate_ovr_hitter(ratings, overalls):
     """Estimate hitter OVR from sub-attributes.
 
-    Refit 2026-06-02 on the expanded set (N=121, OVR 78-99). Re-anchored across
-    the full range to remove a +1.6 over-rating; core hitting dominates, with
-    small fielding/speed/durability terms (RMSE 4.48 -> 3.86, ~0 bias). The
-    prior fielding weight (0.148) was over-stated — it drops to ~0.024 once the
-    low end is anchored.
+    Refit 2026-06-02 on the FULL talent range (N=508, OVR 55-99 — team rosters
+    added 384 sub-78 hitters). Like the pitcher OVR, earlier fits used only the
+    top ~130 (OVR 78-99) and over-rated the mid tier by +7.2. Full-range fit:
+    RMSE 5.75, ~0 bias. Maps a core of 70 -> 74 (was 82), elite holds.
     """
     core_hitting = np.mean([
         ratings["contact_right"], ratings["contact_left"],
@@ -400,10 +399,10 @@ def estimate_ovr_hitter(ratings, overalls):
         ratings["vision"], ratings["discipline"],
         ratings["batting_clutch"],
     ])
-    ovr = (0.667 * core_hitting +
-           0.024 * overalls["fielding"] +
-           0.038 * ratings["speed"] +
-           0.091 * overalls["durability"] + 25.4)
+    ovr = (0.7443 * core_hitting +
+           0.0244 * overalls["fielding"] +
+           0.0377 * ratings["speed"] +
+           0.3240 * overalls["durability"] - 6.65)
     return clamp(ovr)
 
 
