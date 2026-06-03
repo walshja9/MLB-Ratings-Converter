@@ -388,10 +388,10 @@ def detect_player_type(player_name, year):
 def estimate_ovr_hitter(ratings, overalls):
     """Estimate hitter OVR from sub-attributes.
 
-    Refit 2026-06-02 on the FULL talent range (N=508, OVR 55-99 — team rosters
-    added 384 sub-78 hitters). Like the pitcher OVR, earlier fits used only the
-    top ~130 (OVR 78-99) and over-rated the mid tier by +7.2. Full-range fit:
-    RMSE 5.75, ~0 bias. Maps a core of 70 -> 74 (was 82), elite holds.
+    Anchored on NOTABLE players (the population this tool actually rates), not
+    the full MLB pool. A full-range refit including ~380 fringe hitters was
+    tried but under-rated the good players/prospects users build (it dropped
+    Bohrofen from 84 to 73 vs his Show 87), so it was reverted to this fit.
     """
     core_hitting = np.mean([
         ratings["contact_right"], ratings["contact_left"],
@@ -399,23 +399,24 @@ def estimate_ovr_hitter(ratings, overalls):
         ratings["vision"], ratings["discipline"],
         ratings["batting_clutch"],
     ])
-    ovr = (0.7443 * core_hitting +
-           0.0244 * overalls["fielding"] +
-           0.0377 * ratings["speed"] +
-           0.3240 * overalls["durability"] - 6.65)
+    ovr = (0.8165 * core_hitting +
+           0.1476 * overalls["fielding"] +
+           0.0236 * ratings["speed"] +
+           0.1957 * overalls["durability"])
     return clamp(ovr)
 
 
 def estimate_ovr_pitcher(ratings, overalls):
     """Estimate pitcher OVR from the pitching category.
 
-    Refit 2026-06-02 on the FULL talent range (N=562, OVR 60-99 — team rosters
-    added 467 sub-80 arms). Earlier fits used only elite arms (80-99) and badly
-    over-rated the mid/low tier: the prior 0.99*pitch+8.4 carried a +9.4 bias
-    across the full range. Steeper slope + negative intercept spreads pitchers
-    correctly (RMSE 6.57, ~0 bias). Maps a 72 grade -> 70 (was 88, then 80).
+    Anchored on NOTABLE players (theshowratings top lists) — the population this
+    tool is actually used to rate (stars/regulars/prospects), NOT the full MLB
+    pool. A full-range refit including ~470 fringe/AAAA arms (OVR 47-78) was
+    tried but it under-rated the good players users actually build, so it was
+    reverted. Keeps the real fix (pitcher fielding was a near-constant ~52, a
+    spurious +38 term). Maps a 72 grade -> 80 (Perry's Show OVR).
     """
-    ovr = 1.212 * overalls["pitching"] - 17.35
+    ovr = 0.990 * overalls["pitching"] + 8.4
     return clamp(ovr)
 
 
