@@ -410,13 +410,13 @@ def estimate_ovr_hitter(ratings, overalls):
 def estimate_ovr_pitcher(ratings, overalls):
     """Estimate pitcher OVR from the pitching category.
 
-    Refit 2026-06-02 on the FULL pitcher set (N=89, OVR 80-99). The prior
-    formula's big fielding weight (0.727) was spurious — pitcher fielding is a
-    near-constant ~52, a disguised +38 intercept that inflated everyone (a 71
-    grade -> 88 OVR). Pitching alone, anchored across the full talent range,
-    fits cleanly (RMSE ~4.4, ~0 bias). Maps a 72 grade -> 80 (was 88).
+    Refit 2026-06-02 on the FULL talent range (N=562, OVR 60-99 — team rosters
+    added 467 sub-80 arms). Earlier fits used only elite arms (80-99) and badly
+    over-rated the mid/low tier: the prior 0.99*pitch+8.4 carried a +9.4 bias
+    across the full range. Steeper slope + negative intercept spreads pitchers
+    correctly (RMSE 6.57, ~0 bias). Maps a 72 grade -> 70 (was 88, then 80).
     """
-    ovr = 0.990 * overalls["pitching"] + 8.4
+    ovr = 1.212 * overalls["pitching"] - 17.35
     return clamp(ovr)
 
 
