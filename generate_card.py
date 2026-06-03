@@ -403,7 +403,15 @@ def estimate_ovr_hitter(ratings, overalls):
            0.1476 * overalls["fielding"] +
            0.0236 * ratings["speed"] +
            0.1957 * overalls["durability"])
+    # Position adjustment: Show credits up-the-middle defense and docks bat-only
+    # spots. Conservative offsets from measured per-position OVR bias (catchers
+    # under-rated; 1B/2B/3B/LF over-rated) — a light proxy for SDS's true
+    # position-weighted OVR, kept small given the thin per-position sample.
+    ovr += _POS_OVR_ADJ.get(ratings.get("position", "OF"), 0)
     return clamp(ovr)
+
+
+_POS_OVR_ADJ = {"C": 2, "1B": -1, "2B": -1, "3B": -2, "LF": -1, "DH": -1}
 
 
 def estimate_ovr_pitcher(ratings, overalls):
