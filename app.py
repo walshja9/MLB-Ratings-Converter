@@ -24,7 +24,7 @@ from generate_card import (
     calculate_ratings, calculate_overalls,
     calculate_pitcher_ratings, calculate_pitcher_overalls,
     detect_player_type, estimate_ovr_hitter, estimate_ovr_pitcher,
-    build_custom_data, scouting_to_stats,
+    build_custom_data, scouting_to_stats, scouting_to_pitcher_stats,
 )
 
 app = Flask(__name__)
@@ -213,11 +213,17 @@ def generate_scouting():
         year = int(form.get("year") or 2026)
     except ValueError:
         year = 2026
-    position = (form.get("position") or "OF").strip() or "OF"
+    is_pitcher = form.get("is_pitcher", "") == "on"
     try:
-        stat_form = scouting_to_stats(form)
-        data = build_custom_data(stat_form, is_pitcher=False, position=position)
-        result = assemble_card(data, False, name, year, position, mode="season")
+        if is_pitcher:
+            stat_form = scouting_to_pitcher_stats(form)
+            data = build_custom_data(stat_form, is_pitcher=True)
+            result = assemble_card(data, True, name, year, None, mode="season")
+        else:
+            position = (form.get("position") or "OF").strip() or "OF"
+            stat_form = scouting_to_stats(form)
+            data = build_custom_data(stat_form, is_pitcher=False, position=position)
+            result = assemble_card(data, False, name, year, position, mode="season")
         result["mode"] = "season"
         result["custom"] = True
         result["scouting"] = True

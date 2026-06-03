@@ -833,25 +833,51 @@
                 <div class="cstat"><label>Player Name</label><input type="text" id="sc_name" placeholder="Prospect"></div>
                 <div class="cstat"><label>Team</label><input type="text" id="sc_team" placeholder="CUSTOM"></div>
                 <div class="cstat"><label>Year</label><input type="number" id="sc_year" value="2026"></div>
-                <div class="cstat"><label>Position</label>
-                    <select data-sfield="position">
-                        <option>C</option><option>1B</option><option>2B</option><option>SS</option>
-                        <option>3B</option><option>LF</option><option>CF</option><option selected>RF</option><option>DH</option>
+                <div class="cstat"><label>Type</label>
+                    <select id="sc_type" onchange="setScoutType()">
+                        <option value="hitter">Hitter</option>
+                        <option value="pitcher">Pitcher</option>
                     </select>
                 </div>
             </div>
-            <p class="cstat-title">Scouting grades <span style="text-transform:none;letter-spacing:0">— 20-80 scale, 50 = MLB average (FanGraphs / MLB Pipeline)</span></p>
-            <div class="cstat-grid">
-                <div class="cstat"><label>Hit</label><input type="number" data-sfield="g_hit" placeholder="50"></div>
-                <div class="cstat"><label>Power</label><input type="number" data-sfield="g_power" placeholder="50"></div>
-                <div class="cstat"><label>Eye / Discipline</label><input type="number" data-sfield="g_eye" placeholder="50"></div>
-                <div class="cstat"><label>Speed / Run</label><input type="number" data-sfield="g_speed" placeholder="50"></div>
-                <div class="cstat"><label>Field</label><input type="number" data-sfield="g_field" placeholder="50"></div>
+
+            <div id="sc-hitter">
+                <p class="cstat-title">Scouting grades <span style="text-transform:none;letter-spacing:0">— 20-80 scale, 50 = MLB average (FanGraphs / MLB Pipeline)</span></p>
+                <div class="cstat-grid">
+                    <div class="cstat"><label>Position</label>
+                        <select data-sfield="position">
+                            <option>C</option><option>1B</option><option>2B</option><option>SS</option>
+                            <option>3B</option><option>LF</option><option>CF</option><option selected>RF</option><option>DH</option>
+                        </select>
+                    </div>
+                    <div class="cstat"><label>Hit</label><input type="number" data-sfield="g_hit" placeholder="50"></div>
+                    <div class="cstat"><label>Power</label><input type="number" data-sfield="g_power" placeholder="50"></div>
+                    <div class="cstat"><label>Eye / Discipline</label><input type="number" data-sfield="g_eye" placeholder="50"></div>
+                    <div class="cstat"><label>Speed / Run</label><input type="number" data-sfield="g_speed" placeholder="50"></div>
+                    <div class="cstat"><label>Field</label><input type="number" data-sfield="g_field" placeholder="50"></div>
+                </div>
             </div>
+
+            <div id="sc-pitcher" style="display:none">
+                <p class="cstat-title">Pitcher scouting grades <span style="text-transform:none;letter-spacing:0">— 20-80 scale, 50 = MLB average</span></p>
+                <div class="cstat-grid">
+                    <div class="cstat"><label>Role</label>
+                        <select data-pfield="role"><option value="SP">SP</option><option value="RP">RP</option></select>
+                    </div>
+                    <div class="cstat"><label>Throws</label>
+                        <select data-pfield="throws"><option value="R">R</option><option value="L">L</option></select>
+                    </div>
+                    <div class="cstat"><label>Fastball</label><input type="number" data-pfield="g_fb" placeholder="50"></div>
+                    <div class="cstat"><label>Breaking</label><input type="number" data-pfield="g_break" placeholder="50"></div>
+                    <div class="cstat"><label>Offspeed</label><input type="number" data-pfield="g_off" placeholder="50"></div>
+                    <div class="cstat"><label>Command</label><input type="number" data-pfield="g_command" placeholder="50"></div>
+                </div>
+            </div>
+
             <div class="btn-row" style="margin-top:14px">
                 <button class="btn btn-primary" onclick="genScouting()">Generate Card</button>
             </div>
-            <p class="hint">Grades project the player like Show does for prospects — tools, not stats. Hitters only for now.</p>
+            <p class="hint">Grades project the player like Show does for prospects — tools, not stats.</p>
         </div>
 
         <div class="error-msg" id="err"></div>
@@ -1075,12 +1101,22 @@ function setMode(m) {
     document.getElementById('scouting-panel').style.display = m === 'scouting' ? '' : 'none';
 }
 
+function setScoutType() {
+    const isPit = document.getElementById('sc_type').value === 'pitcher';
+    document.getElementById('sc-hitter').style.display = isPit ? 'none' : '';
+    document.getElementById('sc-pitcher').style.display = isPit ? '' : 'none';
+}
+
 async function genScouting() {
+    const isPit = document.getElementById('sc_type').value === 'pitcher';
     const fd = new FormData();
     fd.append('name', document.getElementById('sc_name').value.trim());
     fd.append('team', document.getElementById('sc_team').value.trim());
     fd.append('year', document.getElementById('sc_year').value.trim() || '2026');
-    document.querySelectorAll('#scouting-panel [data-sfield]').forEach(el => fd.append(el.dataset.sfield, el.value.trim()));
+    fd.append('is_pitcher', isPit ? 'on' : '');
+    const block = document.getElementById(isPit ? 'sc-pitcher' : 'sc-hitter');
+    const attr = isPit ? 'data-pfield' : 'data-sfield';
+    block.querySelectorAll('[' + attr + ']').forEach(el => fd.append(el.getAttribute(attr), el.value.trim()));
     setLoading(true, 'Projecting from scouting grades...');
     try {
         const r = await fetch('/generate_scouting', { method: 'POST', body: fd });

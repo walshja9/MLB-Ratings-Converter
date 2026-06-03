@@ -10,6 +10,7 @@ from generate_card import (
     calculate_ratings,
     calculate_pitcher_ratings,
     scouting_to_stats,
+    scouting_to_pitcher_stats,
 )
 from app import app
 
@@ -302,6 +303,27 @@ def test_route_scouting_smoke():
     assert r.status_code == 200
     j = r.get_json()
     assert j["type"] == "hitter" and j["scouting"] is True
+    assert 0 < j["ovr"] <= 99
+
+
+def test_scouting_pitcher_grades_map():
+    sf = scouting_to_pitcher_stats({"g_fb": "70", "g_break": "65", "g_off": "55",
+                                    "g_command": "60", "role": "SP", "throws": "L"})
+    assert float(sf["FB_velo"]) > 93                 # FB 70 -> ~95 mph
+    assert float(sf["K_per_9"]) > 10                 # plus stuff -> high K/9
+    assert float(sf["BB_per_9"]) < 3.0               # cmd 60 -> good control
+    import json
+    arsenal = json.loads(sf["arsenal"])
+    assert any(p["code"] == "SL" for p in arsenal)   # breaking grade -> slider in mix
+
+
+def test_route_scouting_pitcher_smoke():
+    client = app.test_client()
+    r = client.post("/generate_scouting", data={"name": "Arm", "is_pitcher": "on",
+        "role": "SP", "throws": "R", "g_fb": "65", "g_break": "60", "g_off": "50", "g_command": "55"})
+    assert r.status_code == 200
+    j = r.get_json()
+    assert j["type"] == "pitcher" and j["scouting"] is True
     assert 0 < j["ovr"] <= 99
 
 

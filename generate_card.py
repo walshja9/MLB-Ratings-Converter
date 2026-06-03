@@ -1436,7 +1436,8 @@ def _parse_custom_arsenal(raw):
         usage = it.get("usage")
         if usage in (None, ""):
             usage = round(100.0 / n, 1) if n else 0.0
-        brk = _DEFAULT_BREAK_BY_TYPE.get(code, 55)
+        brk_override = it.get("break")
+        brk = int(brk_override) if brk_override not in (None, "") else _DEFAULT_BREAK_BY_TYPE.get(code, 55)
         entry = {
             "code": code,
             "name": _PITCH_NAMES.get(code, code),
@@ -1527,6 +1528,65 @@ def scouting_to_stats(form):
         "HR": str(hr), "3B": str(triples), "SB": str(sb), "CS": str(max(0, round(sb * 0.18))),
         "BB_pct": str(bbpct), "K_pct": str(kpct),
         "sprint_speed": str(sprint), "oaa": str(oaa),
+    }
+
+
+def scouting_to_pitcher_stats(form):
+    """Convert a pitcher's 20-80 grades (FB / Breaking / Offspeed / Command) into
+    a synthetic stat line for the calibrated pitcher engine. FB grade -> velo
+    (FanGraphs: 50->90-91, 80->97 mph); stuff (FB+breaking+offspeed) -> K/9 and
+    contact suppression; Command -> BB/9. Builds an arsenal from the pitch grades
+    so BREAK reflects the breaking-ball grade."""
+    import json
+
+    def g(key, default=50.0):
+        v = form.get(key, "")
+        v = "" if v is None else str(v).strip()
+        try:
+            return float(v) if v != "" else default
+        except ValueError:
+            return default
+
+    def lim(x, lo, hi):
+        return max(lo, min(hi, x))
+
+    fb, brk, off, cmd = g("g_fb"), g("g_break"), g("g_off"), g("g_command")
+    role = "RP" if (form.get("role") or "SP").upper() == "RP" else "SP"
+    stuff = 0.45 * fb + 0.40 * brk + 0.15 * off
+
+    fb_velo = round(lim(90.5 + (fb - 50) * 0.22, 84, 102), 1)
+    k9 = lim(8.0 + (stuff - 50) * 0.17, 4, 14)
+    bb9 = lim(3.0 - (cmd - 50) * 0.05, 1.0, 6.0)
+    hr9 = lim(1.10 - (stuff - 50) * 0.012, 0.4, 2.2)
+    h9 = lim(8.5 - (stuff - 50) * 0.06, 5.5, 11)
+    whip = round((h9 + bb9) / 9, 3)
+    den = 9 * (3 + whip)
+    fip = round((13 * hr9 + 3 * bb9 - 2 * k9) / 9 + 3.10, 2)
+    ip, gms, gs = ("65", "65", "0") if role == "RP" else ("185", "30", "30")
+
+    arsenal = [{"code": "FF", "usage": 50, "velo": fb_velo,
+                "break": int(lim(0.5 * fb + 25, 30, 75))}]
+    if brk >= 40:
+        arsenal.append({"code": "SL", "usage": 30, "velo": round(fb_velo - 9, 1),
+                        "break": int(lim(0.7 * brk + 30, 40, 99))})
+    if off >= 40:
+        arsenal.append({"code": "CH", "usage": 20, "velo": round(fb_velo - 10, 1),
+                        "break": int(lim(0.6 * off + 30, 40, 90))})
+
+    return {
+        "name": form.get("name") or "Prospect",
+        "team": form.get("team") or "CUSTOM",
+        "year": form.get("year") or "2026",
+        "level": form.get("level") or "MLB",
+        "role": role, "throws": form.get("throws") or "R",
+        "full_confidence": "on",
+        "IP": ip, "G": gms, "GS": gs, "SV": "0", "WAR": "3.0",
+        "FB_velo": str(fb_velo), "LOB_pct": "74",
+        "K_per_9": str(round(k9, 1)), "BB_per_9": str(round(bb9, 1)),
+        "HR_per_9": str(round(hr9, 2)), "H_per_9": str(round(h9, 1)),
+        "K_pct": str(round(100 * k9 / den, 1)), "BB_pct": str(round(100 * bb9 / den, 1)),
+        "WHIP": str(whip), "ERA": str(round(fip - 0.2, 2)), "FIP": str(fip),
+        "arsenal": json.dumps(arsenal),
     }
 
 
