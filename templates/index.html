@@ -606,6 +606,7 @@
         <div class="mode-tabs">
             <button class="mode-tab active" id="tab-real" onclick="setMode('real')">Real Player</button>
             <button class="mode-tab" id="tab-custom" onclick="setMode('custom')">Custom Player</button>
+            <button class="mode-tab" id="tab-scouting" onclick="setMode('scouting')">Scouting</button>
         </div>
 
         <div id="real-controls">
@@ -826,6 +827,33 @@
             <p class="hint">Enter the stats you know — blanks fall back to estimates, same as a pre-Statcast player.</p>
         </div>
 
+        <!-- Scouting grades (prospect mode) -->
+        <div class="custom-panel" id="scouting-panel" style="display:none">
+            <div class="ident-row">
+                <div class="cstat"><label>Player Name</label><input type="text" id="sc_name" placeholder="Prospect"></div>
+                <div class="cstat"><label>Team</label><input type="text" id="sc_team" placeholder="CUSTOM"></div>
+                <div class="cstat"><label>Year</label><input type="number" id="sc_year" value="2026"></div>
+                <div class="cstat"><label>Position</label>
+                    <select data-sfield="position">
+                        <option>C</option><option>1B</option><option>2B</option><option>SS</option>
+                        <option>3B</option><option>LF</option><option>CF</option><option selected>RF</option><option>DH</option>
+                    </select>
+                </div>
+            </div>
+            <p class="cstat-title">Scouting grades <span style="text-transform:none;letter-spacing:0">— 20-80 scale, 50 = MLB average (FanGraphs / MLB Pipeline)</span></p>
+            <div class="cstat-grid">
+                <div class="cstat"><label>Hit</label><input type="number" data-sfield="g_hit" placeholder="50"></div>
+                <div class="cstat"><label>Power</label><input type="number" data-sfield="g_power" placeholder="50"></div>
+                <div class="cstat"><label>Eye / Discipline</label><input type="number" data-sfield="g_eye" placeholder="50"></div>
+                <div class="cstat"><label>Speed / Run</label><input type="number" data-sfield="g_speed" placeholder="50"></div>
+                <div class="cstat"><label>Field</label><input type="number" data-sfield="g_field" placeholder="50"></div>
+            </div>
+            <div class="btn-row" style="margin-top:14px">
+                <button class="btn btn-primary" onclick="genScouting()">Generate Card</button>
+            </div>
+            <p class="hint">Grades project the player like Show does for prospects — tools, not stats. Hitters only for now.</p>
+        </div>
+
         <div class="error-msg" id="err"></div>
 
         <div class="status" id="loading">
@@ -1039,11 +1067,28 @@ async function gen() {
 
 // ========== MODE / CUSTOM ==========
 function setMode(m) {
-    const real = m === 'real';
-    document.getElementById('tab-real').classList.toggle('active', real);
-    document.getElementById('tab-custom').classList.toggle('active', !real);
-    document.getElementById('real-controls').style.display = real ? '' : 'none';
-    document.getElementById('custom-panel').style.display = real ? 'none' : '';
+    document.getElementById('tab-real').classList.toggle('active', m === 'real');
+    document.getElementById('tab-custom').classList.toggle('active', m === 'custom');
+    document.getElementById('tab-scouting').classList.toggle('active', m === 'scouting');
+    document.getElementById('real-controls').style.display = m === 'real' ? '' : 'none';
+    document.getElementById('custom-panel').style.display = m === 'custom' ? '' : 'none';
+    document.getElementById('scouting-panel').style.display = m === 'scouting' ? '' : 'none';
+}
+
+async function genScouting() {
+    const fd = new FormData();
+    fd.append('name', document.getElementById('sc_name').value.trim());
+    fd.append('team', document.getElementById('sc_team').value.trim());
+    fd.append('year', document.getElementById('sc_year').value.trim() || '2026');
+    document.querySelectorAll('#scouting-panel [data-sfield]').forEach(el => fd.append(el.dataset.sfield, el.value.trim()));
+    setLoading(true, 'Projecting from scouting grades...');
+    try {
+        const r = await fetch('/generate_scouting', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.error) { showErr(d.error); return; }
+        showCards([d]);
+    } catch (e) { showErr(e.message); }
+    finally { setLoading(false); }
 }
 
 function setCustomType() {
@@ -1096,12 +1141,13 @@ function lockOnEdit(el) { if (el.value.trim() === '') delete el.dataset.locked; 
 // shows stale "random" stats AND locks the derived fields (the restore fires
 // input events) so auto-fill stops. Force a clean slate on every page show.
 function resetCustomForm() {
-    document.querySelectorAll('#custom-panel input').forEach(el => {
+    document.querySelectorAll('#custom-panel input, #scouting-panel input').forEach(el => {
         el.setAttribute('autocomplete', 'off');
         if (el.type === 'checkbox') el.checked = false; else el.value = '';
         delete el.dataset.locked;
     });
     const yr = document.getElementById('c_year'); if (yr) yr.value = '2026';
+    const sy = document.getElementById('sc_year'); if (sy) sy.value = '2026';
 }
 window.addEventListener('pageshow', () => { resetCustomForm(); setTimeout(resetCustomForm, 50); });
 

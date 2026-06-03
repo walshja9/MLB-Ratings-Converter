@@ -24,7 +24,7 @@ from generate_card import (
     calculate_ratings, calculate_overalls,
     calculate_pitcher_ratings, calculate_pitcher_overalls,
     detect_player_type, estimate_ovr_hitter, estimate_ovr_pitcher,
-    build_custom_data,
+    build_custom_data, scouting_to_stats,
 )
 
 app = Flask(__name__)
@@ -199,6 +199,28 @@ def generate_custom():
         result["mode"] = "season"
         result["custom"] = True
         result["level"] = (form.get("level") or "MLB").strip()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/generate_scouting", methods=["POST"])
+def generate_scouting():
+    """Generate a card from 20-80 scouting tool grades (prospect mode)."""
+    form = request.form
+    name = (form.get("name") or "Prospect").strip()
+    try:
+        year = int(form.get("year") or 2026)
+    except ValueError:
+        year = 2026
+    position = (form.get("position") or "OF").strip() or "OF"
+    try:
+        stat_form = scouting_to_stats(form)
+        data = build_custom_data(stat_form, is_pitcher=False, position=position)
+        result = assemble_card(data, False, name, year, position, mode="season")
+        result["mode"] = "season"
+        result["custom"] = True
+        result["scouting"] = True
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

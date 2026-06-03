@@ -9,6 +9,7 @@ from generate_card import (
     build_custom_data,
     calculate_ratings,
     calculate_pitcher_ratings,
+    scouting_to_stats,
 )
 from app import app
 
@@ -269,6 +270,39 @@ def test_minor_hitter_discounted_to_mlb():
     r_mlb = calculate_ratings(mlb, "RF", "season")
     r_aa = calculate_ratings(aa, "RF", "season")
     assert r_aa["power_right"] < r_mlb["power_right"]
+
+
+# ---- Scouting-grade prospect mode ----
+
+def test_scouting_grades_map_to_stats():
+    sf = scouting_to_stats({"g_hit": "60", "g_power": "70", "g_eye": "55",
+                            "g_speed": "40", "g_field": "50", "position": "RF"})
+    assert float(sf["BA"]) == round(0.260 + 10 * 0.002, 3)      # hit 60 -> .280
+    assert int(sf["HR"]) > 25                                    # power 70 -> 30+ HR
+    assert float(sf["K_pct"]) < 22                               # better hit -> fewer K
+    assert float(sf["sprint_speed"]) < 27                        # speed 40 -> below avg
+
+
+def test_scouting_grades_monotonic_ovr():
+    """Higher across-the-board grades -> higher OVR."""
+    def ovr(grade):
+        sf = scouting_to_stats({k: str(grade) for k in
+                                ("g_hit", "g_power", "g_eye", "g_speed", "g_field")})
+        d = build_custom_data(sf, False, "CF")
+        from generate_card import calculate_overalls, estimate_ovr_hitter
+        return estimate_ovr_hitter(calculate_ratings(d, "CF", "season"),
+                                   calculate_overalls(calculate_ratings(d, "CF", "season")))
+    assert ovr(40) < ovr(50) < ovr(60) < ovr(70)
+
+
+def test_route_scouting_smoke():
+    client = app.test_client()
+    r = client.post("/generate_scouting", data={"name": "Top Prospect", "position": "CF",
+        "g_hit": "60", "g_power": "55", "g_eye": "55", "g_speed": "65", "g_field": "65"})
+    assert r.status_code == 200
+    j = r.get_json()
+    assert j["type"] == "hitter" and j["scouting"] is True
+    assert 0 < j["ovr"] <= 99
 
 
 # ---- Full-confidence toggle ----

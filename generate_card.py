@@ -1480,6 +1480,56 @@ _MLE = {
 }
 
 
+def scouting_to_stats(form):
+    """Convert a hitter's 20-80 scouting tool grades into a synthetic full-season
+    stat line, so the CALIBRATED engine can rate the player (mirrors how Show
+    sets prospect ratings from scouting projection, not raw stats).
+
+    Grade->stat anchors are FanGraphs' documented 20-80 tables (50 = MLB average):
+    Hit 50->.260 / 80->.320; Power 50->~16 HR / 80->~40; Run 50->avg speed.
+    K%/BB% track the Hit and Eye grades. Returns a dict shaped like the custom
+    stat form, fed straight into build_custom_data().
+    """
+    def g(key, default=50.0):
+        v = form.get(key, "")
+        v = "" if v is None else str(v).strip()
+        try:
+            return float(v) if v != "" else default
+        except ValueError:
+            return default
+
+    def lim(x, lo, hi):
+        return max(lo, min(hi, x))
+
+    hit, power, eye = g("g_hit"), g("g_power"), g("g_eye")
+    run, field = g("g_speed"), g("g_field")
+
+    ba = round(lim(0.260 + (hit - 50) * 0.002, 0.180, 0.350), 3)
+    iso = round(lim(0.150 + (power - 50) * 0.0046, 0.030, 0.400), 3)
+    hr = max(0, round((power - 50) * 0.85 + 16.5))
+    kpct = round(lim(22 - (hit - 50) * 0.40, 8, 38), 1)
+    bbpct = round(lim(8.5 + (eye - 50) * 0.22, 3, 18), 1)
+    sprint = round(lim(27 + (run - 50) * 0.115, 23, 31), 1)
+    sb = max(0, round((run - 45) * 1.5))
+    triples = max(0, round((run - 55) * 0.15))
+    oaa = round((field - 50) * 0.8)
+
+    return {
+        "name": form.get("name") or "Prospect",
+        "team": form.get("team") or "CUSTOM",
+        "year": form.get("year") or "2026",
+        "position": form.get("position") or "OF",
+        "level": form.get("level") or "MLB",
+        "full_confidence": "on",          # grades ARE the talent estimate; don't regress
+        "PA": "600", "G": "150", "WAR": "3.0",
+        "BA": str(ba), "OBP": str(round(min(0.500, ba + bbpct / 100 + 0.020), 3)),
+        "SLG": str(round(ba + iso, 3)), "ISO": str(iso),
+        "HR": str(hr), "3B": str(triples), "SB": str(sb), "CS": str(max(0, round(sb * 0.18))),
+        "BB_pct": str(bbpct), "K_pct": str(kpct),
+        "sprint_speed": str(sprint), "oaa": str(oaa),
+    }
+
+
 def build_custom_data(form, is_pitcher, position=None):
     """Build the rating engine's `data` dict from a flat custom-stat form.
 
