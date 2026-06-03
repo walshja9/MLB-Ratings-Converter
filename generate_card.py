@@ -1522,8 +1522,16 @@ def scouting_to_stats(form):
     sb = max(0, round((run - 45) * 1.5))
     triples = max(0, round((run - 55) * 0.15))
     oaa = round((field - 50) * 0.8)
+    # Project durability from overall quality rather than assuming every
+    # prospect is a full-season iron-man (studs play full-time -> durable;
+    # fringe guys are part-time). Bat-weighted so a strong-hit/power prospect
+    # keeps a starter's durability even with modest speed/field. Passed to the
+    # route as a durability override.
+    quality = 0.40 * hit + 0.40 * power + 0.10 * field + 0.10 * run
+    proj_dur = round(lim(50 + (quality - 40) * 1.4, 45, 93))
 
     return {
+        "_proj_dur": str(proj_dur),
         "name": form.get("name") or "Prospect",
         "team": form.get("team") or "CUSTOM",
         "year": form.get("year") or "2026",
