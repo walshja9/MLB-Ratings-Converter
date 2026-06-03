@@ -388,9 +388,11 @@ def detect_player_type(player_name, year):
 def estimate_ovr_hitter(ratings, overalls):
     """Estimate hitter OVR from sub-attributes.
 
-    Refit 2026-05-03 against N=44 with updated formulas (NNLS RMSE=3.7).
-    Key change: fielding now contributes (0.148) — with improved attribute
-    formulas the signal emerged. Speed dropped to near-zero (0.024).
+    Refit 2026-06-02 on the expanded set (N=121, OVR 78-99). Re-anchored across
+    the full range to remove a +1.6 over-rating; core hitting dominates, with
+    small fielding/speed/durability terms (RMSE 4.48 -> 3.86, ~0 bias). The
+    prior fielding weight (0.148) was over-stated — it drops to ~0.024 once the
+    low end is anchored.
     """
     core_hitting = np.mean([
         ratings["contact_right"], ratings["contact_left"],
@@ -398,23 +400,23 @@ def estimate_ovr_hitter(ratings, overalls):
         ratings["vision"], ratings["discipline"],
         ratings["batting_clutch"],
     ])
-    ovr = (0.8165 * core_hitting +
-           0.1476 * overalls["fielding"] +
-           0.0236 * ratings["speed"] +
-           0.1957 * overalls["durability"])
+    ovr = (0.667 * core_hitting +
+           0.024 * overalls["fielding"] +
+           0.038 * ratings["speed"] +
+           0.091 * overalls["durability"] + 25.4)
     return clamp(ovr)
 
 
 def estimate_ovr_pitcher(ratings, overalls):
     """Estimate pitcher OVR from the pitching category.
 
-    Refit 2026-06-02 (N=40 cleaned). The prior formula's big fielding weight
-    (0.727) was spurious: pitcher fielding is a near-constant ~52, so that term
-    was a disguised +38 intercept that inflated every pitcher (e.g. a 71
-    pitching grade -> 88 OVR) and carried a +3.4 bias even on the elite
-    calibration set. Pitching alone fits better (RMSE 3.40 vs 4.85, ~0 bias).
+    Refit 2026-06-02 on the FULL pitcher set (N=89, OVR 80-99). The prior
+    formula's big fielding weight (0.727) was spurious — pitcher fielding is a
+    near-constant ~52, a disguised +38 intercept that inflated everyone (a 71
+    grade -> 88 OVR). Pitching alone, anchored across the full talent range,
+    fits cleanly (RMSE ~4.4, ~0 bias). Maps a 72 grade -> 80 (was 88).
     """
-    ovr = 0.929 * overalls["pitching"] + 16.7
+    ovr = 0.990 * overalls["pitching"] + 8.4
     return clamp(ovr)
 
 
