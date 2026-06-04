@@ -317,6 +317,27 @@ def test_scouting_pitcher_grades_map():
     assert any(p["code"] == "SL" for p in arsenal)   # breaking grade -> slider in mix
 
 
+def test_stat_blend_weight_age_vs_level():
+    from generate_card import stat_blend_weight
+    young = stat_blend_weight(20, "AA")    # young for AA -> trust stats
+    old = stat_blend_weight(25, "AA")      # old for AA -> trust scouting
+    assert young > old
+    assert young > 0.6 and old < 0.4
+
+
+def test_route_scouting_blend():
+    client = app.test_client()
+    base = {"name": "Prospect", "position": "CF", "g_hit": "40", "g_power": "55",
+            "g_eye": "50", "g_speed": "50", "g_field": "45", "g_arm": "50",
+            "level": "AA", "b_ba": ".273", "b_iso": ".338", "b_kpct": "32", "b_bbpct": "11"}
+    young = client.post("/generate_scouting", data={**base, "age": "20"}).get_json()
+    old = client.post("/generate_scouting", data={**base, "age": "25"}).get_json()
+    # blend metadata present, and young-for-level leans toward the (higher) stat OVR
+    assert "blend" in young and young["blend"]["stat_pct"] > old["blend"]["stat_pct"]
+    assert young["ovr"] > old["ovr"]                      # stats (big AA line) pull the young one up
+    assert young["ovr_high"] > young["ovr"] > young["ovr_low"]
+
+
 def test_route_scouting_pitcher_smoke():
     client = app.test_client()
     r = client.post("/generate_scouting", data={"name": "Arm", "is_pitcher": "on",

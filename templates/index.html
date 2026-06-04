@@ -857,6 +857,23 @@
                     <div class="cstat"><label>Field</label><input type="number" data-sfield="g_field" placeholder="50"></div>
                     <div class="cstat"><label>Arm</label><input type="number" data-sfield="g_arm" placeholder="50"></div>
                 </div>
+                <details class="cstat-adv">
+                    <summary>Age + actual stats (optional — blends stats with the grades by age-vs-level)</summary>
+                    <div class="cstat-grid">
+                        <div class="cstat"><label>Age</label><input type="number" data-sfield="age" placeholder="22"></div>
+                        <div class="cstat"><label>Stats level</label>
+                            <select data-sfield="level">
+                                <option value="MLB">MLB</option><option value="AAA">AAA</option>
+                                <option value="AA" selected>AA</option><option value="A+">A+</option>
+                                <option value="A">A</option><option value="A-">A-</option><option value="Rk">Rk</option>
+                            </select>
+                        </div>
+                        <div class="cstat"><label>AVG</label><input type="number" step="0.001" data-sfield="b_ba" placeholder=".270"></div>
+                        <div class="cstat"><label>ISO</label><input type="number" step="0.001" data-sfield="b_iso" placeholder=".180"></div>
+                        <div class="cstat"><label>K%</label><input type="number" step="0.1" data-sfield="b_kpct" placeholder="24"></div>
+                        <div class="cstat"><label>BB%</label><input type="number" step="0.1" data-sfield="b_bbpct" placeholder="9"></div>
+                    </div>
+                </details>
             </div>
 
             <div id="sc-pitcher" style="display:none">
@@ -948,6 +965,7 @@ function hitterCard(d) {
         <div class="card-top">
             <div class="name">${esc(d.name)}</div>
             <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}${lvlLabel}</div>
+            ${d.blend ? `<div class="meta" style="font-size:0.72rem;opacity:0.85">proj range ${d.ovr_low}&ndash;${d.ovr_high} &bull; ${d.blend.stat_pct}% stats / ${100 - d.blend.stat_pct}% scouting (stat ${d.blend.stat_ovr} vs scout ${d.blend.scout_ovr})</div>` : ''}
             <div class="ovr-diamond tier-${t}"><span>${esc(d.ovr)}</span></div>
         </div>
         ${secHTML('Hitting', o.hitting,
@@ -1023,6 +1041,7 @@ function pitcherCard(d) {
         <div class="card-top">
             <div class="name">${esc(d.name)}</div>
             <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}${lvlLabel}</div>
+            ${d.blend ? `<div class="meta" style="font-size:0.72rem;opacity:0.85">proj range ${d.ovr_low}&ndash;${d.ovr_high} &bull; ${d.blend.stat_pct}% stats / ${100 - d.blend.stat_pct}% scouting (stat ${d.blend.stat_ovr} vs scout ${d.blend.scout_ovr})</div>` : ''}
             <div class="ovr-diamond tier-${t}"><span>${esc(d.ovr)}</span></div>
         </div>
         ${secHTML('Pitching', o.pitching,

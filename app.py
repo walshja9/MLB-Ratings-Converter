@@ -25,6 +25,7 @@ from generate_card import (
     calculate_pitcher_ratings, calculate_pitcher_overalls,
     detect_player_type, estimate_ovr_hitter, estimate_ovr_pitcher,
     build_custom_data, scouting_to_stats, scouting_to_pitcher_stats,
+    stat_blend_weight,
 )
 
 app = Flask(__name__)
@@ -102,6 +103,56 @@ def assemble_card(data, is_pitcher, name, year, position=None, mode="season", ra
         "ratings": ratings,
         "overalls": overalls,
     }
+
+
+def _blend_with_stats(scout_result, form, position):
+    """If the prospect's age + actual rate stats are given, blend the scouting
+    card's hitting attributes with stat-derived ones, weighted by age vs level
+    (young-for-level -> trust stats; old -> trust scouting). Adds a confidence
+    band from how far the two views disagree. No age/stats -> unchanged."""
+    def f(key, default=0.0):
+        try:
+            return float(form.get(key) or default)
+        except ValueError:
+            return default
+
+    age, ba = f("age"), f("b_ba")
+    if age <= 0 or ba <= 0:
+        return scout_result
+
+    level = (form.get("level") or "MLB").strip()
+    iso, kpct, bbpct = f("b_iso", 0.15), f("b_kpct", 22), f("b_bbpct", 8.5)
+    stat_form = {
+        "BA": str(ba), "ISO": str(iso), "SLG": str(round(ba + iso, 3)),
+        "OBP": str(round(min(0.5, ba + bbpct / 100 + 0.02), 3)),
+        "HR": str(max(0, round(iso * 110))), "3B": "2", "SB": "6", "CS": "1",
+        "BB_pct": str(bbpct), "K_pct": str(kpct),
+        "PA": "560", "G": "140", "WAR": "3.0", "level": level, "full_confidence": "on",
+    }
+    stat_r = calculate_ratings(build_custom_data(stat_form, False, position), position, mode="season")
+    scout_r, scout_ovr = scout_result["ratings"], scout_result["ovr"]
+    HIT = ("contact_left", "contact_right", "power_left", "power_right",
+           "vision", "discipline", "batting_clutch")
+    # The two views differ only in HITTING (the stat line carries no
+    # field/speed/durability info), so swap just those onto the scouting card
+    # to keep stat_ovr apples-to-apples with scout_ovr and the blend in range.
+    stat_view = dict(scout_r)
+    for a in HIT:
+        stat_view[a] = stat_r[a]
+    stat_ovr = estimate_ovr_hitter(stat_view, calculate_overalls(stat_view))
+    w = stat_blend_weight(age, level)
+    blended = dict(scout_r)
+    for a in HIT:
+        blended[a] = round(w * stat_r[a] + (1 - w) * scout_r[a])
+    overalls = calculate_overalls(blended)
+    bovr = estimate_ovr_hitter(blended, overalls)
+    band = max(3, round(abs(stat_ovr - scout_ovr) * 0.5))
+    scout_result.update({
+        "ratings": blended, "overalls": overalls, "ovr": bovr,
+        "ovr_low": max(40, bovr - band), "ovr_high": min(99, bovr + band),
+        "blend": {"stat_pct": round(w * 100), "scout_ovr": scout_ovr, "stat_ovr": stat_ovr},
+    })
+    return scout_result
 
 
 def generate_card_data(player_name, year, is_pitcher=None, position=None, mode="season"):
@@ -237,6 +288,7 @@ def generate_scouting():
             data = build_custom_data(stat_form, is_pitcher=False, position=position)
             result = assemble_card(data, False, name, year, position, mode="season",
                                    rating_overrides=overrides)
+            result = _blend_with_stats(result, form, position)
         result["mode"] = "season"
         result["custom"] = True
         result["scouting"] = True

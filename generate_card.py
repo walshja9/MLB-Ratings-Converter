@@ -1549,6 +1549,20 @@ def scouting_to_stats(form):
     }
 
 
+# Average age by level — for weighting the stat view vs the scouting view.
+_LEVEL_AVG_AGE = {"Rk": 19.5, "A-": 20.0, "A": 20.5, "A+": 21.5,
+                  "AA": 22.8, "AAA": 24.5, "MLB": 27.5}
+
+
+def stat_blend_weight(age, level):
+    """How much to trust the STAT view vs the scouting view (0-1), from age
+    relative to the level's average age. Young-for-level -> production is ahead
+    of the curve, trust the stats. Old-for-level -> numbers are age-inflated,
+    trust the scouting grades."""
+    base = _LEVEL_AVG_AGE.get(level, 22.8)
+    return max(0.10, min(0.90, 0.5 - (age - base) * 0.13))
+
+
 def scouting_to_pitcher_stats(form):
     """Convert a pitcher's 20-80 grades (FB / Breaking / Offspeed / Command) into
     a synthetic stat line for the calibrated pitcher engine. FB grade -> velo
