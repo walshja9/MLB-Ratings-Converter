@@ -59,17 +59,18 @@ def load_player_names(year=2025):
     return sorted_names
 
 
-def assemble_card(data, is_pitcher, name, year, position=None, mode="season", durability_override=None):
+def assemble_card(data, is_pitcher, name, year, position=None, mode="season", rating_overrides=None):
     """Run ratings + overalls on a prepared `data` dict and shape the card JSON.
 
     Shared by the real-player path (data from pull_all_*) and the custom path
     (data from build_custom_data) so both return an identical structure.
-    durability_override (scouting mode) projects durability from grade level
-    rather than assuming a full iron-man season."""
+    rating_overrides (scouting mode) lets us set attributes the stat engine
+    can't infer from a synthetic line — e.g. projected durability and arm,
+    derived from scouting grades."""
     if is_pitcher:
         ratings = calculate_pitcher_ratings(data, mode=mode)
-        if durability_override is not None:
-            ratings["durability"] = durability_override
+        if rating_overrides:
+            ratings.update(rating_overrides)
         overalls = calculate_pitcher_overalls(ratings)
         ovr = estimate_ovr_pitcher(ratings, overalls)
         sc = data.get("statcast", {})
@@ -87,8 +88,8 @@ def assemble_card(data, is_pitcher, name, year, position=None, mode="season", du
             "throws": sc.get("throws", "R"),
         }
     ratings = calculate_ratings(data, position, mode=mode)
-    if durability_override is not None:
-        ratings["durability"] = durability_override
+    if rating_overrides:
+        ratings.update(rating_overrides)
     overalls = calculate_overalls(ratings)
     ovr = estimate_ovr_hitter(ratings, overalls)
     return {
@@ -228,10 +229,14 @@ def generate_scouting():
         else:
             position = (form.get("position") or "OF").strip() or "OF"
             stat_form = scouting_to_stats(form)
-            proj_dur = float(stat_form.get("_proj_dur") or 0) or None
+            overrides = {}
+            if stat_form.get("_proj_dur"):
+                overrides["durability"] = float(stat_form["_proj_dur"])
+            if stat_form.get("_proj_arm"):
+                overrides["arm_strength"] = float(stat_form["_proj_arm"])
             data = build_custom_data(stat_form, is_pitcher=False, position=position)
             result = assemble_card(data, False, name, year, position, mode="season",
-                                   durability_override=proj_dur)
+                                   rating_overrides=overrides)
         result["mode"] = "season"
         result["custom"] = True
         result["scouting"] = True

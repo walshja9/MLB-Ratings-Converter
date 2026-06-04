@@ -1511,7 +1511,7 @@ def scouting_to_stats(form):
         return max(lo, min(hi, x))
 
     hit, power, eye = g("g_hit"), g("g_power"), g("g_eye")
-    run, field = g("g_speed"), g("g_field")
+    run, field, arm = g("g_speed"), g("g_field"), g("g_arm")
 
     ba = round(lim(0.260 + (hit - 50) * 0.002, 0.180, 0.350), 3)
     iso = round(lim(0.150 + (power - 50) * 0.0046, 0.030, 0.400), 3)
@@ -1529,9 +1529,11 @@ def scouting_to_stats(form):
     # route as a durability override.
     quality = 0.40 * hit + 0.40 * power + 0.10 * field + 0.10 * run
     proj_dur = round(lim(50 + (quality - 40) * 1.4, 45, 93))
+    proj_arm = round(lim(0.8 * arm + 33, 40, 99))      # 50->73, 80->97, 30->57
 
     return {
         "_proj_dur": str(proj_dur),
+        "_proj_arm": str(proj_arm),
         "name": form.get("name") or "Prospect",
         "team": form.get("team") or "CUSTOM",
         "year": form.get("year") or "2026",
