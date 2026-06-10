@@ -23,3 +23,10 @@ Thumbs.db
 .cache/
 *.parquet
 fg_fielding_cache/
+
+# Prospect hub local state (teams.json IS committed; these are not)
+prospect_data/progress.json
+prospect_data/fg_unmatched.json
+prospect_data/fg_board_cache.json
+prospect_data/fangraphs_board.csv
+recal_run.log

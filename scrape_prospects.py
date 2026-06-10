@@ -28,16 +28,16 @@ _FIXTURE_DIR = os.path.join(_DIR, "fixtures")
 
 # abbrev -> (mlb.com slug, display name)
 TEAMS = {
-    "ARI": ("diamondbacks", "Arizona Diamondbacks"),
+    "ARI": ("dbacks", "Arizona Diamondbacks"),
     "ATH": ("athletics", "Athletics"),
     "ATL": ("braves", "Atlanta Braves"),
     "BAL": ("orioles", "Baltimore Orioles"),
-    "BOS": ("red-sox", "Boston Red Sox"),
+    "BOS": ("redsox", "Boston Red Sox"),
     "CHC": ("cubs", "Chicago Cubs"),
     "CIN": ("reds", "Cincinnati Reds"),
     "CLE": ("guardians", "Cleveland Guardians"),
     "COL": ("rockies", "Colorado Rockies"),
-    "CWS": ("white-sox", "Chicago White Sox"),
+    "CWS": ("whitesox", "Chicago White Sox"),
     "DET": ("tigers", "Detroit Tigers"),
     "HOU": ("astros", "Houston Astros"),
     "KC":  ("royals", "Kansas City Royals"),
@@ -56,7 +56,7 @@ TEAMS = {
     "STL": ("cardinals", "St. Louis Cardinals"),
     "TB":  ("rays", "Tampa Bay Rays"),
     "TEX": ("rangers", "Texas Rangers"),
-    "TOR": ("blue-jays", "Toronto Blue Jays"),
+    "TOR": ("bluejays", "Toronto Blue Jays"),
     "WSH": ("nationals", "Washington Nationals"),
 }
 
@@ -450,9 +450,19 @@ def main(single_team=None):
         with open(alias_path, "r", encoding="utf-8") as f:
             aliases = json.load(f)
 
+    # Merge into any existing dataset so partial re-runs (one team, retries
+    # after a failure) don't clobber the teams already scraped.
+    out_path = os.path.join(_DIR, "teams.json")
     teams = {}
+    if os.path.exists(out_path):
+        try:
+            with open(out_path, "r", encoding="utf-8") as f:
+                teams = json.load(f).get("teams", {})
+        except ValueError:
+            teams = {}
+    wanted = None if single_team is None else set(single_team.split(","))
     items = [(a, s) for a, (s, _) in TEAMS.items()
-             if single_team is None or s == single_team]
+             if wanted is None or s in wanted or a in wanted]
     for abbrev, slug in items:
         print(f"Scraping {abbrev} ({slug})...")
         try:
@@ -477,7 +487,6 @@ def main(single_team=None):
 
     from datetime import date
     out = {"season": 2026, "scraped": date.today().isoformat(), "teams": teams}
-    out_path = os.path.join(_DIR, "teams.json")
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=1)
     total = sum(len(t["prospects"]) for t in teams.values())
