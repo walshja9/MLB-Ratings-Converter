@@ -501,8 +501,33 @@ def pool_delete(pid):
 # ---- Prospect hub ----
 
 def _prospect_card_json(team, p):
-    """Run a prospect's grades through the scouting engine; attach hub metadata."""
-    card = _scouting_card(prospect_to_form(p, team))
+    """Run a prospect's grades through the scouting engine; attach hub metadata.
+
+    Prospects are displayed as their NOW card (attributes + overall from the
+    present grades) so what Alex keys into The Show is current ability — the
+    game's own development system handles the future. The potential (future
+    grade) OVR stays available as ovr_future. FV anchoring is applied on the
+    future card (FV describes future value) and ovr_now is shifted by the same
+    delta, so we keep the future card's ovr_now rather than re-anchoring.
+    Prospects without present grades keep the future card, flagged 'potential'."""
+    form = prospect_to_form(p, team)
+    card = _scouting_card(form)
+    if card.get("ovr_now") is not None:
+        tools = _PITCH_TOOLS if p.get("is_pitcher") else _HIT_TOOLS
+        nform = dict(form)
+        for fut, pres in tools:
+            if nform.get(pres):
+                nform[fut] = nform[pres]
+                nform[pres] = ""
+        now_card = _scouting_card(nform)
+        card["ratings"] = now_card["ratings"]
+        card["overalls"] = now_card["overalls"]
+        if now_card.get("arsenal"):
+            card["arsenal"] = now_card["arsenal"]
+        card["ovr"] = card["ovr_now"]
+        card["display"] = "now"
+    else:
+        card["display"] = "potential"
     card["prospect"] = {
         "team": team, "id": p.get("id"), "rank": p.get("rank"),
         "pos": p.get("pos"), "age": p.get("age"),

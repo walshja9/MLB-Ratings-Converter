@@ -1347,7 +1347,9 @@ async function prOpenCard(pid) {
         showCards([d]);
         const bio = [b.bats && b.throws ? `B/T ${b.bats}/${b.throws}` : '',
                      b.height || '', b.weight ? `${b.weight} lb` : '',
-                     b.eta ? `ETA ${b.eta}` : '', b.level || ''].filter(Boolean).join(' • ');
+                     b.eta ? `ETA ${b.eta}` : '', b.level || '',
+                     d.display === 'potential' ? 'PROJECTED PEAK — no present grades' : ''
+                    ].filter(Boolean).join(' • ');
         if (bio) {
             const meta = document.querySelector('#cards .card .meta');
             if (meta) meta.insertAdjacentHTML('afterend',

@@ -65,6 +65,27 @@ def test_prospect_card_shape(tmp_path, monkeypatch):
     assert card["prospect"]["bats"] == "R"
 
 
+def test_card_displays_now_when_present_grades_exist(tmp_path, monkeypatch):
+    # sample-hitter has grades_present -> displayed card = NOW (attributes +
+    # overall from present grades), potential kept as ovr_future
+    _point_at_fixture(tmp_path, monkeypatch)
+    card = app.test_client().get("/prospects/TST/sample-hitter").get_json()
+    assert card["display"] == "now"
+    assert card["ovr"] == card["ovr_now"]
+    assert card["ovr_future"] > card["ovr"]          # 30/35 present << 60/55 future
+    # attributes must be the present-grade ones: a 30-grade hit reads far below
+    # the future card's 60-grade hit
+    assert card["ratings"]["contact_right"] < 60
+
+
+def test_card_displays_potential_when_no_present_grades(tmp_path, monkeypatch):
+    # sample-pitcher has no grades_present -> future card, flagged as potential
+    _point_at_fixture(tmp_path, monkeypatch)
+    card = app.test_client().get("/prospects/TST/sample-pitcher").get_json()
+    assert card["display"] == "potential"
+    assert "ovr_now" not in card
+
+
 def test_done_toggle(tmp_path, monkeypatch):
     _point_at_fixture(tmp_path, monkeypatch)
     c = app.test_client()
