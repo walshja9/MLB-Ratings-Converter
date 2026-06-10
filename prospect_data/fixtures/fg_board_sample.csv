@@ -1,0 +1,4 @@
+Name,Org,Pos,Age,FV,Hit,Game Pwr,Raw Pwr,Spd,Fld,Arm,FB,SL,CB,CH,CMD,Current Level
+Sample Hitter,TST,SS,20.4,60,30/60,35/55,50/60,60/60,45/60,55/55,,,,,,AA
+Sample Pitcher,TST,RHP,22.1,50,,,,,,,60/70,55/60,45/50,40/45,40/50,AAA
+Relief Guy,TST,SIRP,24.0,40,,,,,,,70/70,60/60,,,30/40,AAA
