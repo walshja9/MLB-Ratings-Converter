@@ -421,6 +421,63 @@
         .card-save button:hover { border-color: var(--accent); color: var(--accent); }
         .card-save button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* ==================== PLAYER POOL ==================== */
+        .pool-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; border: 1px solid var(--border);
+            border-radius: 8px; margin-bottom: 8px; background: var(--bg);
+        }
+        .pool-ovr {
+            font-family: 'Oswald'; font-weight: 700; font-size: 1.1rem;
+            min-width: 34px; text-align: center;
+        }
+        .pool-name { font-weight: 600; font-size: 0.92rem; }
+        .pool-meta { color: var(--text2); font-size: 0.75rem; flex: 1; }
+        .pool-actions { display: flex; gap: 6px; }
+        .pool-actions button {
+            padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--surface2); color: var(--text); cursor: pointer;
+            font-family: 'Oswald'; font-size: 0.78rem; letter-spacing: 0.5px;
+        }
+        .pool-actions button:hover { border-color: var(--accent); color: var(--accent); }
+        @media (max-width: 520px) {
+            .pool-meta { flex-basis: 100%; order: 3; }
+        }
+
+        /* ==================== PROSPECT HUB ==================== */
+        .pr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+        .pr-team { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+            padding: 10px 6px; cursor: pointer; color: var(--text); display: flex; flex-direction: column;
+            align-items: center; gap: 4px; font-family: inherit; }
+        .pr-team:hover { border-color: var(--accent); }
+        .pr-team.pr-complete { opacity: 0.55; }
+        .pr-abbrev { font-weight: 700; font-size: 1rem; font-family: 'Oswald'; letter-spacing: 0.5px; }
+        .pr-count { font-size: 0.72rem; color: var(--text2); }
+        .pr-team-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .pr-team-head h3 { margin: 0; flex: 1; }
+        .pr-progress { font-size: 0.78rem; color: var(--text2); }
+        .pr-row { display: flex; align-items: center; gap: 8px; padding: 9px 8px;
+            border-bottom: 1px solid var(--border); }
+        .pr-row.pr-done { opacity: 0.45; }
+        .pr-row.pr-done .pr-name { text-decoration: line-through; }
+        .pr-rank { width: 22px; text-align: right; color: var(--text2); font-size: 0.78rem; }
+        .pr-name { flex: 1; cursor: pointer; font-weight: 600; }
+        .pr-name:hover { color: var(--accent); }
+        .pr-pos { width: 34px; font-size: 0.75rem; color: var(--text2); }
+        .pr-age { width: 24px; font-size: 0.75rem; color: var(--text2); text-align: right; }
+        .pr-fv { font-size: 0.7rem; padding: 2px 6px; border: 1px solid var(--border); border-radius: 10px; }
+        .pr-fv-est { opacity: 0.6; font-style: italic; }
+        .pr-ovr { width: 56px; text-align: right; font-weight: 700; font-family: 'Oswald'; }
+        @media (max-width: 480px) { .pr-age { display: none; } }
+
+        #toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+            background: var(--green); color: #04210f; font-weight: 600; font-size: 0.85rem;
+            padding: 12px 20px; border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+            opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; z-index: 500;
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
         /* Pitch Arsenal */
         .arsenal-section {
             padding: 10px 16px;
@@ -582,6 +639,7 @@
             background: var(--bg); color: var(--text); font-size: 0.85rem; font-family: inherit; width: 100%;
         }
         details.cstat-adv { margin-top: 12px; }
+        .cstat-sub { font-size: 0.72rem; color: var(--text2); margin: 10px 0 6px; letter-spacing: .3px; }
         details.cstat-adv > summary { cursor: pointer; font-size: 0.75rem; color: var(--accent); letter-spacing: .5px; }
         .ars-head, .ars-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 8px; align-items: center; }
         .ars-head { font-size: 0.62rem; text-transform: uppercase; letter-spacing: .4px; color: var(--text2); margin-bottom: 4px; }
@@ -607,6 +665,8 @@
             <button class="mode-tab active" id="tab-real" onclick="setMode('real')">Real Player</button>
             <button class="mode-tab" id="tab-custom" onclick="setMode('custom')">Custom Player</button>
             <button class="mode-tab" id="tab-scouting" onclick="setMode('scouting')">Scouting</button>
+            <button class="mode-tab" id="tab-pool" onclick="setMode('pool')">My Pool</button>
+            <button class="mode-tab" id="tab-prospects" onclick="setMode('prospects')">Prospects</button>
         </div>
 
         <div id="real-controls">
@@ -842,7 +902,7 @@
             </div>
 
             <div id="sc-hitter">
-                <p class="cstat-title">Scouting grades <span style="text-transform:none;letter-spacing:0">— 20-80 scale, 50 = MLB average (FanGraphs / MLB Pipeline)</span></p>
+                <p class="cstat-title">Scouting grades <span style="text-transform:none;letter-spacing:0">— 20-80 scale, 50 = MLB average. These are FUTURE (projection) grades.</span></p>
                 <div class="cstat-grid">
                     <div class="cstat"><label>Position</label>
                         <select data-sfield="position">
@@ -850,6 +910,7 @@
                             <option>3B</option><option>LF</option><option>CF</option><option selected>RF</option><option>DH</option>
                         </select>
                     </div>
+                    <div class="cstat"><label>FV (overall)</label><input type="number" data-sfield="fv" placeholder="—"></div>
                     <div class="cstat"><label>Hit</label><input type="number" data-sfield="g_hit" placeholder="50"></div>
                     <div class="cstat"><label>Power</label><input type="number" data-sfield="g_power" placeholder="50"></div>
                     <div class="cstat"><label>Eye / Discipline</label><input type="number" data-sfield="g_eye" placeholder="50"></div>
@@ -857,6 +918,17 @@
                     <div class="cstat"><label>Field</label><input type="number" data-sfield="g_field" placeholder="50"></div>
                     <div class="cstat"><label>Arm</label><input type="number" data-sfield="g_arm" placeholder="50"></div>
                 </div>
+                <details class="cstat-adv">
+                    <summary>Present grades (optional — current ability, shows a Now → Potential range)</summary>
+                    <div class="cstat-grid">
+                        <div class="cstat"><label>Hit now</label><input type="number" data-sfield="g_hit_p" placeholder="—"></div>
+                        <div class="cstat"><label>Power now</label><input type="number" data-sfield="g_power_p" placeholder="—"></div>
+                        <div class="cstat"><label>Eye now</label><input type="number" data-sfield="g_eye_p" placeholder="—"></div>
+                        <div class="cstat"><label>Speed now</label><input type="number" data-sfield="g_speed_p" placeholder="—"></div>
+                        <div class="cstat"><label>Field now</label><input type="number" data-sfield="g_field_p" placeholder="—"></div>
+                        <div class="cstat"><label>Arm now</label><input type="number" data-sfield="g_arm_p" placeholder="—"></div>
+                    </div>
+                </details>
                 <details class="cstat-adv">
                     <summary>Age + actual stats (optional — blends stats with the grades by age-vs-level)</summary>
                     <div class="cstat-grid">
@@ -873,11 +945,20 @@
                         <div class="cstat"><label>K%</label><input type="number" step="0.1" data-sfield="b_kpct" placeholder="24"></div>
                         <div class="cstat"><label>BB%</label><input type="number" step="0.1" data-sfield="b_bbpct" placeholder="9"></div>
                     </div>
+                    <div class="cstat-sub">Defense (optional) — actual fielding blends with the Field grade too</div>
+                    <div class="cstat-grid">
+                        <div class="cstat"><label>PO</label><input type="number" data-sfield="po" placeholder="—"></div>
+                        <div class="cstat"><label>A</label><input type="number" data-sfield="a" placeholder="—"></div>
+                        <div class="cstat"><label>E</label><input type="number" data-sfield="e" placeholder="—"></div>
+                        <div class="cstat"><label>DP</label><input type="number" data-sfield="dp" placeholder="—"></div>
+                        <div class="cstat"><label>OAA</label><input type="number" data-sfield="oaa" placeholder="—"></div>
+                        <div class="cstat"><label>DRS</label><input type="number" data-sfield="drs" placeholder="—"></div>
+                    </div>
                 </details>
             </div>
 
             <div id="sc-pitcher" style="display:none">
-                <p class="cstat-title">Pitcher scouting grades <span style="text-transform:none;letter-spacing:0">— 20-80 scale, 50 = MLB average</span></p>
+                <p class="cstat-title">Pitcher scouting grades <span style="text-transform:none;letter-spacing:0">— 20-80 scale, 50 = MLB average. These are FUTURE (projection) grades.</span></p>
                 <div class="cstat-grid">
                     <div class="cstat"><label>Role</label>
                         <select data-pfield="role"><option value="SP">SP</option><option value="RP">RP</option></select>
@@ -885,11 +966,21 @@
                     <div class="cstat"><label>Throws</label>
                         <select data-pfield="throws"><option value="R">R</option><option value="L">L</option></select>
                     </div>
+                    <div class="cstat"><label>FV (overall)</label><input type="number" data-pfield="fv" placeholder="—"></div>
                     <div class="cstat"><label>Fastball</label><input type="number" data-pfield="g_fb" placeholder="50"></div>
                     <div class="cstat"><label>Breaking</label><input type="number" data-pfield="g_break" placeholder="50"></div>
                     <div class="cstat"><label>Offspeed</label><input type="number" data-pfield="g_off" placeholder="50"></div>
                     <div class="cstat"><label>Command</label><input type="number" data-pfield="g_command" placeholder="50"></div>
                 </div>
+                <details class="cstat-adv">
+                    <summary>Present grades (optional — current ability, shows a Now → Potential range)</summary>
+                    <div class="cstat-grid">
+                        <div class="cstat"><label>Fastball now</label><input type="number" data-pfield="g_fb_p" placeholder="—"></div>
+                        <div class="cstat"><label>Breaking now</label><input type="number" data-pfield="g_break_p" placeholder="—"></div>
+                        <div class="cstat"><label>Offspeed now</label><input type="number" data-pfield="g_off_p" placeholder="—"></div>
+                        <div class="cstat"><label>Command now</label><input type="number" data-pfield="g_command_p" placeholder="—"></div>
+                    </div>
+                </details>
             </div>
 
             <div class="btn-row" style="margin-top:14px">
@@ -906,8 +997,32 @@
             <p class="sub">This takes 15-30 seconds (BBRef + Statcast)</p>
         </div>
 
+        <!-- Player pool (persistence) -->
+        <div id="pool-panel" style="display:none">
+            <div class="search-panel">
+                <p style="color:var(--text2);font-size:0.85rem;margin-bottom:12px;">
+                    Saved players survive restarts and feed the simulation. Load one back into the card view, or delete.
+                </p>
+                <div id="pool-list"><p class="hint">Loading…</p></div>
+            </div>
+        </div>
+
+        <!-- Prospect hub -->
+        <div class="prospects-panel" id="prospects-panel" style="display:none">
+            <div id="pr-teams"><p class="hint">Loading teams…</p></div>
+            <div id="pr-team-view" style="display:none">
+                <div class="pr-team-head">
+                    <button class="btn btn-ghost" onclick="prShowTeams()">&larr; Teams</button>
+                    <h3 id="pr-team-name"></h3>
+                    <span id="pr-team-progress" class="pr-progress"></span>
+                </div>
+                <div id="pr-list"></div>
+            </div>
+        </div>
+
         <div class="cards-wrap" id="cards"></div>
     </div>
+    <div id="toast"></div>
 
 <script>
 // ========== RATING HELPERS ==========
@@ -966,6 +1081,8 @@ function hitterCard(d) {
             <div class="name">${esc(d.name)}</div>
             <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}${lvlLabel}</div>
             ${d.blend ? `<div class="meta" style="font-size:0.72rem;opacity:0.85">proj range ${d.ovr_low}&ndash;${d.ovr_high} &bull; ${d.blend.stat_pct}% stats / ${100 - d.blend.stat_pct}% scouting (stat ${d.blend.stat_ovr} vs scout ${d.blend.scout_ovr})</div>` : ''}
+            ${d.ovr_now ? `<div class="meta" style="font-size:0.72rem;opacity:0.85">Now ${d.ovr_now} &rarr; Potential ${d.ovr_future}</div>` : ''}
+            ${d.fv ? `<div class="meta" style="font-size:0.72rem;opacity:0.85">${d.fv} FV <span style="opacity:.55">&bull; est. anchor</span></div>` : ''}
             <div class="ovr-diamond tier-${t}"><span>${esc(d.ovr)}</span></div>
         </div>
         ${secHTML('Hitting', o.hitting,
@@ -989,7 +1106,7 @@ function hitterCard(d) {
             <h3>Durability</h3>
             <span class="val c-${rc(o.durability)}">${o.durability}</span>
         </div>
-        <div class="card-save"><button onclick="saveCard(this)">Copy Card</button> <button onclick="downloadCard(this)">Download PNG</button></div>`;
+        <div class="card-save"><button onclick="saveToPool()">★ Save to Pool</button> <button onclick="saveCard(this)">Copy Card</button> <button onclick="downloadCard(this)">Download PNG</button></div>`;
 }
 
 function arsenalHTML(arsenal, throws, estimated) {
@@ -1042,6 +1159,8 @@ function pitcherCard(d) {
             <div class="name">${esc(d.name)}</div>
             <div class="meta">${esc(d.year)} &bull; ${esc(d.position)} &bull; ${esc(d.team)}${modeLabel}${lvlLabel}</div>
             ${d.blend ? `<div class="meta" style="font-size:0.72rem;opacity:0.85">proj range ${d.ovr_low}&ndash;${d.ovr_high} &bull; ${d.blend.stat_pct}% stats / ${100 - d.blend.stat_pct}% scouting (stat ${d.blend.stat_ovr} vs scout ${d.blend.scout_ovr})</div>` : ''}
+            ${d.ovr_now ? `<div class="meta" style="font-size:0.72rem;opacity:0.85">Now ${d.ovr_now} &rarr; Potential ${d.ovr_future}</div>` : ''}
+            ${d.fv ? `<div class="meta" style="font-size:0.72rem;opacity:0.85">${d.fv} FV <span style="opacity:.55">&bull; est. anchor</span></div>` : ''}
             <div class="ovr-diamond tier-${t}"><span>${esc(d.ovr)}</span></div>
         </div>
         ${secHTML('Pitching', o.pitching,
@@ -1066,7 +1185,7 @@ function pitcherCard(d) {
             <h3>Durability</h3>
             <span class="val c-${rc(o.durability)}">${o.durability}</span>
         </div>
-        <div class="card-save"><button onclick="saveCard(this)">Copy Card</button> <button onclick="downloadCard(this)">Download PNG</button></div>`;
+        <div class="card-save"><button onclick="saveToPool()">★ Save to Pool</button> <button onclick="saveCard(this)">Copy Card</button> <button onclick="downloadCard(this)">Download PNG</button></div>`;
 }
 
 function renderCard(d) {
@@ -1103,6 +1222,7 @@ async function gen() {
         fd.append('mode', mode);
         if (pos) fd.append('position', pos);
 
+        window._lastGen = { source: 'real', fields: fdToObj(fd) };
         const r = await fetch('/generate', { method: 'POST', body: fd });
         const d = await r.json();
         if (d.error) { showErr(d.error); return; }
@@ -1116,9 +1236,180 @@ function setMode(m) {
     document.getElementById('tab-real').classList.toggle('active', m === 'real');
     document.getElementById('tab-custom').classList.toggle('active', m === 'custom');
     document.getElementById('tab-scouting').classList.toggle('active', m === 'scouting');
+    document.getElementById('tab-pool').classList.toggle('active', m === 'pool');
+    document.getElementById('tab-prospects').classList.toggle('active', m === 'prospects');
     document.getElementById('real-controls').style.display = m === 'real' ? '' : 'none';
     document.getElementById('custom-panel').style.display = m === 'custom' ? '' : 'none';
     document.getElementById('scouting-panel').style.display = m === 'scouting' ? '' : 'none';
+    document.getElementById('pool-panel').style.display = m === 'pool' ? '' : 'none';
+    document.getElementById('prospects-panel').style.display = m === 'prospects' ? '' : 'none';
+    if (m === 'pool') loadPool();
+    if (m === 'prospects') prLoadTeams();
+}
+
+// ----- Player pool (persistence) -----
+function fdToObj(fd) { const o = {}; for (const [k, v] of fd.entries()) o[k] = v; return o; }
+
+let _toastTimer = null;
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ----- Prospect hub -----
+let _prTeam = null;
+
+async function prLoadTeams() {
+    const el = document.getElementById('pr-teams');
+    prShowTeams();
+    try {
+        const r = await fetch('/prospects');
+        const d = await r.json();
+        if (d.error) { el.innerHTML = `<p class="hint">${esc(d.error)}</p>`; return; }
+        el.innerHTML = '<div class="pr-grid">' + d.teams.map(t => `
+            <button class="pr-team ${t.done >= t.count && t.count > 0 ? 'pr-complete' : ''}"
+                    onclick="prOpenTeam('${esc(t.abbrev)}')">
+                <span class="pr-abbrev">${esc(t.abbrev)}</span>
+                <span class="pr-count">${t.done}/${t.count}</span>
+            </button>`).join('') + '</div>';
+    } catch (e) { el.innerHTML = `<p class="hint">${esc(e.message)}</p>`; }
+}
+
+function prShowTeams() {
+    document.getElementById('pr-teams').style.display = '';
+    document.getElementById('pr-team-view').style.display = 'none';
+    document.getElementById('cards').innerHTML = '';
+}
+
+async function prOpenTeam(abbrev) {
+    _prTeam = abbrev;
+    setLoading(true, `Loading ${abbrev} prospects…`);
+    try {
+        const r = await fetch(`/prospects/${abbrev}`);
+        const d = await r.json();
+        if (d.error) { showErr(d.error); return; }
+        document.getElementById('pr-teams').style.display = 'none';
+        document.getElementById('pr-team-view').style.display = '';
+        document.getElementById('pr-team-name').textContent = d.name;
+        prRenderList(d.prospects);
+    } catch (e) { showErr(e.message); }
+    finally { setLoading(false); }
+}
+
+function prRenderList(rows) {
+    const done = rows.filter(p => p.done).length;
+    document.getElementById('pr-team-progress').textContent = `${done}/${rows.length} done`;
+    document.getElementById('pr-list').innerHTML = rows.map(p => {
+        const range = p.ovr_now ? `${p.ovr_now}→${p.ovr_future}` : `${p.ovr}`;
+        const warn = p.grades_incomplete ? ' ⚠' : '';
+        const fv = p.fv ? `<span class="pr-fv ${p.fv_source === 'pipeline' ? 'pr-fv-est' : ''}">${p.fv} FV</span>` : '';
+        return `<div class="pr-row ${p.done ? 'pr-done' : ''}" data-id="${esc(p.id)}">
+            <input type="checkbox" ${p.done ? 'checked' : ''}
+                   onclick="event.stopPropagation(); prToggle('${esc(p.id)}', this.checked)">
+            <span class="pr-rank">${p.rank}</span>
+            <span class="pr-name" onclick="prOpenCard('${esc(p.id)}')">${esc(p.name)}${warn}</span>
+            <span class="pr-pos">${esc(p.pos || '')}</span>
+            <span class="pr-age">${p.age != null ? p.age : ''}</span>
+            ${fv}
+            <span class="pr-ovr">${range}</span>
+        </div>`;
+    }).join('');
+}
+
+async function prToggle(pid, checked) {
+    const fd = new FormData();
+    fd.append('team', _prTeam);
+    fd.append('id', pid);
+    fd.append('done', checked ? '1' : '0');
+    const row = document.querySelector(`.pr-row[data-id="${CSS.escape(pid)}"]`);
+    if (row) row.classList.toggle('pr-done', checked);   // optimistic
+    try {
+        const r = await fetch('/prospects/done', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error || 'toggle failed');
+        prOpenTeam(_prTeam);   // refresh counts (cheap; also re-syncs state)
+    } catch (e) {
+        if (row) row.classList.toggle('pr-done', !checked);   // revert
+        toast(`Save failed: ${e.message}`);
+    }
+}
+
+async function prOpenCard(pid) {
+    setLoading(true, 'Generating card…');
+    try {
+        const r = await fetch(`/prospects/${_prTeam}/${pid}`);
+        const d = await r.json();
+        if (d.error) { showErr(d.error); return; }
+        const b = d.prospect || {};
+        d.team = `${_prTeam} #${b.rank}`;
+        showCards([d]);
+        const bio = [b.bats && b.throws ? `B/T ${b.bats}/${b.throws}` : '',
+                     b.height || '', b.weight ? `${b.weight} lb` : '',
+                     b.eta ? `ETA ${b.eta}` : '', b.level || ''].filter(Boolean).join(' • ');
+        if (bio) {
+            const meta = document.querySelector('#cards .card .meta');
+            if (meta) meta.insertAdjacentHTML('afterend',
+                `<div class="meta" style="font-size:0.72rem;opacity:0.85">${esc(bio)}</div>`);
+        }
+        document.getElementById('cards').scrollIntoView({ behavior: 'smooth' });
+    } catch (e) { showErr(e.message); }
+    finally { setLoading(false); }
+}
+
+// saveToPool re-submits the inputs that built the CURRENT card (captured in
+// _lastGen by gen/genCustom/genScouting) so the server can re-derive + store it.
+async function saveToPool() {
+    if (!window._lastGen) { showErr('Generate a card first, then save it.'); return; }
+    const fd = new FormData();
+    fd.append('source', window._lastGen.source);
+    const f = window._lastGen.fields;
+    for (const k in f) fd.append(k, f[k]);
+    try {
+        const d = await (await fetch('/pool/save', { method: 'POST', body: fd })).json();
+        if (d.error) { showErr(d.error); return; }
+        toast(`Saved ${d.name} to pool · OVR ${d.ovr}`);
+    } catch (e) { showErr(e.message); }
+}
+
+async function loadPool() {
+    const el = document.getElementById('pool-list');
+    el.innerHTML = '<p class="hint">Loading…</p>';
+    try {
+        const list = await (await fetch('/pool')).json();
+        if (!list.length) {
+            el.innerHTML = '<p class="hint">No saved players yet. Generate a card and hit ★ Save to Pool.</p>';
+            return;
+        }
+        el.innerHTML = list.map(p => `<div class="pool-row">
+            <span class="pool-ovr c-${rc(p.ovr || 0)}">${p.ovr ?? '—'}</span>
+            <span class="pool-name">${esc(p.name)}</span>
+            <span class="pool-meta">${esc(p.team || '—')} · ${esc(p.position || '')} · ${esc(p.year || '')} · ${esc(p.source)}</span>
+            <span class="pool-actions">
+                <button onclick="loadFromPool('${p.id}')">Load</button>
+                <button onclick="deleteFromPool('${p.id}', this)" title="Delete">✕</button>
+            </span></div>`).join('');
+    } catch (e) { el.innerHTML = '<p class="hint">Error loading pool.</p>'; }
+}
+
+async function loadFromPool(id) {
+    setLoading(true, 'Loading saved player…');
+    try {
+        const d = await (await fetch('/pool/' + id)).json();
+        if (d.error) { showErr(d.error); return; }
+        showCards([d]);
+        document.getElementById('cards').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) { showErr(e.message); }
+    finally { setLoading(false); }
+}
+
+async function deleteFromPool(id, btn) {
+    if (!confirm('Delete this player from the pool?')) return;
+    try {
+        await fetch('/pool/' + id, { method: 'DELETE' });
+        const row = btn.closest('.pool-row'); if (row) row.remove();
+    } catch (e) { showErr(e.message); }
 }
 
 function setScoutType() {
@@ -1137,6 +1428,7 @@ async function genScouting() {
     const block = document.getElementById(isPit ? 'sc-pitcher' : 'sc-hitter');
     const attr = isPit ? 'data-pfield' : 'data-sfield';
     block.querySelectorAll('[' + attr + ']').forEach(el => fd.append(el.getAttribute(attr), el.value.trim()));
+    window._lastGen = { source: 'scouting', fields: fdToObj(fd) };
     setLoading(true, 'Projecting from scouting grades...');
     try {
         const r = await fetch('/generate_scouting', { method: 'POST', body: fd });
@@ -1173,6 +1465,7 @@ async function genCustom() {
     const bulk = +(fd.get(isPit ? 'IP' : 'PA') || 0);
     if (!(bulk > 0)) { showErr(`Enter ${isPit ? 'IP' : 'PA'} greater than 0.`); return; }
 
+    window._lastGen = { source: 'custom', fields: fdToObj(fd) };
     setLoading(true, 'Generating custom card...');
     try {
         const r = await fetch('/generate_custom', { method: 'POST', body: fd });
