@@ -229,8 +229,12 @@ def capture_fg_board(headless=True):
     return captured[0]["json"]
 
 
+FG_CACHE_PATH = os.path.join(_DIR, "fg_board_cache.json")
+
+
 def load_fg_rows():
-    """FG Board rows from manual CSV export if present, else Playwright capture.
+    """FG Board rows. Priority: manual CSV export > disk cache of a prior
+    capture > live Playwright capture (HEADED — Cloudflare blocks headless).
     Returns list of dicts or [] (FG is enrichment — empty is non-fatal)."""
     if os.path.exists(FG_CSV_PATH):
         import csv
@@ -238,14 +242,23 @@ def load_fg_rows():
             rows = list(csv.DictReader(f))
         print(f"  FG: using manual CSV ({len(rows)} rows)")
         return rows
+    if os.path.exists(FG_CACHE_PATH):
+        with open(FG_CACHE_PATH, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        rows = payload.get("data", payload) if isinstance(payload, dict) else payload
+        if isinstance(rows, list) and rows:
+            print(f"  FG: using cached capture ({len(rows)} rows)")
+            return rows
     try:
-        payload = capture_fg_board()
+        payload = capture_fg_board(headless=False)
     except Exception as e:
         print(f"  FG Playwright failed: {e}")
         payload = None
     if payload is None:
         print("  WARNING: no FG data (export The Board CSV to prospect_data/fangraphs_board.csv)")
         return []
+    with open(FG_CACHE_PATH, "w", encoding="utf-8") as f:
+        json.dump(payload, f)
     rows = payload.get("data", payload) if isinstance(payload, dict) else payload
     return rows if isinstance(rows, list) else []
 
@@ -270,13 +283,16 @@ def parse_grade_pair(val):
         return None, None
 
 
-# FG column name -> canonical grade key. Keys cover both the CSV export labels
-# and the board API field names (lowercase variants checked at lookup time).
-_FG_HIT_COLS = {"Hit": "hit", "Game Pwr": "power", "Raw Pwr": "raw_power",
-                "Spd": "run", "Fld": "field", "Arm": "arm"}
-_FG_PITCH_COLS = {"FB": "fb", "SL": "sl", "CB": "cb", "CH": "ch",
-                  "CMD": "control"}
+# Canonical grade key -> FG column aliases (CSV export label, board API field).
+_FG_HIT_COLS = {"hit": ("Hit",), "power": ("Game Pwr", "Game"),
+                "run": ("Spd",), "field": ("Fld",), "arm": ("Arm",)}
+_FG_PITCH_COLS = {"fb": ("FB",), "sl": ("SL",), "cb": ("CB",), "ch": ("CH",),
+                  "fc": ("CT",), "fs": ("SPL",), "control": ("CMD",)}
 _PITCH_POS_TOKENS = ("RHP", "LHP", "P", "SP", "RP", "SIRP", "MIRP")
+
+# FG org abbreviations that differ from ours (TEAMS keys).
+_FG_ORG_ALIASES = {"CHW": "CWS", "KCR": "KC", "SDP": "SD", "SFG": "SF",
+                   "TBR": "TB", "WSN": "WSH", "OAK": "ATH", "AZ": "ARI"}
 
 
 def _fg_get(row, *names):
@@ -301,13 +317,14 @@ def parse_fg_row(row):
         return None
     name = str(name).strip()
     org = str(org).strip().upper()
+    org = _FG_ORG_ALIASES.get(org, org)
     _, fv = parse_grade_pair(_fg_get(row, "FV", "cFV"))
     pos = str(_fg_get(row, "Pos", "Position", "pos") or "").strip().upper()
     is_pitcher = pos in _PITCH_POS_TOKENS
     cols = _FG_PITCH_COLS if is_pitcher else _FG_HIT_COLS
     present, future = {}, {}
-    for col, key in cols.items():
-        p, f = parse_grade_pair(_fg_get(row, col))
+    for key, aliases in cols.items():
+        p, f = parse_grade_pair(_fg_get(row, *aliases))
         if p is not None:
             present[key] = p
         if f is not None:

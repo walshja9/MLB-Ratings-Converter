@@ -70,6 +70,21 @@ def test_parse_fg_reliever_role():
     assert r["future"]["fb"] == 70
 
 
+def test_parse_fg_api_row_shape():
+    # Board API field names: playerName/Team/Position, "Game" for game power,
+    # spaced "P / F" pairs, FG org abbrevs (SDP -> SD)
+    row = {"playerName": "Api Guy", "Team": "SDP", "Position": "SS",
+           "Age": 20.11, "cFV": 65, "Hit": "40 / 60", "Game": "45 / 55",
+           "Spd": "70 / 70", "Fld": "55 / 60", "mlevel": "AA"}
+    r = parse_fg_row(row)
+    assert r["org"] == "SD"
+    assert r["fv"] == 65
+    assert r["present"]["power"] == 45 and r["future"]["power"] == 55
+    assert r["future"]["hit"] == 60
+    assert r["age"] == 20.1
+    assert r["level"] == "AA"
+
+
 # ---- Merge + validation ----
 
 from scrape_prospects import merge_fg, normalize_match_name, validate_teams
