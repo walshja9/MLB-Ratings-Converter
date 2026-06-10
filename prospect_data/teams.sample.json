@@ -1,0 +1,54 @@
+{
+  "season": 2026,
+  "scraped": "2026-06-09",
+  "teams": {
+    "TST": {
+      "name": "Test Team",
+      "prospects": [
+        {
+          "id": "sample-hitter",
+          "rank": 1,
+          "name": "Sample Hitter",
+          "pos": "SS",
+          "age": 20,
+          "bats": "R", "throws": "R",
+          "height": "6'1\"", "weight": 185,
+          "eta": 2027, "level": "AA",
+          "is_pitcher": false,
+          "grades": {"hit": 60, "power": 55, "run": 60, "arm": 55, "field": 60, "overall": 60},
+          "grades_present": {"hit": 30, "power": 35},
+          "fv": 60, "fv_source": "fangraphs",
+          "grades_incomplete": false
+        },
+        {
+          "id": "sample-pitcher",
+          "rank": 2,
+          "name": "Sample Pitcher",
+          "pos": "RHP",
+          "age": 22,
+          "bats": "R", "throws": "R",
+          "height": "6'4\"", "weight": 210,
+          "eta": 2026, "level": "AAA",
+          "is_pitcher": true, "role": "SP",
+          "grades": {"fb": 70, "sl": 60, "cb": 50, "ch": 45, "control": 50, "overall": 55},
+          "fv": 50, "fv_source": "pipeline",
+          "grades_incomplete": false
+        },
+        {
+          "id": "sparse-guy",
+          "rank": 3,
+          "name": "Sparse Guy",
+          "pos": "OF",
+          "age": 18,
+          "bats": "L", "throws": "L",
+          "height": null, "weight": null,
+          "eta": 2029, "level": "Rk",
+          "is_pitcher": false,
+          "grades": {"hit": 50, "power": 50, "run": 50, "arm": 50, "field": 50, "overall": 45},
+          "fv": 45, "fv_source": "pipeline",
+          "grades_incomplete": true
+        }
+      ]
+    }
+  }
+}
