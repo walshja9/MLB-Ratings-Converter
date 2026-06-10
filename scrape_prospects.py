@@ -337,6 +337,136 @@ def cmd_capture(slug):
           f"{len(payload['persons'])} persons")
 
 
+# ----------------------------------------------------------------------------
+# Merge + validation + orchestration
+# ----------------------------------------------------------------------------
+
+_SUFFIXES = (" jr", " sr", " ii", " iii", " iv")
+
+
+def normalize_match_name(name):
+    s = "".join(c for c in unicodedata.normalize("NFD", name or "")
+                if unicodedata.category(c) != "Mn").lower()
+    s = re.sub(r"[^a-z ]", "", s).strip()
+    for suf in _SUFFIXES:
+        if s.endswith(suf):
+            s = s[: -len(suf)].strip()
+    return re.sub(r"\s+", " ", s)
+
+
+def merge_fg(teams, fg_rows, aliases):
+    """Layer FG Board data onto Pipeline prospects in place.
+    Match on normalized name + org. aliases maps FG name -> Pipeline name.
+    Returns list of unmatched FG rows ({name, org}) for the report."""
+    index = {}
+    for abbrev, t in teams.items():
+        for p in t["prospects"]:
+            index[(normalize_match_name(p["name"]), abbrev)] = p
+
+    unmatched = []
+    for row in fg_rows:
+        if not row:
+            continue
+        name = aliases.get(row["name"], row["name"])
+        key = (normalize_match_name(name), row.get("org", ""))
+        p = index.get(key)
+        if p is None:
+            unmatched.append({"name": row["name"], "org": row.get("org", "")})
+            continue
+        if row.get("fv") is not None:
+            p["fv"] = row["fv"]
+            p["fv_source"] = "fangraphs"
+        for k, v in (row.get("future") or {}).items():
+            if k != "raw_power":          # canonical schema has no raw_power slot
+                p["grades"][k] = v
+        if row.get("present"):
+            p["grades_present"] = {k: v for k, v in row["present"].items()
+                                   if k != "raw_power"}
+        if row.get("age") is not None:
+            p["age"] = row["age"]
+        if row.get("level"):
+            p["level"] = row["level"]
+        if row.get("role") == "RP":
+            p["role"] = "RP"
+    return unmatched
+
+
+_EXPECTED_HIT = ("hit", "power", "run", "arm", "field")
+_EXPECTED_PIT = ("fb", "control")
+
+
+def validate_teams(teams):
+    """Fill missing expected grades with 50 + set grades_incomplete.
+    Returns human-readable warnings (short teams, incomplete prospects)."""
+    warnings = []
+    for abbrev, t in teams.items():
+        n = len(t["prospects"])
+        if n != 30:
+            warnings.append(f"{abbrev}: {n} prospects (expected 30)")
+        for p in t["prospects"]:
+            expected = _EXPECTED_PIT if p.get("is_pitcher") else _EXPECTED_HIT
+            missing = [k for k in expected if p["grades"].get(k) is None]
+            if missing:
+                p["grades_incomplete"] = True
+                for k in missing:
+                    p["grades"][k] = 50
+                warnings.append(f"{abbrev}/{p['name']}: defaulted {','.join(missing)}")
+            else:
+                p.setdefault("grades_incomplete", False)
+    return warnings
+
+
+def scrape_team(abbrev, slug):
+    """Fetch + parse one team's Top 30. Raises on failure."""
+    payload = extract_pipeline_data(fetch_pipeline_html(slug))
+    prospects = parse_pipeline_payload(payload)
+    if not prospects:
+        raise RuntimeError(f"no prospects parsed for {abbrev} ({slug})")
+    return prospects
+
+
+def main(single_team=None):
+    os.makedirs(_DIR, exist_ok=True)
+    aliases = {}
+    alias_path = os.path.join(_DIR, "name_aliases.json")
+    if os.path.exists(alias_path):
+        with open(alias_path, "r", encoding="utf-8") as f:
+            aliases = json.load(f)
+
+    teams = {}
+    items = [(a, s) for a, (s, _) in TEAMS.items()
+             if single_team is None or s == single_team]
+    for abbrev, slug in items:
+        print(f"Scraping {abbrev} ({slug})...")
+        try:
+            teams[abbrev] = {"name": TEAMS[abbrev][1],
+                             "prospects": scrape_team(abbrev, slug)}
+            print(f"  {len(teams[abbrev]['prospects'])} prospects")
+        except Exception as e:
+            print(f"  FAILED {abbrev}: {e}")
+        time.sleep(2)   # be polite
+
+    print("Loading FanGraphs Board...")
+    fg_rows = [parse_fg_row(r) for r in load_fg_rows()]
+    unmatched = merge_fg(teams, [r for r in fg_rows if r], aliases)
+    if unmatched:
+        rpt = os.path.join(_DIR, "fg_unmatched.json")
+        with open(rpt, "w", encoding="utf-8") as f:
+            json.dump(unmatched, f, indent=1)
+        print(f"  {len(unmatched)} FG rows unmatched -> {rpt} (fix via name_aliases.json)")
+
+    for w in validate_teams(teams):
+        print(f"  WARN: {w}")
+
+    from datetime import date
+    out = {"season": 2026, "scraped": date.today().isoformat(), "teams": teams}
+    out_path = os.path.join(_DIR, "teams.json")
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(out, f, indent=1)
+    total = sum(len(t["prospects"]) for t in teams.values())
+    print(f"Wrote {out_path}: {len(teams)} teams, {total} prospects")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--capture", metavar="SLUG", help="capture extracted payload for one team")
@@ -345,4 +475,4 @@ if __name__ == "__main__":
     if args.capture:
         cmd_capture(args.capture)
         sys.exit(0)
-    print("full run implemented in Task 8")
+    main(single_team=args.team)

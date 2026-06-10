@@ -68,3 +68,55 @@ def test_parse_fg_reliever_role():
     r = parse_fg_row(_fg_rows()[2])
     assert r["is_pitcher"] and r["role"] == "RP"
     assert r["future"]["fb"] == 70
+
+
+# ---- Merge + validation ----
+
+from scrape_prospects import merge_fg, normalize_match_name, validate_teams
+
+
+def test_normalize_match_name():
+    assert normalize_match_name("Jesús Madé") == normalize_match_name("Jesus Made")
+    assert normalize_match_name("George Lombard Jr.") == normalize_match_name("george lombard")
+
+
+def test_merge_fg_layers_fv_and_grades():
+    teams = {"TST": {"name": "T", "prospects": [
+        {"id": "a", "name": "Sample Hitter", "is_pitcher": False,
+         "grades": {"hit": 55, "power": 50, "run": 55, "arm": 50, "field": 55, "overall": 55},
+         "fv": 55, "fv_source": "pipeline"},
+    ]}}
+    fg = [{"name": "Sample Hitter", "org": "TST", "fv": 60, "is_pitcher": False,
+           "age": 20.4, "level": "AA",
+           "present": {"hit": 30}, "future": {"hit": 60, "power": 55, "run": 60}}]
+    unmatched = merge_fg(teams, fg, aliases={})
+    p = teams["TST"]["prospects"][0]
+    assert p["fv"] == 60 and p["fv_source"] == "fangraphs"
+    assert p["grades"]["hit"] == 60          # FG future grades override Pipeline
+    assert p["grades"]["arm"] == 50          # Pipeline kept where FG has no grade
+    assert p["grades_present"] == {"hit": 30}
+    assert p["age"] == 20.4 and p["level"] == "AA"
+    assert unmatched == []
+
+
+def test_merge_fg_unmatched_reported_and_alias_applied():
+    teams = {"TST": {"name": "T", "prospects": [
+        {"id": "a", "name": "Bobby Smith", "is_pitcher": False,
+         "grades": {"hit": 50}, "fv": 50, "fv_source": "pipeline"}]}}
+    fg = [{"name": "Robert Smith", "org": "TST", "fv": 55, "is_pitcher": False,
+           "present": {}, "future": {}}]
+    unmatched = merge_fg(teams, fg, aliases={})
+    assert unmatched and unmatched[0]["name"] == "Robert Smith"
+    unmatched = merge_fg(teams, fg, aliases={"Robert Smith": "Bobby Smith"})
+    assert unmatched == []
+    assert teams["TST"]["prospects"][0]["fv"] == 55
+
+
+def test_validate_flags_short_teams_and_missing_grades():
+    teams = {"TST": {"name": "T", "prospects": [
+        {"id": "a", "name": "A", "is_pitcher": False, "grades": {"hit": 50}}]}}
+    warnings = validate_teams(teams)
+    assert any("TST" in w and "1" in w for w in warnings)       # short team
+    p = teams["TST"]["prospects"][0]
+    assert p["grades_incomplete"] is True
+    assert p["grades"]["power"] == 50                            # filled default
