@@ -30,3 +30,10 @@ prospect_data/fg_unmatched.json
 prospect_data/fg_board_cache.json
 prospect_data/fangraphs_board.csv
 recal_run.log
+
+# Regenerable calibration artifacts
+_recal_cache.json
+show_truth.json
+
+# Personal runtime state (per-user saved cards)
+player_pool.json
