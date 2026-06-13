@@ -641,9 +641,14 @@ def compare():
 
 
 if __name__ == "__main__":
+    import os
+    import socket
+    expose_lan = os.environ.get("MLBSHOW_EXPOSE_LAN", "").lower() in ("1", "true", "yes")
+    host = "0.0.0.0" if expose_lan else "127.0.0.1"
     print("\n  MLB The Show 26 - Card Generator")
     print("  http://localhost:5000\n")
-    import socket
-    local_ip = socket.gethostbyname(socket.gethostname())
-    print(f"  Also available on your network: http://{local_ip}:5000\n")
-    app.run(debug=False, port=5000, host="0.0.0.0")
+    if expose_lan:
+        local_ip = socket.gethostbyname(socket.gethostname())
+        print(f"  LAN exposure ENABLED: http://{local_ip}:5000")
+        print("  (anyone on your network can read/write the player pool)\n")
+    app.run(debug=False, port=5000, host=host)

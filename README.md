@@ -30,6 +30,8 @@ python app.py
 
 Then open <http://localhost:5000>.
 
+Defaults to localhost only. To reach it from your phone on the same WiFi, set `MLBSHOW_EXPOSE_LAN=1` before running — this exposes write endpoints to your whole network.
+
 CLI works too:
 ```bash
 python generate_card.py "Juan Soto" 2025
@@ -95,6 +97,22 @@ templates/              # Web UI templates
 - Pre-2008 pitcher arsenals are reference estimates from scouting sources, not measured pitch data. Marked clearly in the UI.
 - Pitcher Break is heuristic-based — no measurable stat correlates strongly with Show's Break rating.
 - Pitcher Velocity overrates soft-tossers under ~93 mph.
+
+## Running tests
+
+Install test dependencies (pytest is already in the shared venv, but this makes it explicit):
+
+```bash
+"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" -m pip install -r requirements-dev.txt
+```
+
+Run the suite with one command from the repo root:
+
+```bash
+"C:/Users/Alex/Claude Context/Robert Stock - Pitching Grade Model/venv/Scripts/python.exe" -m pytest -q
+```
+
+All 170 tests should pass. The configuration lives in `pytest.ini`; `conftest.py` adds the project root to `sys.path` automatically so no manual path setup is needed. CI runs the same command on every push and pull request via `.github/workflows/tests.yml`.
 
 ## License
 

@@ -1,7 +1,7 @@
-flask>=3.0
-numpy>=1.26
-pandas>=2.1
-lxml>=5.0
-pybaseball>=2.2
-cloudscraper>=1.2
-scipy>=1.11
+flask>=3.0,<4
+numpy>=1.26,<3
+pandas>=2.1,<4
+lxml>=5.0,<7
+pybaseball>=2.2,<3
+cloudscraper>=1.2,<2
+scipy>=1.11,<2
