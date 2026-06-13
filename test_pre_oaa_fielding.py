@@ -229,9 +229,9 @@ PRES_YEAR = 2022  # any modern year with OAA/RngR available
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("oaa_val,expected_fielding,expected_rl,expected_rr,expected_rf,expected_rb", [
-    # Observed on unfixed code — SS position, inn=1200 (full trust)
-    (-5,  58, 49, 67, 61, 52),
-    ( 0,  69, 55, 75, 68, 58),
+    # Observed on recalibrated code (6/4 refit) — SS position, inn=1200 (full trust)
+    (-5,  65, 49, 67, 61, 52),
+    ( 0,  73, 55, 75, 68, 58),
     (10,  90, 68, 92, 84, 72),
     (20,  99, 81, 99, 99, 86),
 ])
@@ -264,13 +264,13 @@ def test_oaa_path_preservation_ss(oaa_val, expected_fielding, expected_rl, expec
 
 
 @pytest.mark.parametrize("pos,oaa_val,expected_fielding,expected_rl,expected_rr,expected_rf,expected_rb", [
-    # Observed on unfixed code — multi-position, inn=1200
-    ("CF", -5,  58, 58, 55, 52, 52),
-    ("CF", 10,  90, 80, 76, 72, 72),
-    ("3B", -5,  58, 52, 55, 67, 52),
-    ("3B", 10,  90, 72, 76, 92, 72),
-    ("2B", -5,  58, 55, 61, 64, 49),
-    ("2B", 10,  90, 76, 84, 88, 68),
+    # Observed on recalibrated code (6/4 refit) — multi-position, inn=1200
+    ("CF", -5,  65, 58, 58, 55, 55),
+    ("CF", 10,  90, 80, 80, 76, 76),
+    ("3B", -5,  62, 52, 55, 67, 52),
+    ("3B", 10,  86, 72, 76, 92, 72),
+    ("2B", -5,  62, 55, 61, 64, 49),
+    ("2B", 10,  86, 76, 84, 88, 68),
 ])
 def test_oaa_path_preservation_multipos(pos, oaa_val, expected_fielding, expected_rl, expected_rr, expected_rf, expected_rb):
     """
@@ -346,9 +346,9 @@ def test_rngr_path_preservation_ss(rngr_val, expected_rl, expected_rr, expected_
 
 
 @pytest.mark.parametrize("pos,rngr_val,expected_rl,expected_rr,expected_rf,expected_rb", [
-    # Observed on unfixed code — multi-position, inn=1200
-    ("CF", -10, 45, 43, 40, 40),
-    ("CF",   8, 81, 77, 73, 73),
+    # Observed on recalibrated code (6/4 refit) — multi-position, inn=1200
+    ("CF", -10, 45, 45, 43, 43),
+    ("CF",   8, 81, 81, 77, 77),
     ("3B", -10, 40, 43, 52, 40),
     ("3B",   8, 73, 77, 93, 73),
 ])
@@ -398,11 +398,11 @@ def test_rngr_path_preservation_low_innings(inn_val, expected_rl, expected_rr, e
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("def_val,expected_fielding", [
-    # Observed on unfixed code — SS position, inn=1200 (full trust)
-    (-15, 47),
-    (  0, 67),
-    ( 10, 81),
-    ( 20, 95),
+    # Observed on recalibrated code (6/4 refit) — SS position, inn=1200 (full trust)
+    (-15, 53),
+    (  0, 73),
+    ( 10, 87),
+    ( 20, 99),
 ])
 def test_fg_def_path_preservation(def_val, expected_fielding):
     """
@@ -421,13 +421,13 @@ def test_fg_def_path_preservation(def_val, expected_fielding):
 
 
 @pytest.mark.parametrize("def_val,inn_val,expected_fielding", [
-    # Observed on unfixed code — def_trust blending at various innings
-    ( 0, 200, 66),
-    (10, 200, 70),
-    ( 0, 600, 67),
-    (10, 600, 81),
-    ( 0, 1200, 67),
-    (10, 1200, 81),
+    # Observed on recalibrated code (6/4 refit) — def_trust blending at various innings
+    ( 0, 200, 68),
+    (10, 200, 72),
+    ( 0, 600, 73),
+    (10, 600, 87),
+    ( 0, 1200, 73),
+    (10, 1200, 87),
 ])
 def test_fg_def_path_preservation_def_trust(def_val, inn_val, expected_fielding):
     """

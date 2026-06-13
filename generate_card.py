@@ -13,6 +13,18 @@ import json
 import argparse
 import warnings
 import time
+import math as _math
+
+
+def safe_float(val, default=0.0):
+    """NaN/None-safe float cast. Single module-level source for all callers.
+    Pass default=None to preserve the (older) None-on-missing behavior."""
+    if val is None or (isinstance(val, float) and _math.isnan(val)):
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
 
 # Optional: if you keep your pybaseball venv in a sibling project, point at it
 # via the MLB_SHOW_VENV_SITE env var. Otherwise we use the active interpreter.
@@ -58,8 +70,8 @@ _DEFAULT_BREAK_BY_TYPE = {
     "FF": 42,  # 4-seam
 }
 
-# Pitch code -> display name (module-level mirror of the map in
-# pull_pitcher_statcast, for custom arsenals where no Statcast pull happens).
+# Pitch code -> display name. Single source of truth used by both the live
+# Statcast path (pull_pitcher_statcast) and custom arsenals (no Statcast pull).
 _PITCH_NAMES = {
     "FF": "4-Seam FB", "SI": "Sinker", "FC": "Cutter", "SL": "Slider",
     "ST": "Sweeper", "CU": "Curveball", "CH": "Changeup", "FS": "Splitter",
@@ -352,8 +364,11 @@ def detect_player_type(player_name, year):
         pit_df = pitching_stats(year)
         match = pit_df[pit_df["Name"] == player_name]
         if not match.empty:
-            ip = float(match.sort_values("IP", ascending=False).iloc[0]["IP"])
-    except Exception:
+            chosen = match.sort_values("IP", ascending=False).iloc[0] if "IP" in match.columns else match.iloc[0]
+            ip = float(chosen.get("IP", 0))
+    except Exception as e:
+        import sys
+        print(f"[detect_player_type] pitching {year}: {type(e).__name__}: {e}", file=sys.stderr)
         pass
 
     # Check batting stats — strict name match only
@@ -361,8 +376,11 @@ def detect_player_type(player_name, year):
         bat_df = batting_stats(year)
         match = bat_df[bat_df["Name"] == player_name]
         if not match.empty:
-            pa = int(match.sort_values("PA", ascending=False).iloc[0]["PA"])
-    except Exception:
+            chosen = match.sort_values("PA", ascending=False).iloc[0] if "PA" in match.columns else match.iloc[0]
+            pa = int(chosen.get("PA", 0))
+    except Exception as e:
+        import sys
+        print(f"[detect_player_type] batting {year}: {type(e).__name__}: {e}", file=sys.stderr)
         pass
 
     # If found in both, compare: pitcher if IP > PA/3 (rough heuristic)
@@ -423,8 +441,15 @@ def estimate_ovr_pitcher(ratings, overalls):
     tried but it under-rated the good players users actually build, so it was
     reverted. Keeps the real fix (pitcher fielding was a near-constant ~52, a
     spurious +38 term). Maps a 72 grade -> 80 (Perry's Show OVR).
+
+    Re-fit 6/4 (slope 0.990->1.074, intercept 8.4->4.6) after the K/9 + H/9 split
+    decompression lowered pitching-overall: the old formula was tuned to the
+    inflated splits and went -2.5 biased once they were corrected. Re-fit on the
+    SAME notable set (N=95, OVR 80-99 — still no fringe, so the over-correction
+    that killed the 1.212 full-pool fit doesn't apply). Pitcher OVR RMSE 4.51->4.13,
+    bias ~0; notable arms stable (Crochet 93->94, Skubal 94->95). 1.074 << 1.212.
     """
-    ovr = 0.990 * overalls["pitching"] + 8.4
+    ovr = 1.074 * overalls["pitching"] + 4.6
     return clamp(ovr)
 
 
@@ -436,7 +461,9 @@ def find_player(df, name):
     """Find player in a FanGraphs dataframe by name."""
     match = df[df["Name"] == name]
     if not match.empty:
-        return match.iloc[0] if len(match) == 1 else match.sort_values("PA", ascending=False).iloc[0]
+        if len(match) == 1 or "PA" not in match.columns:
+            return match.iloc[0]
+        return match.sort_values("PA", ascending=False).iloc[0]
     # Partial match
     for part in name.split():
         if len(part) > 3 and part not in ("Jr.", "Sr.", "III", "II"):
@@ -444,7 +471,7 @@ def find_player(df, name):
             if len(m) == 1:
                 return m.iloc[0]
             if len(m) > 1:
-                return m.sort_values("PA", ascending=False).iloc[0]
+                return m.iloc[0] if "PA" not in m.columns else m.sort_values("PA", ascending=False).iloc[0]
     return None
 
 
@@ -506,7 +533,9 @@ def lookup_mlbam_id(player_name, year=None):
             mlbam = pick_best(result, year)
             if mlbam:
                 return mlbam
-        except Exception:
+        except Exception as e:
+            import sys
+            print(f"[mlbam-lookup] {try_last},{try_first}: {type(e).__name__}: {e}", file=sys.stderr)
             pass
 
     # Last resort: search by last name only
@@ -517,7 +546,9 @@ def lookup_mlbam_id(player_name, year=None):
             mlbam = pick_best(match, year)
             if mlbam:
                 return mlbam
-    except Exception:
+    except Exception as e:
+        import sys
+        print(f"[mlbam-lookup] {last}: {type(e).__name__}: {e}", file=sys.stderr)
         pass
 
     return None
@@ -538,11 +569,6 @@ def pull_season_batting(player_name, year):
         if val is None or (isinstance(val, float) and _math.isnan(val)):
             return default
         return int(val)
-
-    def safe_float(val, default=0.0):
-        if val is None or (isinstance(val, float) and _math.isnan(val)):
-            return default
-        return float(val)
 
     fg_spd = row.get("Spd")
     fg_spd = round(float(fg_spd), 1) if fg_spd and not (isinstance(fg_spd, float) and _math.isnan(fg_spd)) else None
@@ -590,7 +616,10 @@ def pull_career_batting(player_name, year, num_years=4):
                     print(f"    {player_name} not found in {y}, stopping career search.")
                     break
             else:
-                row = match.iloc[0] if len(match) == 1 else match.sort_values("PA", ascending=False).iloc[0]
+                if len(match) == 1 or "PA" not in match.columns:
+                    row = match.iloc[0]
+                else:
+                    row = match.sort_values("PA", ascending=False).iloc[0]
 
             if row is not None:
                 import math as _m
@@ -613,7 +642,9 @@ def pull_career_batting(player_name, year, num_years=4):
                         "G": _si(row.get("G")),
                         "SB": _si(row.get("SB")),
                     }
-        except Exception:
+        except Exception as e:
+            import sys
+            print(f"[career-walk] {y}: {type(e).__name__}: {e}", file=sys.stderr)
             break
 
     if not yearly:
@@ -707,14 +738,8 @@ def pull_career_fielding(player_name, year, num_years=4):
     """Pull multi-year fielding stats (OAA) and detect primary position.
     Aggregates across all position entries for multi-position players.
     Starts from target year backwards. Stops if player not found."""
-    import math as _math
     yearly_oaa = {}
     position = None
-
-    def safe_float(val):
-        if val is None or (isinstance(val, float) and _math.isnan(val)):
-            return None
-        return float(val)
 
     for y in range(year, year - num_years, -1):
         try:
@@ -764,57 +789,57 @@ def pull_career_fielding(player_name, year, num_years=4):
             best_inn = 0
 
             for _, row in matches.iterrows():
-                inn = safe_float(row.get("Inn")) or 0
+                inn = safe_float(row.get("Inn"), None) or 0
                 total_inn += inn
 
-                oaa = safe_float(row.get("OAA"))
+                oaa = safe_float(row.get("OAA"), None)
                 if oaa is not None:
                     total_oaa += oaa
                     has_oaa = True
 
-                def_v = safe_float(row.get("Def"))
+                def_v = safe_float(row.get("Def"), None)
                 if def_v is not None:
                     total_def += def_v
                     has_def = True
 
-                rarm = safe_float(row.get("rARM"))
+                rarm = safe_float(row.get("rARM"), None)
                 if rarm is not None:
                     total_rarm += rarm
                     has_rarm = True
 
-                rngr = safe_float(row.get("RngR"))
+                rngr = safe_float(row.get("RngR"), None)
                 if rngr is not None:
                     total_rngr += rngr
                     has_rngr = True
 
-                errr = safe_float(row.get("ErrR"))
+                errr = safe_float(row.get("ErrR"), None)
                 if errr is not None:
                     total_errr += errr
                     has_errr = True
 
-                assists = safe_float(row.get("A"))
+                assists = safe_float(row.get("A"), None)
                 if assists is not None:
                     total_assists += assists
                     has_assists = True
 
-                errors = safe_float(row.get("E"))
+                errors = safe_float(row.get("E"), None)
                 if errors is not None:
                     total_errors += errors
                     has_errors = True
 
-                chances = safe_float(row.get("Ch"))
+                chances = safe_float(row.get("Ch"), None)
                 if chances is not None:
                     total_chances += chances
                     has_chances = True
 
                 # BBRef-specific defensive metrics (era-specific inputs).
                 # Rdrs = DRS (post-2003); Rtot = Total Zone (deeper history).
-                rdrs = safe_float(row.get("Rdrs"))
+                rdrs = safe_float(row.get("Rdrs"), None)
                 if rdrs is not None:
                     total_rdrs += rdrs
                     has_rdrs = True
 
-                rtot = safe_float(row.get("Rtot"))
+                rtot = safe_float(row.get("Rtot"), None)
                 if rtot is not None:
                     total_rtot += rtot
                     has_rtot = True
@@ -852,7 +877,9 @@ def pull_career_fielding(player_name, year, num_years=4):
             if y == year and best_pos:
                 position = best_pos
 
-        except Exception:
+        except Exception as e:
+            import sys
+            print(f"[fielding-walk] {y}: {type(e).__name__}: {e}", file=sys.stderr)
             break
 
     return yearly_oaa, position
@@ -1110,14 +1137,16 @@ def find_pitcher_fg(df, name):
     """Find pitcher in FanGraphs dataframe, sort by IP instead of PA."""
     match = df[df["Name"] == name]
     if not match.empty:
-        return match.iloc[0] if len(match) == 1 else match.sort_values("IP", ascending=False).iloc[0]
+        if len(match) == 1 or "IP" not in match.columns:
+            return match.iloc[0]
+        return match.sort_values("IP", ascending=False).iloc[0]
     for part in name.split():
         if len(part) > 3 and part not in ("Jr.", "Sr.", "III", "II"):
             m = df[df["Name"].str.contains(part, case=False, na=False)]
             if len(m) == 1:
                 return m.iloc[0]
             if len(m) > 1:
-                return m.sort_values("IP", ascending=False).iloc[0]
+                return m.iloc[0] if "IP" not in m.columns else m.sort_values("IP", ascending=False).iloc[0]
     return None
 
 
@@ -1131,22 +1160,25 @@ def pull_season_pitching(player_name, year):
         print(f"    WARNING: {player_name} not found in {year} pitching")
         return None
 
-    def safe_float(val, default=0):
+    def safe_int(val, default=0):
         if val is None or (isinstance(val, float) and _math.isnan(val)):
             return default
-        return float(val)
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return default
 
     fbv = safe_float(row.get("FBv"), None)
 
     return {
-        "W": int(row.get("W", 0)),
-        "L": int(row.get("L", 0)),
+        "W": safe_int(row.get("W", 0)),
+        "L": safe_int(row.get("L", 0)),
         "ERA": round(safe_float(row.get("ERA")), 2),
         "FIP": round(safe_float(row.get("FIP")), 2),
         "IP": round(safe_float(row.get("IP")), 1),
-        "G": int(row.get("G", 0)),
-        "GS": int(row.get("GS", 0)),
-        "SV": int(row.get("SV", 0)),
+        "G": safe_int(row.get("G", 0)),
+        "GS": safe_int(row.get("GS", 0)),
+        "SV": safe_int(row.get("SV", 0)),
         "K_per_9": round(safe_float(row.get("K/9")), 1),
         "BB_per_9": round(safe_float(row.get("BB/9")), 1),
         "HR_per_9": round(safe_float(row.get("HR/9")), 2),
@@ -1156,7 +1188,7 @@ def pull_season_pitching(player_name, year):
         "WHIP": round(safe_float(row.get("WHIP")), 3),
         "WAR": round(safe_float(row.get("WAR")), 1),
         "LOB_pct": round(safe_float(row.get("LOB%")) * 100, 1),
-        "FB_velo": round(fbv, 1) if fbv else None,
+        "FB_velo": round(fbv, 1) if fbv is not None else None,
         "team": str(row.get("Team", "?")),
     }
 
@@ -1165,6 +1197,16 @@ def pull_career_pitching(player_name, year, num_years=4):
     """Pull multi-year pitching stats for career blending.
     Starts from target year backwards. Stops if player not found (rookie detection)."""
     import math as _math
+    import sys
+
+    def safe_int(val, default=0):
+        if val is None or (isinstance(val, float) and _math.isnan(val)):
+            return default
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return default
+
     yearly = {}
     for y in range(year, year - num_years, -1):
         try:
@@ -1178,13 +1220,16 @@ def pull_career_pitching(player_name, year, num_years=4):
                     print(f"    {player_name} not found in {y}, stopping career search.")
                     break
             else:
-                row = match.iloc[0] if len(match) == 1 else match.sort_values("IP", ascending=False).iloc[0]
+                if len(match) == 1 or "IP" not in match.columns:
+                    row = match.iloc[0]
+                else:
+                    row = match.sort_values("IP", ascending=False).iloc[0]
 
             if row is not None and float(row.get("IP", 0)) >= 5:
                 yearly[y] = {
                     "IP": round(float(row.get("IP", 0)), 1),
-                    "G": int(row.get("G", 0)),
-                    "GS": int(row.get("GS", 0)),
+                    "G": safe_int(row.get("G", 0)),
+                    "GS": safe_int(row.get("GS", 0)),
                     "ERA": round(float(row.get("ERA", 0)), 2),
                     "K_per_9": round(float(row.get("K/9", 0)), 1),
                     "BB_per_9": round(float(row.get("BB/9", 0)), 1),
@@ -1193,7 +1238,8 @@ def pull_career_pitching(player_name, year, num_years=4):
                     "K_pct": round(float(row.get("K%", 0)) * 100, 1),
                     "BB_pct": round(float(row.get("BB%", 0)) * 100, 1),
                 }
-        except Exception:
+        except Exception as e:
+            print(f"[career-walk] {y}: {type(e).__name__}: {e}", file=sys.stderr)
             break
 
     if not yearly:
@@ -1273,14 +1319,7 @@ def pull_pitcher_statcast(mlbam_id, year):
             "BB_pct": round(bbs / n_pa * 100, 1) if n_pa else 0,
         }
 
-    # Pitch arsenal: per-pitch type stats
-    PITCH_NAMES = {
-        "FF": "4-Seam FB", "SI": "Sinker", "FC": "Cutter", "SL": "Slider",
-        "ST": "Sweeper", "CU": "Curveball", "CH": "Changeup", "FS": "Splitter",
-        "KC": "Knuckle Curve", "SV": "Slurve", "KN": "Knuckleball",
-        "SC": "Screwball", "EP": "Eephus", "CS": "Slow Curve",
-    }
-
+    # Pitch arsenal: per-pitch type stats (names from module-level _PITCH_NAMES)
     pitch_data = df[df["pitch_type"].notna() & (df["pitch_type"] != "UN")]
     total_pitches = len(pitch_data)
     arsenal = []
@@ -1295,7 +1334,7 @@ def pull_pitcher_statcast(mlbam_id, year):
 
             pitch_info = {
                 "code": pt,
-                "name": PITCH_NAMES.get(pt, pt),
+                "name": _PITCH_NAMES.get(pt, pt),
                 "usage": round(pct, 1),
                 "count": count,
             }
@@ -1538,7 +1577,11 @@ def scouting_to_stats(form):
         "team": form.get("team") or "CUSTOM",
         "year": form.get("year") or "2026",
         "position": form.get("position") or "OF",
-        "level": form.get("level") or "MLB",
+        # Grades are an MLB PROJECTION (FanGraphs future grades) -> always build the
+        # grade card at MLB level. The form's level describes the ACTUAL stats (for
+        # the blend) only; MLE-discounting the grade card double-counts and pushes
+        # prospects DOWN (the opposite of how Show projects them up).
+        "level": "MLB",
         "full_confidence": "on",          # grades ARE the talent estimate; don't regress
         "PA": "600", "G": "150", "WAR": "3.0",
         "BA": str(ba), "OBP": str(round(min(0.500, ba + bbpct / 100 + 0.020), 3)),
@@ -1936,12 +1979,15 @@ def calculate_ratings(data, position_override=None, mode="season"):
     ba_for_cr = trust_vr * ba_vr_raw + (1 - trust_vr) * effective_ba if ba_vr_raw is not None else effective_ba
 
     # Contact R refit: EV dropped (hurts at N=44), BA-only RMSE=6.8 (was 8.2)
+    # Contact R refit (6/4): 320.5*BA - 12.2 — steeper than the old 268*BA+4.8,
+    # which ran +3.2 high and compressed the middle (good/avg hitters over-rated
+    # +4.3, elite under). N=123: RMSE 8.0->7.2, bias +3.2->0; Hitter OVR 4.22->4.09.
     if use_career:
         career_ba = career.get("BA", bat["BA"])
         blended_ba = 0.55 * ba_for_cr + 0.45 * career_ba
-        ratings["contact_right"] = clamp(268 * blended_ba + 4.8)
+        ratings["contact_right"] = clamp(320.5 * blended_ba - 12.2)
     else:
-        ratings["contact_right"] = clamp(268 * ba_for_cr + 4.8)
+        ratings["contact_right"] = clamp(320.5 * ba_for_cr - 12.2)
 
     # --- CONTACT L: BA-based (not OBP — keeps contact/vision/discipline cleanly separated) ---
     ba_vs_lhp = splits.get("vs_LHP", {}).get("BA", effective_ba)
@@ -1952,8 +1998,11 @@ def calculate_ratings(data, position_override=None, mode="season"):
     else:
         fallback_ba = effective_ba
     contact_l_ba = trust_l * ba_vs_lhp + (1 - trust_l) * fallback_ba
-    # Contact L refit: 212.7*BA + 18.7 (RMSE 10.4, was 11.4)
-    ratings["contact_left"] = clamp(212.7 * contact_l_ba + 18.7)
+    # Contact L refit (6/4): 251.9*BA + 5.8 — steeper line + lower intercept than
+    # the old 212.7*BA+18.7, which ran +2.74 high and under-spread the platoon-weak
+    # lefties (Muncy/Carpenter/Abreu read mid-60s vs Show's 40s). Strong side (~.300)
+    # is preserved; the weak side is pulled down. N=114: RMSE 10.4->9.8, bias +2.7->0.0.
+    ratings["contact_left"] = clamp(251.9 * contact_l_ba + 5.8)
 
     # --- HR RATE (used by Power R and Power L) ---
     # Dampened toward league avg (~3.0%) for small samples, same trust as BA/ISO.
@@ -1992,7 +2041,19 @@ def calculate_ratings(data, position_override=None, mode="season"):
     # Barrel% blended when available for robustness at scale.
     barrel = data.get("barrel_stats")
     brl_pct = barrel.get("brl_percent") if barrel else None
-    pwr_r_trad = 87.1 * iso_blend + 352.5 * hr_rate + 43.4
+    # Platoon-aware HR contribution: scale the overall HR rate by this side's ISO
+    # relative to overall, so a hitter with no power vs one hand doesn't get full
+    # credit for HRs hit against the other hand (e.g. a LH masher's .070 ISO vs
+    # LHP shouldn't inherit his .323-ISO-vs-RHP home runs). Suppress-only: the
+    # ratio caps at 1.0 so a strong side is never inflated, only a weak side cut.
+    # Identity (ratio=1) with no splits or in career mode. Validated on 114
+    # calibration hitters: PWR L RMSE 11.9->10.6 (bias +2.8->-0.4), PWR R
+    # 9.3->9.0 (bias +4.4->+4.1).
+    hr_rate_r = hr_rate * (min(1.0, max(0.3, iso_blend / effective_iso))
+                           if (not use_career and effective_iso > 0) else 1.0)
+    # Power R refit (6/4): steeper ISO + lower intercept than old 87.1/43.4, which
+    # ran +4.1 high and compressed the middle. N=123: RMSE 9.0->7.5, bias +4.1->0.
+    pwr_r_trad = 130.1 * iso_blend + 358.4 * hr_rate_r + 30.4
     if brl_pct is not None and pa >= 100:
         pwr_r_barrel = 2.83 * brl_pct + 36.5
         ratings["power_right"] = clamp(0.6 * pwr_r_barrel + 0.4 * pwr_r_trad)
@@ -2011,7 +2072,9 @@ def calculate_ratings(data, position_override=None, mode="season"):
             iso_l = trust_l_pwr * iso_vl + (1 - trust_l_pwr) * effective_iso
         else:
             iso_l = effective_iso
-    pwr_l_trad = 55.1 * iso_l + 504.6 * hr_rate + 38.6
+    hr_rate_l = hr_rate * (min(1.0, max(0.3, iso_l / effective_iso))
+                           if (not use_career and effective_iso > 0) else 1.0)
+    pwr_l_trad = 55.1 * iso_l + 504.6 * hr_rate_l + 38.6
     if brl_pct is not None and pa >= 100:
         pwr_l_barrel = 2.24 * brl_pct + 38.7
         ratings["power_left"] = clamp(0.5 * pwr_l_barrel + 0.5 * pwr_l_trad)
@@ -2027,6 +2090,16 @@ def calculate_ratings(data, position_override=None, mode="season"):
         "C": 70, "1B": 50, "2B": 75, "SS": 85, "3B": 65,
         "LF": 50, "CF": 75, "RF": 60, "DH": 35, "OF": 55,
     }
+    # Position-scaled OAA->fielding (refit 6/4). OAA is already position-relative,
+    # but Show ALSO caps the FLD ceiling by position difficulty; the old flat
+    # 2.09*OAA+74.6 over-rated corners (+7-9) while premium spots were accurate
+    # (full-season OAA trust washes out pos_baseline). Shared slope 1.65 + a
+    # per-position intercept. N=104: RMSE 11.7->9.5, per-position bias ~0. Catchers
+    # rarely have OAA (framing-rated, not range) so they fall to pos_baseline; the
+    # C intercept just matches that ~71 for the rare catcher who does.
+    _FLD_OAA_INT = {"1B": 64, "LF": 64, "RF": 64, "OF": 64, "DH": 64,
+                    "2B": 70, "3B": 70, "SS": 73, "CF": 73, "C": 71}
+    fld_int = _FLD_OAA_INT.get(pos, 70)
 
     # Adjust baseline down for players who barely play the field
     # Only apply DH-blend when we actually HAVE innings data — otherwise
@@ -2077,11 +2150,11 @@ def calculate_ratings(data, position_override=None, mode="season"):
                     total_oaa += oaa_data[y] * weight
                     total_w += weight
             weighted_oaa = total_oaa / total_w if total_w > 0 else 0
-            raw_fld = clamp(2.09 * weighted_oaa + 74.6)
+            raw_fld = clamp(1.65 * weighted_oaa + fld_int)
         else:
             target_oaa = oaa_data.get(target_year)
             if target_oaa is not None:
-                raw_fld = clamp(2.09 * target_oaa + 74.6)
+                raw_fld = clamp(1.65 * target_oaa + fld_int)
             else:
                 raw_fld = pos_baseline
         ratings["fielding"] = clamp(def_trust * raw_fld + (1 - def_trust) * pos_baseline)
@@ -2415,17 +2488,16 @@ def calculate_pitcher_ratings(data, mode="season"):
         kpct_blend = pit["K_pct"]
 
     if has_splits:
-        # H/9 splits: NO DAMPENING when split data available (same fix as K/9).
-        # Dampening caused -6 to -8 systematic bias. Coefficients from N=22 refit.
-        ratings["h_per_9_left"] = clamp(-228.2 * vs_lhb["BA"] + 129.6)
-        ratings["h_per_9_right"] = clamp(-187.7 * vs_rhb["BA"] + 120.7)
-
-        # K/9 splits: NO DAMPENING when we have split data (PA >= 50).
-        # Dampening was the primary cause of -8 to -10 systematic bias.
-        # The regression coefficients (1.16/0.87) already compress the range
-        # appropriately. Undampened RMSE: L=6.9, R=7.1 with zero bias.
-        ratings["k_per_9_left"] = clamp(1.16 * vs_lhb["K_pct"] + 50.6)
-        ratings["k_per_9_right"] = clamp(0.87 * vs_rhb["K_pct"] + 59.8)
+        # H/9 + K/9 splits, steeper refit (6/4, N=80). The old N=22 coefficients
+        # COMPRESSED the range — they over-rated the middle (+4 to +8 bias) and
+        # under-rated elite arms (Skubal/Crochet K/9 read ~88 vs Show 99). Steeper
+        # slopes + adjusted intercepts decompress, zeroing aggregate bias.
+        # K/9 L: RMSE 16.3->13.5, R: 16.5->13.2; H/9 L: 16.1->14.3, R: 15.0->14.1.
+        # (Elite still reads a few low — Show's reputation ceiling, unreachable.)
+        ratings["h_per_9_left"] = clamp(-304.91 * vs_lhb["BA"] + 138.8)
+        ratings["h_per_9_right"] = clamp(-233.77 * vs_rhb["BA"] + 125.9)
+        ratings["k_per_9_left"] = clamp(1.93 * vs_lhb["K_pct"] + 20.9)
+        ratings["k_per_9_right"] = clamp(1.74 * vs_rhb["K_pct"] + 27.1)
     else:
         # No reliable splits — use overall and apply default platoon gap
         h9_avg = dampen(-7.86 * h9_blend + 131.1)
@@ -2457,7 +2529,7 @@ def calculate_pitcher_ratings(data, mode="season"):
     # only 2 data points we keep a conservative approach.
     # Stamina refit: SP N=20 RMSE 3.9 (was 19.4). Flatter slope — Show gives
     # most SPs similar stamina. RP formula: ~29 baseline (only 3 data points).
-    if role == "RP" and pit["GS"] == 0:
+    if role == "RP":
         ratings["stamina"] = clamp(-0.054 * pit["G"] + 28.7)
     elif use_career:
         career_gs = career.get("avg_GS_per_year", pit["GS"]) if isinstance(career, dict) else pit["GS"]

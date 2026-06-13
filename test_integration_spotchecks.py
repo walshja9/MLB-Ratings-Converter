@@ -261,11 +261,11 @@ class TestDerekJeter2005:
 class TestJuanSoto2025:
     """Juan Soto 2025 — critical modern-era preservation check."""
 
-    # Observed on fixed code (OAA path is unchanged by the fix):
-    # Soto (OAA=5, LF, inn=1200): fielding=79, rl=68, rr=65, rf=61, rb=68
+    # Observed on recalibrated code (6/4 refit; OAA fielding path = 1.65*OAA + LF intercept 64):
+    # Soto (OAA=5, LF, inn=1200): fielding=72, rl=68, rr=65, rf=61, rb=68
     YEAR = 2022  # use 2022 as proxy year (same OAA path logic)
     POS = "LF"
-    EXPECTED_FIELDING = 79
+    EXPECTED_FIELDING = 72
     EXPECTED_RL = 68
     EXPECTED_RR = 65
     EXPECTED_RF = 61
@@ -319,11 +319,11 @@ class TestJuanSoto2025:
 class TestXanderBogaerts2022:
     """Xander Bogaerts 2022 — critical middle-era preservation check."""
 
-    # Observed on fixed code (RngR path is unchanged by the fix):
-    # Bogaerts (RngR=3, SS, inn=1200): fielding=85, rl=60, rr=82, rf=75, rb=64
+    # Observed on recalibrated code (6/4 refit; fielding path = 1.65*metric + SS intercept 73):
+    # Bogaerts (RngR=3, SS, inn=1200): fielding=77, rl=60, rr=82, rf=75, rb=64
     YEAR = 2022
     POS = "SS"
-    EXPECTED_FIELDING = 85
+    EXPECTED_FIELDING = 77
     EXPECTED_RL = 60
     EXPECTED_RR = 82
     EXPECTED_RF = 75

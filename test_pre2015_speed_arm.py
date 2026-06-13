@@ -41,7 +41,11 @@ def _make_data(year=2010, position="CF", sprint_speed=None, fg_spd=None, fieldin
 def test_statcast_speed_path_unchanged():
     data = _make_data(year=2025, position="CF", sprint_speed=30.0, sb=3, cs=1, triples=1)
     ratings = calculate_ratings(data, mode="season")
-    assert ratings["speed"] == clamp(max(15.01 * 30.0 - 353.5, 15))
+    # Current Statcast speed formula (6/4 refit): 15.02*sprint + 0.10*SB/162 - 356.5.
+    # SB/162 derived from the same inputs the model uses (G=130, SB=3).
+    games = max(data["batting"]["G"], 1)
+    sb_per_162 = min(data["batting"]["SB"] / games * 162.0, 60.0)
+    assert ratings["speed"] == clamp(max(15.02 * 30.0 + 0.10 * sb_per_162 - 356.5, 15))
 
 
 def test_pre_tracking_speed_uses_more_than_sb_count():

@@ -42,13 +42,13 @@ Then open **http://localhost:5000** in your browser.
 | Attribute | Formula | Source |
 |-----------|---------|--------|
 | Vision | `-3.07 * K% + 126.9` (dampened toward 25% K for PA<200) | r=0.909, RMSE=7.6 |
-| Speed | `7.36 * Sprint + 0.45 * SB/162 - 147.1` (Statcast, regressed for G<30) or `9.42 * FG_Spd + 19.1` (pre-2015) or SB-based (pre-2002) | RMSE=~13.6 |
+| Speed | `15.02 * Sprint + 0.10 * SB/162 - 356.5` (Statcast, regressed for G<30) or `9.42 * FG_Spd + 19.1` (pre-2015) or SB-based (pre-2002) | RMSE=~13.6 |
 | Discipline | `4.86 * BB% + 17.2` (dampened toward 8% BB for PA<200) | r=0.835, RMSE=10.7 |
-| Fielding | `2.09 * OAA + 68.6` or `1.38 * FG_Def + 67.3` (pre-OAA) or position baseline | RMSE=11.9 |
-| Contact R | `240 * BA_vR + 2.09 * Exit_Velo - 168` (Statcast) or `372 * BA_vR - 29` (dampened BA) | r=0.803, RMSE=8.8 |
-| Contact L | `281 * BA_vs_LHP - 3` (trust-blended) | r=0.710, RMSE=12.0 |
-| Power R | `91.6 * ISO_blend + 502.4 * HR_rate + 31.8` (ISO + HR/PA, both dampened) | RMSE=~17.5 |
-| Power L | `18.6 * ISO_blend + 764.6 * HR_rate + 31.2` (HR rate dominates) | RMSE=~13.3 |
+| Fielding | `1.65 * OAA + per-position intercept` (OAA/RngR/Rdrs path) or `1.38 * FG_Def + 67.3` (pre-OAA) or position baseline | refit 6/4 |
+| Contact R | `320.5 * BA_vR - 12.2` (BA dampened; career-blended 0.55/0.45 in career mode) | refit 6/4 |
+| Contact L | `251.9 * BA_vs_LHP + 5.8` (trust-blended) | refit 6/4 |
+| Power R | `130.1 * ISO_blend + 358.4 * HR_rate_R + 30.4` (barrel-blended 0.6/0.4 when Barrel% available) | refit 6/4 |
+| Power L | `55.1 * ISO_L + 504.6 * HR_rate_L + 38.6` (barrel-blended 0.5/0.5 when Barrel% available) | refit 6/4 |
 | Stealing | Tiered: SB/162<2 → `3 + 0.04*Speed`; else → `2.0*SB/162 + 9`. Cap SB/162 at 60. | r=0.916, RMSE=13.4 |
 | Durability | Season: `0.17 * GP + 72` (floor 78, dampened) / Career: `0.16 * blended_GP + 72` | RMSE=4.9 |
 | Batting Clutch | `-161.7 * BA + 2.2 * WAR + 239.4 * RISP_BA + 39.1` (Statcast era) or `93 * BA + 2.6 * WAR + 34` (pre-Statcast). Dampened toward 50 for PA<150. | RMSE=~16.5 |
@@ -57,12 +57,19 @@ Then open **http://localhost:5000** in your browser.
 | Reactions (L/R/F/B) | OAA or RngR -> base reaction, then position-specific directional weights | |
 | Bunting/Drag Bunt | Position defaults (do NOT affect OVR) | |
 
-### Hitter OVR Formula (NNLS, N=18, RMSE=4.2)
+> Coefficients last refit 6/4/2026; keep this table in sync with `generate_card.py`.
+
+**Fielding OAA per-position intercepts** (`raw_fld = clamp(1.65 * weighted_OAA + intercept)`):
+`{"1B": 64, "LF": 64, "RF": 64, "OF": 64, "DH": 64, "2B": 70, "3B": 70, "SS": 73, "CF": 73, "C": 71}`
+(default 70). Raw fielding is blended with the position baseline via the innings-based `def_trust` ramp.
+
+### Hitter OVR Formula (refit 6/4/2026)
 ```
-OVR = 0.908 * CoreHitting + 0.106 * Speed + 0.192 * Durability
+OVR = 0.8165 * CoreHitting + 0.1476 * FieldingOVR + 0.0236 * Speed + 0.1957 * Durability + _POS_OVR_ADJ
 ```
 CoreHitting = avg of Contact R/L, Power R/L, Vision, Discipline, Clutch (excludes Bunt/Drag Bunt).
-Fielding weight = 0 in NNLS (Show OVR driven by hitting + speed + durability).
+`_POS_OVR_ADJ = {"C": 2, "1B": -1, "2B": -1, "3B": -2, "LF": -1, "DH": -1}` (default 0).
+The fielding term is now nonzero (a small position-defense credit on top of hitting/speed/durability).
 
 ### Sample Size Dampening (Hitters)
 All rate stats (K%, BB%, BA, ISO) are regressed toward league averages for PA < 200:
@@ -94,11 +101,12 @@ Multi-position players are aggregated across all position entries per year (e.g.
 
 **Sample size dampener**: `trust = min(career_IP / 200, 1.0)`. Low-IP pitchers regressed toward 65.
 
-### Pitcher OVR Formula (NNLS, N=10, RMSE=3.6)
+### Pitcher OVR Formula (refit 6/4/2026, RMSE ~4.13)
 ```
-OVR = 1.035 * PitchingOVR + 0.117 * Durability
+OVR = 1.074 * PitchingOVR + 4.6
 ```
-Fielding weight = 0. Pitching weight > 1.0 means OVR is dominated by pitching attributes.
+Refit 6/4 (slope 0.990->1.074, intercept 8.4->4.6) after the K/9 + H/9 split decompression.
+Fielding/durability weights = 0; pitching dominates. Crochet 94, Skubal 95.
 
 ## Pre-Statcast Data Tiers
 | Era | Speed | Fielding | Contact | Reactions | Arsenal |

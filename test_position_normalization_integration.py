@@ -168,8 +168,8 @@ class TestJuanSoto2025Preservation:
     # Use 2022 as proxy year (same OAA path logic; Statcast era)
     YEAR = 2022
     POS = "LF"
-    # Values observed on fixed code (same as test_integration_spotchecks.py TestJuanSoto2025)
-    EXPECTED_FIELDING = 79
+    # Values observed on recalibrated code (6/4 refit; same as test_integration_spotchecks.py TestJuanSoto2025)
+    EXPECTED_FIELDING = 72
     EXPECTED_RL = 68
     EXPECTED_RR = 65
     EXPECTED_RF = 61
