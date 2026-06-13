@@ -1,0 +1,152 @@
+==============================================
+#1  JoJo Parker  (62 OVR)
+SS  A  age 19.8  B/T L/R  [pipeline]
+Now 62 -> Potential 78   |   55 FV
+HIT    CON R 60  CON L 62  PWR R 43  PWR L 46  VIS 46  DISC 64  CLUTCH 63
+FIELD  FIELD 66  ARM STR 77  ARM ACC 75  REAC L/R/F/B 50/68/62/53  (from SS 348.3inn fld%0.973 A117 E5)
+RUN    SPEED 46  STEAL 26  BR AGG 32
+DUR    45
+==============================================
+#2  Arjun Nimmala  (66 OVR)
+SS  AA  age 20.6  B/T R/R  [fangraphs]
+Now 66 -> Potential 76   |   50 FV
+HIT    CON R 62  CON L 64  PWR R 51  PWR L 53  VIS 50  DISC 66  CLUTCH 63
+FIELD  FIELD 71  ARM STR 77  ARM ACC 75  REAC L/R/F/B 54/74/67/58  (from SS 167.7inn fld%0.986 A46 E1)
+RUN    SPEED 36  STEAL 4  BR AGG 4
+DUR    50
+==============================================
+#3  Johnny King  (67 OVR)
+LHP  A+  age 19.9  B/T L/L  [fangraphs]
+Now 67 -> Potential 74   |   45 FV
+PITCH  K/9 vR 45 vL 55  HR/9 50  CONTROL 59  VELO 81  STAM 85
+       H/9 vR 45 vL 53  CLUTCH 73
+DUR    72
+==============================================
+#4  Ricky Tiedemann  (75 OVR)
+LHP  AAA  age 23.8  B/T L/L  [fangraphs]
+Now 75 -> Potential 76   |   45 FV
+PITCH  K/9 vR 64 vL 78  HR/9 63  CONTROL 66  VELO 86  STAM 85
+       H/9 vR 59 vL 69  CLUTCH 73
+DUR    72
+==============================================
+#5  Gage Stanifer  (70 OVR)
+RHP  AA  age 22.5  B/T R/R  [pipeline]
+Now 70 -> Potential 72   |   45 FV
+PITCH  K/9 vR 68 vL 56  HR/9 58  CONTROL 59  VELO 84  STAM 25
+       H/9 vR 63 vL 53  CLUTCH 93
+DUR    76
+==============================================
+#6  Juan Sanchez  (58 OVR)
+3B/SS  A  age 18.7  B/T R/R  [pipeline]
+Now 58 -> Potential 70   |   45 FV
+HIT    CON R 56  CON L 60  PWR R 43  PWR L 46  VIS 41  DISC 48  CLUTCH 62
+FIELD  FIELD 38  ARM STR 66  ARM ACC 68  REAC L/R/F/B 39/38/36/38  (from 3B 185.7inn fld%0.824 A28 E9)
+RUN    SPEED 28  STEAL 4  BR AGG 4
+DUR    45
+==============================================
+#7  Jake Bloss  (78 OVR)
+RHP  MLB  age 24.9  B/T R/R  [fangraphs]
+Now 78 -> Potential 79   |   50 FV
+PITCH  K/9 vR 81 vL 67  HR/9 67  CONTROL 67  VELO 86  STAM 85
+       H/9 vR 72 vL 62  CLUTCH 73
+DUR    72
+==============================================
+#8  RJ Schreck  (71 OVR)
+OF  AAA  age 25.9  B/T L/R  [fangraphs]
+Now 71 -> Potential 70   |   40 FV
+HIT    CON R 67  CON L 68  PWR R 58  PWR L 59  VIS 58  DISC 74  CLUTCH 65
+FIELD  FIELD 59  ARM STR 71  ARM ACC 68  REAC L/R/F/B 57/56/52/56  (from CF 178.0inn fld%0.978 A0 E1)
+RUN    SPEED 42  STEAL 22  BR AGG 29
+DUR    58
+==============================================
+#9  Yohendrick Piñango  (64 OVR)
+OF  MLB  age 24.1  B/T L/L  [fangraphs]
+Now 64 -> Potential 70   |   40 FV
+HIT    CON R 65  CON L 66  PWR R 54  PWR L 56  VIS 54  DISC 52  CLUTCH 64
+FIELD  FIELD 66  ARM STR 71  ARM ACC 68  REAC L/R/F/B 63/61/57/61  (from RF 97.0inn fld%1.0 A0 E0)
+RUN    SPEED 33  STEAL 4  BR AGG 4
+DUR    54
+==============================================
+#10  Jake Cook  (57 OVR)
+OF  A  age 22.9  B/T L/L  [fangraphs]
+Now 57 -> Potential 70   |   40 FV
+HIT    CON R 62  CON L 64  PWR R 34  PWR L 40  VIS 49  DISC 47  CLUTCH 63
+FIELD  FIELD 61  ARM STR 73  ARM ACC 68  REAC L/R/F/B 59/58/54/58  (from CF 118.3inn fld%1.0 A1 E0)
+RUN    SPEED 99  STEAL 99  BR AGG 99
+DUR    45
+==============================================
+#11  Victor Arias  (56 OVR)
+OF  AA  age 22.8  B/T L/L  [pipeline]
+Now 56 -> Potential 68   |   40 FV
+HIT    CON R 58  CON L 61  PWR R 38  PWR L 42  VIS 44  DISC 42  CLUTCH 62
+FIELD  FIELD 41  ARM STR 69  ARM ACC 68  REAC L/R/F/B 42/41/38/41  (from CF 166.0inn fld%0.917 A2 E3)
+RUN    SPEED 68  STEAL 60  BR AGG 62
+DUR    45
+==============================================
+#12  Josh Kasevich  (68 OVR)
+SS/3B  AAA  age 25.4  B/T R/R  [fangraphs]
+Now 68 -> Potential 69   |   40 FV
+HIT    CON R 77  CON L 76  PWR R 37  PWR L 41  VIS 73  DISC 59  CLUTCH 68
+FIELD  FIELD 61  ARM STR 79  ARM ACC 68  REAC L/R/F/B 59/58/54/58  (from SS 228.0inn fld%0.971 A68 E3)
+RUN    SPEED 36  STEAL 4  BR AGG 4
+DUR    55
+==============================================
+#13  Silvano Hechavarria  (68 OVR)
+RHP  A+  age 23.2  B/T R/R  [fangraphs]
+Now 68 -> Potential 70   |   40 FV
+PITCH  K/9 vR 57 vL 47  HR/9 51  CONTROL 72  VELO 81  STAM 85
+       H/9 vR 54 vL 46  CLUTCH 73
+DUR    72
+==============================================
+#14  Blaine Bullard  (59 OVR)
+OF  A  age 19.8  B/T S/L  [fangraphs]
+Now 59 -> Potential 69   |   40 FV
+HIT    CON R 61  CON L 63  PWR R 38  PWR L 42  VIS 48  DISC 47  CLUTCH 63
+FIELD  FIELD 64  ARM STR 69  ARM ACC 68  REAC L/R/F/B 62/60/57/60  (from CF 267.0inn fld%1.0 A2 E0)
+RUN    SPEED 65  STEAL 56  BR AGG 59
+DUR    45
+==============================================
+#15  Sean Keys  (71 OVR)
+INF  AAA  age 23.0  B/T L/R  [fangraphs]
+Now 71 -> Potential 67   |   40 FV
+HIT    CON R 67  CON L 68  PWR R 62  PWR L 62  VIS 58  DISC 66  CLUTCH 65
+FIELD  FIELD 57  ARM STR 70  ARM ACC 70  REAC L/R/F/B 50/56/58/45  (from 3B 228.0inn fld%0.9 A44 E7)
+RUN    SPEED 25  STEAL 4  BR AGG 4
+DUR    58
+==============================================
+#16  Nolan Perry  (76 OVR)
+RHP  ?  age 22  B/T R/R  [pipeline]
+Now None -> Potential 76   |   45 FV
+PITCH  K/9 vR 78 vL 64  HR/9 66  CONTROL 73  VELO 83  STAM 85
+       H/9 vR 71 vL 61  CLUTCH 73
+DUR    72
+==============================================
+#17  Fernando Perez  (71 OVR)
+RHP  AA  age 22.3  B/T R/R  [pipeline]
+Now 71 -> Potential 72   |   45 FV
+PITCH  K/9 vR 59 vL 49  HR/9 54  CONTROL 74  VELO 78  STAM 85
+       H/9 vR 57 vL 49  CLUTCH 73
+DUR    72
+==============================================
+#18  Micah Bucknam  (70 OVR)
+RHP  ?  age 22.8  B/T R/R  [fangraphs]
+Now 70 -> Potential 72   |   40 FV
+PITCH  K/9 vR 74 vL 60  HR/9 65  CONTROL 62  VELO 78  STAM 25
+       H/9 vR 70 vL 60  CLUTCH 93
+DUR    76
+==============================================
+#19  Edward Duran  (59 OVR)
+C  A+  age 22.0  B/T R/R  [fangraphs]
+Now 59 -> Potential 68   |   40 FV
+HIT    CON R 58  CON L 61  PWR R 38  PWR L 42  VIS 44  DISC 42  CLUTCH 62
+FIELD  FIELD 71  ARM STR 76  ARM ACC 65  REAC L/R/F/B 65/65/65/58  (from C 95.3inn fld%1.0 A7 E0)
+RUN    SPEED 15  STEAL 4  BR AGG 3
+DUR    45
+==============================================
+#20  Tim Piasentin  (50 OVR)
+3B  ?  age 19.2  B/T L/R  [fangraphs]
+Now 50 -> Potential 68   |   40 FV
+HIT    CON R 52  CON L 56  PWR R 34  PWR L 40  VIS 34  DISC 37  CLUTCH 60
+FIELD  FIELD 44  ARM STR 81  ARM ACC 72  REAC L/R/F/B 37/39/47/37  (scouting)
+RUN    SPEED 33  STEAL 4  BR AGG 4
+DUR    45
