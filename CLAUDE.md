@@ -63,10 +63,11 @@ Then open **http://localhost:5000** in your browser.
 `{"1B": 64, "LF": 64, "RF": 64, "OF": 64, "DH": 64, "2B": 70, "3B": 70, "SS": 73, "CF": 73, "C": 71}`
 (default 70). Raw fielding is blended with the position baseline via the innings-based `def_trust` ramp.
 
-### Hitter OVR Formula (refit 6/4/2026)
+### Hitter OVR Formula (refit 6/4/2026, +2.5 OVR debias lift 6/14)
 ```
-OVR = 0.8165 * CoreHitting + 0.1476 * FieldingOVR + 0.0236 * Speed + 0.1957 * Durability + _POS_OVR_ADJ
+OVR = 0.8165 * CoreHitting + 0.1476 * FieldingOVR + 0.0236 * Speed + 0.1957 * Durability + _POS_OVR_ADJ + 2.5
 ```
+The trailing `+2.5` is the 6/14 elite-tier debias lift (measured mean OVR bias was -2.6 on the top-50 show_truth band; +2.5 zeroes it, RMSE 4.3->~3.4; clamp absorbs it at the 99 ceiling).
 CoreHitting = avg of Contact R/L, Power R/L, Vision, Discipline, Clutch (excludes Bunt/Drag Bunt).
 `_POS_OVR_ADJ = {"C": 2, "1B": -1, "2B": -1, "3B": -2, "LF": -1, "DH": -1}` (default 0).
 The fielding term is now nonzero (a small position-defense credit on top of hitting/speed/durability).
@@ -101,11 +102,12 @@ Multi-position players are aggregated across all position entries per year (e.g.
 
 **Sample size dampener**: `trust = min(career_IP / 200, 1.0)`. Low-IP pitchers regressed toward 65.
 
-### Pitcher OVR Formula (refit 6/4/2026, RMSE ~4.13)
+### Pitcher OVR Formula (refit 6/4/2026, RMSE ~4.13, +2.5 OVR debias lift 6/14)
 ```
-OVR = 1.074 * PitchingOVR + 4.6
+OVR = 1.074 * PitchingOVR + 7.1
 ```
 Refit 6/4 (slope 0.990->1.074, intercept 8.4->4.6) after the K/9 + H/9 split decompression.
+6/14 elite-tier debias lift: intercept 4.6->7.1 (+2.5) to zero a measured mean OVR bias of -2.6 on the top-50 show_truth band (RMSE 4.3->~3.4; clamp absorbs it at the 99 ceiling).
 Fielding/durability weights = 0; pitching dominates. Crochet 94, Skubal 95.
 
 ## Pre-Statcast Data Tiers

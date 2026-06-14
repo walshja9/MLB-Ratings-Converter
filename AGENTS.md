@@ -63,12 +63,13 @@ Defaults to localhost only. To reach it from your phone on the same WiFi, set `M
 `{"1B": 64, "LF": 64, "RF": 64, "OF": 64, "DH": 64, "2B": 70, "3B": 70, "SS": 73, "CF": 73, "C": 71}`
 (default intercept 70). Raw fielding is then blended with the position baseline by the innings-based `def_trust` ramp.
 
-### Hitter OVR Formula
+### Hitter OVR Formula (+2.5 OVR debias lift 6/14)
 ```
-OVR = 0.8165 * CoreHitting + 0.1476 * FieldingOVR + 0.0236 * Speed + 0.1957 * Durability + _POS_OVR_ADJ
+OVR = 0.8165 * CoreHitting + 0.1476 * FieldingOVR + 0.0236 * Speed + 0.1957 * Durability + _POS_OVR_ADJ + 2.5
 ```
 CoreHitting = avg of Contact R/L, Power R/L, Vision, Discipline, Clutch (excludes Bunt/Drag Bunt).
 `_POS_OVR_ADJ = {"C": 2, "1B": -1, "2B": -1, "3B": -2, "LF": -1, "DH": -1}` (default 0).
+The trailing `+2.5` is the 6/14 elite-tier debias lift (measured mean OVR bias was -2.6 on the top-50 show_truth band; +2.5 zeroes it, RMSE 4.3->~3.4; clamp absorbs it at the 99 ceiling).
 
 ### Directional Reactions
 Base reaction from OAA (`1.5 * OAA + 65`) or RngR (`2.0 * RngR + 65`), then multiplied by position weights:
@@ -96,12 +97,13 @@ Base reaction from OAA (`1.5 * OAA + 65`) or RngR (`2.0 * RngR + 65`), then mult
 
 **Sample size dampener**: `trust = min(career_IP / 200, 1.0)`. Low-IP pitchers regressed toward 65.
 
-### Pitcher OVR Formula
+### Pitcher OVR Formula (+2.5 OVR debias lift 6/14)
 ```
-OVR = 1.074 * PitchingOVR + 4.6
+OVR = 1.074 * PitchingOVR + 7.1
 ```
 Refit 6/4/2026 (slope 0.990->1.074, intercept 8.4->4.6) after the K/9 + H/9 split
 decompression. Fielding/durability weights dropped to 0 (pitching dominates).
+6/14 elite-tier debias lift: intercept 4.6->7.1 (+2.5) to zero a measured mean OVR bias of -2.6 on the top-50 show_truth band (RMSE 4.3->~3.4; clamp absorbs it at the 99 ceiling).
 Pitcher OVR RMSE ~4.13. Crochet 94, Skubal 95.
 
 ## Pre-Statcast Data Tiers

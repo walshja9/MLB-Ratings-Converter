@@ -426,6 +426,10 @@ def estimate_ovr_hitter(ratings, overalls):
     # under-rated; 1B/2B/3B/LF over-rated) — a light proxy for SDS's true
     # position-weighted OVR, kept small given the thin per-position sample.
     ovr += _POS_OVR_ADJ.get(ratings.get("position", "OF"), 0)
+    # Elite-tier debias lift (6/14): measured mean OVR bias was -2.6 on the
+    # top-50 show_truth band; +2.5 zeroes it (RMSE 4.3->~3.4). Clamp absorbs it
+    # at the 99 ceiling where under-bias is worst.
+    ovr += 2.5
     return clamp(ovr)
 
 
@@ -449,7 +453,10 @@ def estimate_ovr_pitcher(ratings, overalls):
     that killed the 1.212 full-pool fit doesn't apply). Pitcher OVR RMSE 4.51->4.13,
     bias ~0; notable arms stable (Crochet 93->94, Skubal 94->95). 1.074 << 1.212.
     """
-    ovr = 1.074 * overalls["pitching"] + 4.6
+    # Elite-tier debias lift (6/14): measured mean OVR bias was -2.6 on the
+    # top-50 show_truth band; +2.5 zeroes it (RMSE 4.3->~3.4). Clamp absorbs it
+    # at the 99 ceiling where under-bias is worst. (intercept 4.6 -> 7.1)
+    ovr = 1.074 * overalls["pitching"] + 7.1
     return clamp(ovr)
 
 
