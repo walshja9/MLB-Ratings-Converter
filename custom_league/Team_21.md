@@ -1,0 +1,299 @@
+# Team 21  (T21)
+
+*Custom 90-man org. OVR + attributes from the Ratings Converter engine.*
+
+## MLB
+
+### Position players
+Cooper Mbeki — C | Age 26 | B/T S/R | OVR 73
+    CON L67/R66  POW L51/R48  VIS 45  DIS 53  CLU 57
+    SPD 25  STE 23  BR-AGG 30  DUR 89  FLD 70  ARM 80/ACC 65
+    Blocking / Pop / Reactions = set to Show position default (not stat-modeled)  BNT 35  DRG 25
+Mateo Esposito — C | Age 35 | B/T R/R | OVR 84
+    CON L73/R73  POW L65/R63  VIS 71  DIS 68  CLU 64
+    SPD 35  STE 34  BR-AGG 40  DUR 92  FLD 70  ARM 80/ACC 65
+    Blocking / Pop / Reactions = set to Show position default (not stat-modeled)  BNT 35  DRG 25
+Yusei Pike — 1B | Age 24 | B/T R/R | OVR 78
+    CON L68/R67  POW L57/R57  VIS 53  DIS 53  CLU 61
+    SPD 59  STE 38  BR-AGG 43  DUR 93  FLD 50  ARM 58/ACC 62
+    REA F50/B60/L65/R60  BNT 35  DRG 25
+Tariq Acosta — 2B | Age 29 | B/T L/R | OVR 90
+    CON L87/R91  POW L57/R57  VIS 92  DIS 62  CLU 69
+    SPD 55  STE 41  BR-AGG 46  DUR 89  FLD 75  ARM 60/ACC 70
+    REA F75/B60/L65/R70  BNT 45  DRG 35
+Cooper Salinas — 3B | Age 34 | B/T R/R | OVR 92
+    CON L72/R71  POW L91/R92  VIS 48  DIS 93  CLU 69
+    SPD 33  STE 4  BR-AGG 4  DUR 95  FLD 65  ARM 65/ACC 72
+    REA F75/B60/L55/R60  BNT 35  DRG 35
+Hector Lugo — SS | Age 28 | B/T L/R | OVR 86
+    CON L74/R75  POW L47/R46  VIS 90  DIS 53  CLU 63
+    SPD 92  STE 99  BR-AGG 99  DUR 95  FLD 85  ARM 68/ACC 75
+    REA F80/B70/L55/R80  BNT 35  DRG 25
+Mason Pike — LF | Age 34 | B/T R/R | OVR 89
+    CON L77/R79  POW L81/R79  VIS 60  DIS 66  CLU 68
+    SPD 42  STE 35  BR-AGG 40  DUR 95  FLD 50  ARM 60/ACC 65
+    REA F55/B60/L60/R55  BNT 35  DRG 30
+Akira Mbeki — CF | Age 28 | B/T L/R | OVR 95
+    CON L83/R86  POW L68/R69  VIS 76  DIS 80  CLU 73
+    SPD 84  STE 49  BR-AGG 53  DUR 93  FLD 75  ARM 75/ACC 70
+    REA F60/B60/L70/R65  BNT 45  DRG 40
+Kofi Delgado — RF | Age 33 | B/T S/L | OVR 84
+    CON L71/R70  POW L50/R48  VIS 89  DIS 51  CLU 64
+    SPD 99  STE 99  BR-AGG 99  DUR 94  FLD 60  ARM 75/ACC 70
+    REA F55/B60/L60/R60  BNT 35  DRG 25
+Cruz Vance — DH | Age 25 | B/T S/R | OVR 81
+    CON L72/R72  POW L50/R50  VIS 76  DIS 64  CLU 64
+    SPD 99  STE 99  BR-AGG 99  DUR 90  FLD 35  ARM 55/ACC 65
+    REA F45/B45/L45/R45  BNT 35  DRG 25
+Marcus Cabrera — 2B | Age 32 | B/T L/R | OVR 91
+    CON L83/R86  POW L57/R57  VIS 95  DIS 70  CLU 68
+    SPD 56  STE 43  BR-AGG 47  DUR 90  FLD 75  ARM 60/ACC 70
+    REA F75/B60/L65/R70  BNT 45  DRG 35
+Amir Acosta — LF | Age 26 | B/T S/L | OVR 87
+    CON L64/R62  POW L87/R92  VIS 47  DIS 83  CLU 61
+    SPD 35  STE 27  BR-AGG 34  DUR 95  FLD 50  ARM 60/ACC 65
+    REA F55/B60/L60/R55  BNT 35  DRG 30
+Mateo Lugo — 3B | Age 32 | B/T R/R | OVR 81
+    CON L69/R69  POW L57/R59  VIS 66  DIS 63  CLU 61
+    SPD 52  STE 42  BR-AGG 47  DUR 90  FLD 65  ARM 65/ACC 72
+    REA F75/B60/L55/R60  BNT 35  DRG 35
+
+### Pitchers
+James Fairchild — SP | Age 30 | T L | OVR 91 | 97.1 mph
+    K/9 L86/R70  H/9 L78/R66  CTL 70  VEL 95  STA 85  BRK 80  HR/9 73  CLU 72
+Khalil Schmidt — SP | Age 29 | T L | OVR 89 | 96.4 mph
+    K/9 L88/R72  H/9 L72/R62  CTL 67  VEL 94  STA 85  BRK 80  HR/9 71  CLU 70
+Dmitri Lim — SP | Age 24 | T R | OVR 92 | 97.2 mph
+    K/9 L72/R88  H/9 L65/R77  CTL 76  VEL 96  STA 85  BRK 80  HR/9 68  CLU 82
+Pavel Hendricks — SP | Age 26 | T R | OVR 84 | 95.0 mph
+    K/9 L63/R77  H/9 L56/R66  CTL 76  VEL 91  STA 86  BRK 80  HR/9 57  CLU 72
+Pedro Mercado — SP | Age 26 | T R | OVR 86 | 93.2 mph
+    K/9 L62/R76  H/9 L59/R69  CTL 72  VEL 87  STA 84  BRK 80  HR/9 75  CLU 69
+Xavier Pennington — RP | Age 33 | T L | OVR 84 | 102.9 mph
+    K/9 L84/R68  H/9 L79/R67  CTL 60  VEL 99  STA 26  BRK 80  HR/9 65  CLU 91
+Reid Drummond — RP | Age 33 | T R | OVR 81 | 96.3 mph
+    K/9 L63/R77  H/9 L62/R72  CTL 65  VEL 94  STA 26  BRK 80  HR/9 63  CLU 89
+Sang Novak — RP | Age 33 | T L | OVR 84 | 100.3 mph
+    K/9 L86/R70  H/9 L78/R66  CTL 61  VEL 99  STA 26  BRK 80  HR/9 63  CLU 89
+Knox Pena — RP | Age 25 | T L | OVR 78 | 87.4 mph
+    K/9 L73/R59  H/9 L69/R59  CTL 69  VEL 74  STA 25  BRK 80  HR/9 65  CLU 90
+Brock Mercer — RP | Age 29 | T R | OVR 80 | 89.0 mph
+    K/9 L60/R74  H/9 L59/R69  CTL 71  VEL 78  STA 26  BRK 80  HR/9 69  CLU 90
+Mason Haas — RP | Age 29 | T L | OVR 84 | 97.2 mph
+    K/9 L86/R70  H/9 L75/R63  CTL 68  VEL 96  STA 25  BRK 80  HR/9 66  CLU 91
+Quincy Salas — RP | Age 27 | T R | OVR 80 | 93.1 mph
+    K/9 L61/R75  H/9 L58/R68  CTL 66  VEL 87  STA 26  BRK 80  HR/9 69  CLU 89
+Dalton Park — RP | Age 33 | T R | OVR 83 | 98.2 mph
+    K/9 L67/R81  H/9 L64/R76  CTL 64  VEL 98  STA 25  BRK 80  HR/9 66  CLU 91
+
+## AAA
+
+### Position players
+Soren Beckett — C | Age 26 | B/T R/R | OVR 77
+    CON L69/R68  POW L57/R56  VIS 58  DIS 52  CLU 60
+    SPD 22  STE 25  BR-AGG 32  DUR 89  FLD 70  ARM 80/ACC 65
+    Blocking / Pop / Reactions = set to Show position default (not stat-modeled)  BNT 35  DRG 25
+Darnell Conway — 1B | Age 27 | B/T R/R | OVR 86
+    CON L75/R76  POW L80/R80  VIS 64  DIS 61  CLU 67
+    SPD 44  STE 36  BR-AGG 41  DUR 84  FLD 50  ARM 58/ACC 62
+    REA F50/B60/L65/R60  BNT 35  DRG 25
+Niko Fuentes — 3B | Age 26 | B/T L/R | OVR 85
+    CON L76/R77  POW L75/R73  VIS 51  DIS 63  CLU 68
+    SPD 45  STE 28  BR-AGG 34  DUR 87  FLD 65  ARM 65/ACC 72
+    REA F75/B60/L55/R60  BNT 35  DRG 35
+Trey Pena — SS | Age 22 | B/T R/R | OVR 81
+    CON L69/R68  POW L59/R57  VIS 51  DIS 57  CLU 61
+    SPD 56  STE 32  BR-AGG 38  DUR 89  FLD 85  ARM 68/ACC 75
+    REA F80/B70/L55/R80  BNT 35  DRG 25
+Emilio Lim — LF | Age 23 | B/T R/L | OVR 78
+    CON L68/R67  POW L61/R58  VIS 60  DIS 55  CLU 60
+    SPD 58  STE 24  BR-AGG 31  DUR 84  FLD 50  ARM 60/ACC 65
+    REA F55/B60/L60/R55  BNT 35  DRG 30
+Marcus Acosta — LF | Age 24 | B/T R/R | OVR 82
+    CON L73/R74  POW L61/R60  VIS 67  DIS 64  CLU 63
+    SPD 57  STE 44  BR-AGG 48  DUR 87  FLD 50  ARM 60/ACC 65
+    REA F55/B60/L60/R55  BNT 35  DRG 30
+Jett Cordero — LF | Age 25 | B/T R/R | OVR 81
+    CON L72/R71  POW L61/R58  VIS 67  DIS 57  CLU 63
+    SPD 46  STE 40  BR-AGG 45  DUR 88  FLD 50  ARM 60/ACC 65
+    REA F55/B60/L60/R55  BNT 35  DRG 30
+
+### Pitchers
+Diego Vance — SP | Age 25 | T L | OVR 83 | 94.2 mph
+    K/9 L74/R60  H/9 L65/R55  CTL 75  VEL 89  STA 84  BRK 80  HR/9 57  CLU 67
+Omar Pena — SP | Age 26 | T R | OVR 79 | 90.0 mph
+    K/9 L54/R66  H/9 L49/R57  CTL 76  VEL 80  STA 84  BRK 80  HR/9 61  CLU 66
+Pavel Schmidt — SP | Age 24 | T R | OVR 87 | 95.3 mph
+    K/9 L68/R82  H/9 L61/R71  CTL 76  VEL 91  STA 83  BRK 80  HR/9 56  CLU 75
+Knox Tatum — RP | Age 22 | T L | OVR 78 | 88.1 mph
+    K/9 L70/R58  H/9 L68/R58  CTL 69  VEL 76  STA 26  BRK 80  HR/9 66  CLU 89
+Yusei Haas — RP | Age 25 | T R | OVR 81 | 97.0 mph
+    K/9 L63/R77  H/9 L63/R73  CTL 64  VEL 95  STA 26  BRK 80  HR/9 65  CLU 88
+Jose Sosa — RP | Age 22 | T R | OVR 82 | 98.1 mph
+    K/9 L65/R79  H/9 L63/R75  CTL 64  VEL 98  STA 26  BRK 80  HR/9 63  CLU 90
+Hideki Ashby — RP | Age 22 | T R | OVR 80 | 95.1 mph
+    K/9 L63/R77  H/9 L61/R71  CTL 64  VEL 91  STA 26  BRK 80  HR/9 64  CLU 88
+Cole Maddox — RP | Age 26 | T R | OVR 80 | 99.2 mph
+    K/9 L64/R78  H/9 L60/R70  CTL 58  VEL 99  STA 26  BRK 80  HR/9 63  CLU 87
+
+## AA
+
+### Position players
+Diego Reeves — C | Age 21 | B/T L/R | OVR 85
+    CON L73/R73  POW L81/R79  VIS 58  DIS 63  CLU 65
+    SPD 31  STE 27  BR-AGG 33  DUR 85  FLD 70  ARM 80/ACC 65
+    Blocking / Pop / Reactions = set to Show position default (not stat-modeled)  BNT 35  DRG 25
+Mike Vance — 2B | Age 22 | B/T R/R | OVR 76
+    CON L64/R62  POW L58/R55  VIS 44  DIS 62  CLU 57
+    SPD 51  STE 25  BR-AGG 31  DUR 83  FLD 75  ARM 60/ACC 70
+    REA F75/B60/L65/R70  BNT 45  DRG 35
+Soren Doyle — SS | Age 24 | B/T L/R | OVR 80
+    CON L67/R66  POW L57/R58  VIS 45  DIS 63  CLU 59
+    SPD 76  STE 67  BR-AGG 68  DUR 84  FLD 85  ARM 68/ACC 75
+    REA F80/B70/L55/R80  BNT 35  DRG 25
+Cooper Rios — RF | Age 25 | B/T R/L | OVR 77
+    CON L64/R62  POW L56/R52  VIS 50  DIS 59  CLU 57
+    SPD 53  STE 35  BR-AGG 40  DUR 86  FLD 60  ARM 75/ACC 70
+    REA F55/B60/L60/R60  BNT 35  DRG 25
+Cade Marsh — LF | Age 22 | B/T S/L | OVR 80
+    CON L68/R67  POW L65/R62  VIS 62  DIS 63  CLU 59
+    SPD 56  STE 29  BR-AGG 35  DUR 86  FLD 50  ARM 60/ACC 65
+    REA F55/B60/L60/R55  BNT 35  DRG 30
+Otto Brennan — 3B | Age 24 | B/T R/R | OVR 77
+    CON L68/R67  POW L64/R59  VIS 50  DIS 57  CLU 59
+    SPD 52  STE 41  BR-AGG 46  DUR 82  FLD 65  ARM 65/ACC 72
+    REA F75/B60/L55/R60  BNT 35  DRG 35
+Carlos Ishida — 1B | Age 21 | B/T R/R | OVR 78
+    CON L69/R68  POW L61/R59  VIS 59  DIS 57  CLU 60
+    SPD 53  STE 38  BR-AGG 43  DUR 83  FLD 50  ARM 58/ACC 62
+    REA F50/B60/L65/R60  BNT 35  DRG 25
+
+### Pitchers
+Xavier Ishida — SP | Age 20 | T R | OVR 79 | 91.3 mph
+    K/9 L51/R63  H/9 L48/R56  CTL 74  VEL 83  STA 84  BRK 80  HR/9 65  CLU 64
+Mason Vance — SP | Age 25 | T R | OVR 80 | 86.6 mph
+    K/9 L52/R64  H/9 L52/R62  CTL 83  VEL 72  STA 83  BRK 80  HR/9 60  CLU 69
+Ramon Bello — SP | Age 25 | T R | OVR 79 | 92.5 mph
+    K/9 L50/R62  H/9 L53/R63  CTL 69  VEL 85  STA 83  BRK 80  HR/9 58  CLU 65
+Soren Guerra — RP | Age 25 | T L | OVR 78 | 89.0 mph
+    K/9 L69/R57  H/9 L66/R56  CTL 70  VEL 78  STA 26  BRK 80  HR/9 64  CLU 89
+Pedro Reyes — RP | Age 25 | T L | OVR 78 | 93.4 mph
+    K/9 L70/R58  H/9 L68/R58  CTL 66  VEL 87  STA 26  BRK 80  HR/9 61  CLU 88
+Bryce Ferreira — RP | Age 25 | T R | OVR 82 | 102.8 mph
+    K/9 L65/R79  H/9 L62/R72  CTL 63  VEL 99  STA 26  BRK 80  HR/9 60  CLU 90
+Cooper Stockton — RP | Age 23 | T R | OVR 81 | 97.4 mph
+    K/9 L60/R74  H/9 L61/R71  CTL 67  VEL 96  STA 26  BRK 80  HR/9 66  CLU 88
+Pavel Maddox — RP | Age 24 | T R | OVR 79 | 100.5 mph
+    K/9 L59/R73  H/9 L60/R70  CTL 58  VEL 99  STA 26  BRK 80  HR/9 61  CLU 88
+
+## A+
+
+### Position players
+Bryce Stockton — C | Age 22 | B/T R/R | OVR 74
+    CON L65/R63  POW L58/R55  VIS 46  DIS 57  CLU 59
+    SPD 38  STE 40  BR-AGG 45  DUR 83  FLD 70  ARM 80/ACC 65
+    Blocking / Pop / Reactions = set to Show position default (not stat-modeled)  BNT 35  DRG 25
+Roman Bonilla — 1B | Age 19 | B/T L/L | OVR 68
+    CON L59/R56  POW L50/R46  VIS 37  DIS 45  CLU 55
+    SPD 42  STE 33  BR-AGG 39  DUR 84  FLD 50  ARM 58/ACC 62
+    REA F50/B60/L65/R60  BNT 35  DRG 25
+Eduardo Bello — 2B | Age 20 | B/T R/R | OVR 73
+    CON L61/R58  POW L64/R59  VIS 33  DIS 49  CLU 56
+    SPD 47  STE 42  BR-AGG 47  DUR 80  FLD 75  ARM 60/ACC 70
+    REA F75/B60/L65/R70  BNT 45  DRG 35
+Tyler Stockton — SS | Age 21 | B/T R/R | OVR 75
+    CON L62/R60  POW L56/R50  VIS 36  DIS 59  CLU 56
+    SPD 53  STE 68  BR-AGG 69  DUR 81  FLD 85  ARM 68/ACC 75
+    REA F80/B70/L55/R80  BNT 35  DRG 25
+Hector Vargas — 3B | Age 20 | B/T R/R | OVR 75
+    CON L66/R64  POW L60/R55  VIS 50  DIS 54  CLU 59
+    SPD 60  STE 58  BR-AGG 60  DUR 83  FLD 65  ARM 65/ACC 72
+    REA F75/B60/L55/R60  BNT 35  DRG 35
+Jett Vance — RF | Age 22 | B/T R/L | OVR 81
+    CON L65/R63  POW L83/R81  VIS 15  DIS 78  CLU 60
+    SPD 28  STE 4  BR-AGG 4  DUR 85  FLD 60  ARM 75/ACC 70
+    REA F55/B60/L60/R60  BNT 35  DRG 25
+Hideki Pike — LF | Age 22 | B/T S/L | OVR 69
+    CON L58/R54  POW L49/R44  VIS 40  DIS 55  CLU 53
+    SPD 48  STE 26  BR-AGG 33  DUR 86  FLD 50  ARM 60/ACC 65
+    REA F55/B60/L60/R55  BNT 35  DRG 30
+Sang Sakamoto — DH | Age 22 | B/T R/R | OVR 67
+    CON L58/R54  POW L49/R45  VIS 43  DIS 53  CLU 54
+    SPD 33  STE 28  BR-AGG 34  DUR 84  FLD 35  ARM 55/ACC 65
+    REA F45/B45/L45/R45  BNT 35  DRG 25
+
+### Pitchers
+Bryce Pike — SP | Age 19 | T R | OVR 84 | 94.2 mph
+    K/9 L63/R77  H/9 L61/R71  CTL 70  VEL 89  STA 82  BRK 80  HR/9 62  CLU 69
+Xavier Marsh — SP | Age 20 | T L | OVR 78 | 90.6 mph
+    K/9 L62/R50  H/9 L57/R49  CTL 70  VEL 81  STA 82  BRK 80  HR/9 60  CLU 65
+Tunde Granger — SP | Age 23 | T R | OVR 76 | 91.6 mph
+    K/9 L50/R62  H/9 L42/R50  CTL 75  VEL 83  STA 83  BRK 80  HR/9 55  CLU 64
+Soren Ferreira — SP | Age 22 | T R | OVR 78 | 89.3 mph
+    K/9 L49/R59  H/9 L44/R52  CTL 85  VEL 78  STA 83  BRK 80  HR/9 69  CLU 66
+Brock Berg — RP | Age 21 | T R | OVR 80 | 98.1 mph
+    K/9 L58/R72  H/9 L61/R71  CTL 65  VEL 98  STA 27  BRK 80  HR/9 62  CLU 88
+Kwame Traore — RP | Age 21 | T R | OVR 80 | 98.0 mph
+    K/9 L59/R73  H/9 L57/R67  CTL 63  VEL 97  STA 27  BRK 80  HR/9 66  CLU 88
+Min Cordero — RP | Age 22 | T R | OVR 79 | 96.2 mph
+    K/9 L59/R73  H/9 L59/R69  CTL 62  VEL 93  STA 27  BRK 80  HR/9 64  CLU 87
+Reid Okonkwo — RP | Age 20 | T R | OVR 80 | 98.3 mph
+    K/9 L59/R73  H/9 L60/R70  CTL 59  VEL 98  STA 27  BRK 80  HR/9 62  CLU 87
+Rico Conway — RP | Age 23 | T R | OVR 81 | 99.1 mph
+    K/9 L62/R76  H/9 L62/R72  CTL 62  VEL 99  STA 27  BRK 80  HR/9 65  CLU 89
+
+## A
+
+### Position players
+Dae Haas — C | Age 20 | B/T S/R | OVR 66
+    CON L54/R49  POW L47/R43  VIS 39  DIS 54  CLU 53
+    SPD 32  STE 32  BR-AGG 38  DUR 79  FLD 70  ARM 80/ACC 65
+    Blocking / Pop / Reactions = set to Show position default (not stat-modeled)  BNT 35  DRG 25
+Pedro Vance — 1B | Age 18 | B/T L/R | OVR 67
+    CON L57/R53  POW L49/R46  VIS 33  DIS 52  CLU 53
+    SPD 39  STE 27  BR-AGG 33  DUR 84  FLD 50  ARM 58/ACC 62
+    REA F50/B60/L65/R60  BNT 35  DRG 25
+Mateo Sankara — 2B | Age 19 | B/T L/R | OVR 74
+    CON L64/R62  POW L62/R57  VIS 34  DIS 53  CLU 57
+    SPD 49  STE 25  BR-AGG 32  DUR 81  FLD 75  ARM 60/ACC 70
+    REA F75/B60/L65/R70  BNT 45  DRG 35
+John Cordero — SS | Age 19 | B/T R/R | OVR 77
+    CON L62/R60  POW L61/R55  VIS 59  DIS 55  CLU 57
+    SPD 53  STE 27  BR-AGG 34  DUR 78  FLD 85  ARM 68/ACC 75
+    REA F80/B70/L55/R80  BNT 35  DRG 25
+Diego Bautista — 3B | Age 20 | B/T R/R | OVR 72
+    CON L62/R60  POW L53/R49  VIS 51  DIS 48  CLU 56
+    SPD 44  STE 31  BR-AGG 37  DUR 83  FLD 65  ARM 65/ACC 72
+    REA F75/B60/L55/R60  BNT 35  DRG 35
+Atlas Horvath — RF | Age 20 | B/T R/R | OVR 81
+    CON L69/R68  POW L72/R69  VIS 40  DIS 62  CLU 61
+    SPD 50  STE 31  BR-AGG 37  DUR 83  FLD 60  ARM 75/ACC 70
+    REA F55/B60/L60/R60  BNT 35  DRG 25
+Brett Fujimoto — RF | Age 20 | B/T R/R | OVR 80
+    CON L68/R66  POW L74/R70  VIS 42  DIS 58  CLU 60
+    SPD 48  STE 31  BR-AGG 37  DUR 83  FLD 60  ARM 75/ACC 70
+    REA F55/B60/L60/R60  BNT 35  DRG 25
+Knox Schmidt — CF | Age 18 | B/T L/R | OVR 73
+    CON L57/R53  POW L57/R54  VIS 23  DIS 73  CLU 55
+    SPD 77  STE 61  BR-AGG 63  DUR 79  FLD 75  ARM 75/ACC 70
+    REA F60/B60/L70/R65  BNT 45  DRG 40
+
+### Pitchers
+Cole Traore — SP | Age 20 | T L | OVR 78 | 87.3 mph
+    K/9 L62/R50  H/9 L56/R48  CTL 79  VEL 74  STA 82  BRK 80  HR/9 64  CLU 67
+Min Marsh — SP | Age 21 | T R | OVR 78 | 86.5 mph
+    K/9 L51/R63  H/9 L50/R58  CTL 82  VEL 72  STA 82  BRK 80  HR/9 54  CLU 67
+Zane Schmidt — SP | Age 20 | T R | OVR 80 | 93.5 mph
+    K/9 L53/R65  H/9 L55/R65  CTL 69  VEL 87  STA 81  BRK 80  HR/9 65  CLU 65
+Pavel Ozawa — SP | Age 19 | T R | OVR 79 | 87.7 mph
+    K/9 L52/R64  H/9 L54/R64  CTL 72  VEL 75  STA 81  BRK 80  HR/9 58  CLU 66
+Logan Adeyemi — RP | Age 19 | T R | OVR 79 | 98.5 mph
+    K/9 L58/R70  H/9 L58/R68  CTL 61  VEL 98  STA 27  BRK 80  HR/9 66  CLU 88
+Bo Yamamoto — RP | Age 18 | T L | OVR 79 | 97.1 mph
+    K/9 L73/R59  H/9 L70/R60  CTL 59  VEL 95  STA 27  BRK 80  HR/9 62  CLU 88
+Kwame Tatum — RP | Age 21 | T R | OVR 78 | 100.2 mph
+    K/9 L58/R70  H/9 L59/R69  CTL 56  VEL 99  STA 27  BRK 80  HR/9 60  CLU 87
+Boone Nguyen — RP | Age 21 | T L | OVR 77 | 87.0 mph
+    K/9 L69/R57  H/9 L67/R57  CTL 68  VEL 73  STA 27  BRK 80  HR/9 66  CLU 87
+Zane Granger — RP | Age 21 | T R | OVR 79 | 98.4 mph
+    K/9 L58/R70  H/9 L58/R68  CTL 60  VEL 98  STA 27  BRK 80  HR/9 61  CLU 88
